@@ -1,0 +1,852 @@
+"""
+FIFA World Cup 2026 — Web Predictor
+Run: python app.py  →  http://localhost:5000
+"""
+import json
+import math
+import os
+import random
+from flask import Flask, jsonify, request, send_from_directory
+from stacked_predictor import (
+    stack_predict, expected_goals, _poisson_pmf, penalty_win_prob
+)
+from predictor import VENUES
+from tournament import load_team_db
+from injuries_client import get_injury_detail
+from odds_client import get_match_odds
+
+app = Flask(__name__, static_folder="static", static_url_path="")
+
+# ── Key attacking threats per team (WC 2026 squads) ──────────────────────────
+KEY_PLAYERS = {
+    "Argentina":    [{"name": "Lautaro Martínez", "role": "ST",  "share": 0.32},
+                     {"name": "Julián Álvarez",   "role": "ST",  "share": 0.24},
+                     {"name": "Lionel Messi",      "role": "RW",  "share": 0.26}],
+    "France":       [{"name": "Kylian Mbappé",    "role": "ST",  "share": 0.38},
+                     {"name": "Marcus Thuram",     "role": "ST",  "share": 0.22},
+                     {"name": "Ousmane Dembélé",   "role": "RW",  "share": 0.18}],
+    "Brazil":       [{"name": "Vinicius Jr",       "role": "LW",  "share": 0.34},
+                     {"name": "Endrick",           "role": "ST",  "share": 0.26},
+                     {"name": "Rodrygo",           "role": "RW",  "share": 0.20}],
+    "England":      [{"name": "Harry Kane",        "role": "ST",  "share": 0.36},
+                     {"name": "Bukayo Saka",       "role": "RW",  "share": 0.22},
+                     {"name": "Phil Foden",        "role": "AM",  "share": 0.18}],
+    "Spain":        [{"name": "Lamine Yamal",      "role": "RW",  "share": 0.28},
+                     {"name": "Álvaro Morata",     "role": "ST",  "share": 0.26},
+                     {"name": "Pedri",             "role": "CM",  "share": 0.16}],
+    "Germany":      [{"name": "Florian Wirtz",     "role": "AM",  "share": 0.28},
+                     {"name": "Jamal Musiala",     "role": "AM",  "share": 0.26},
+                     {"name": "Kai Havertz",       "role": "ST",  "share": 0.24}],
+    "Portugal":     [{"name": "Cristiano Ronaldo", "role": "ST",  "share": 0.34},
+                     {"name": "Bruno Fernandes",   "role": "AM",  "share": 0.24},
+                     {"name": "Rafael Leão",       "role": "LW",  "share": 0.20}],
+    "Netherlands":  [{"name": "Cody Gakpo",        "role": "LW",  "share": 0.30},
+                     {"name": "Memphis Depay",     "role": "ST",  "share": 0.26},
+                     {"name": "Joshua Zirkzee",    "role": "ST",  "share": 0.20}],
+    "Belgium":      [{"name": "Romelu Lukaku",     "role": "ST",  "share": 0.34},
+                     {"name": "Kevin De Bruyne",   "role": "AM",  "share": 0.22},
+                     {"name": "Leandro Trossard",  "role": "LW",  "share": 0.18}],
+    "Croatia":      [{"name": "Luka Modrić",       "role": "CM",  "share": 0.18},
+                     {"name": "Andrej Kramarić",   "role": "ST",  "share": 0.30},
+                     {"name": "Ivan Perišić",      "role": "LW",  "share": 0.22}],
+    "Colombia":     [{"name": "Luis Díaz",         "role": "LW",  "share": 0.28},
+                     {"name": "Jhon Córdoba",      "role": "ST",  "share": 0.26},
+                     {"name": "James Rodríguez",   "role": "AM",  "share": 0.20}],
+    "Uruguay":      [{"name": "Darwin Núñez",      "role": "ST",  "share": 0.36},
+                     {"name": "Federico Valverde", "role": "CM",  "share": 0.20},
+                     {"name": "Facundo Pellistri",  "role": "RW",  "share": 0.16}],
+    "Japan":        [{"name": "Takumi Minamino",   "role": "AM",  "share": 0.24},
+                     {"name": "Ayase Ueda",        "role": "ST",  "share": 0.28},
+                     {"name": "Kaoru Mitoma",      "role": "LW",  "share": 0.22}],
+    "Morocco":      [{"name": "Youssef En-Nesyri", "role": "ST",  "share": 0.34},
+                     {"name": "Hakim Ziyech",      "role": "RW",  "share": 0.24},
+                     {"name": "Sofiane Boufal",    "role": "LW",  "share": 0.18}],
+    "USA":          [{"name": "Christian Pulisic", "role": "AM",  "share": 0.30},
+                     {"name": "Ricardo Pepi",      "role": "ST",  "share": 0.28},
+                     {"name": "Gio Reyna",         "role": "AM",  "share": 0.18}],
+    "Mexico":       [{"name": "Hirving Lozano",    "role": "RW",  "share": 0.26},
+                     {"name": "Santiago Giménez",  "role": "ST",  "share": 0.34},
+                     {"name": "Alexis Vega",       "role": "LW",  "share": 0.16}],
+    "Canada":       [{"name": "Alphonso Davies",   "role": "LW",  "share": 0.26},
+                     {"name": "Jonathan David",    "role": "ST",  "share": 0.38},
+                     {"name": "Tajon Buchanan",    "role": "RW",  "share": 0.18}],
+    "Senegal":      [{"name": "Sadio Mané",        "role": "LW",  "share": 0.34},
+                     {"name": "Ismaïla Sarr",      "role": "RW",  "share": 0.24},
+                     {"name": "Nicolas Jackson",   "role": "ST",  "share": 0.22}],
+    "Switzerland":  [{"name": "Breel Embolo",      "role": "ST",  "share": 0.30},
+                     {"name": "Xherdan Shaqiri",   "role": "AM",  "share": 0.24},
+                     {"name": "Ruben Vargas",      "role": "LW",  "share": 0.18}],
+    "Austria":      [{"name": "Marcel Sabitzer",   "role": "AM",  "share": 0.24},
+                     {"name": "Christoph Baumgartner", "role": "AM", "share": 0.22},
+                     {"name": "Michael Gregoritsch", "role": "ST", "share": 0.28}],
+    "Turkey":       [{"name": "Hakan Çalhanoğlu",  "role": "CM",  "share": 0.22},
+                     {"name": "Kerem Aktürkoğlu",  "role": "LW",  "share": 0.26},
+                     {"name": "Arda Güler",        "role": "AM",  "share": 0.24}],
+    "South Korea":  [{"name": "Son Heung-min",     "role": "LW",  "share": 0.38},
+                     {"name": "Lee Kang-in",       "role": "AM",  "share": 0.24},
+                     {"name": "Hwang Hee-chan",    "role": "RW",  "share": 0.18}],
+    "Serbia":       [{"name": "Dušan Vlahović",    "role": "ST",  "share": 0.36},
+                     {"name": "Dušan Tadić",       "role": "AM",  "share": 0.22},
+                     {"name": "Aleksandar Mitrović","role": "ST",  "share": 0.24}],
+    "Ecuador":      [{"name": "Enner Valencia",    "role": "ST",  "share": 0.34},
+                     {"name": "Moisés Caicedo",    "role": "CM",  "share": 0.16},
+                     {"name": "Ángel Mena",        "role": "RW",  "share": 0.20}],
+    "Iran":         [{"name": "Mehdi Taremi",      "role": "ST",  "share": 0.38},
+                     {"name": "Sardar Azmoun",     "role": "ST",  "share": 0.28},
+                     {"name": "Alireza Jahanbakhsh","role": "RW",  "share": 0.18}],
+    "Nigeria":      [{"name": "Victor Osimhen",    "role": "ST",  "share": 0.40},
+                     {"name": "Samuel Chukwueze",  "role": "RW",  "share": 0.20},
+                     {"name": "Wilfred Ndidi",     "role": "CM",  "share": 0.12}],
+    "Norway":       [{"name": "Erling Haaland",     "role": "ST",  "share": 0.45},
+                     {"name": "Martin Ødegaard",     "role": "AM",  "share": 0.28},
+                     {"name": "Alexander Sørloth",   "role": "ST",  "share": 0.15}],
+    "Sweden":       [{"name": "Alexander Isak",     "role": "ST",  "share": 0.38},
+                     {"name": "Viktor Gyökeres",     "role": "ST",  "share": 0.32},
+                     {"name": "Dejan Kulusevski",    "role": "RW",  "share": 0.20}],
+    "Scotland":     [{"name": "Scott McTominay",    "role": "CM",  "share": 0.22},
+                     {"name": "Che Adams",           "role": "ST",  "share": 0.26},
+                     {"name": "Lyndon Dykes",        "role": "ST",  "share": 0.18}],
+    "Czech Republic":[{"name": "Patrik Schick",     "role": "ST",  "share": 0.36},
+                     {"name": "Tomáš Souček",        "role": "CM",  "share": 0.20},
+                     {"name": "Lukáš Provod",        "role": "AM",  "share": 0.16}],
+    "Bosnia & Herzegovina": [{"name": "Edin Džeko", "role": "ST",  "share": 0.30},
+                     {"name": "Miralem Pjanić",      "role": "CM",  "share": 0.18},
+                     {"name": "Sead Kolašinac",      "role": "LB",  "share": 0.10}],
+}
+
+
+# ── Helpers ────────────────────────────────────────────────────────────────────
+def scoreline_matrix(lam_a: float, lam_b: float, max_goals: int = 6) -> list:
+    """Full probability matrix (0..max_goals × 0..max_goals), normalised."""
+    cells = []
+    total = 0.0
+    for i in range(max_goals + 1):
+        for j in range(max_goals + 1):
+            p = _poisson_pmf(lam_a, i) * _poisson_pmf(lam_b, j)
+            cells.append({"gf_a": i, "gf_b": j, "prob": p})
+            total += p
+    for c in cells:
+        c["prob"] = round(c["prob"] / total, 5)
+        c["score"] = f"{c['gf_a']}-{c['gf_b']}"
+    cells.sort(key=lambda x: -x["prob"])
+    return cells
+
+
+def _team_or_default(team_db: dict, name: str) -> dict:
+    t = dict(team_db.get(name, {
+        "ELO": 1650, "FORMA": 1.2, "GF_AVG": 1.0, "GA_AVG": 1.2, "INJURIES": 0
+    }))
+    t["name"] = name
+    return t
+
+
+# ── Routes ──────────────────────────────────────────────────────────────────────
+@app.route("/")
+def index():
+    return send_from_directory("static", "index.html")
+
+
+@app.route("/api/teams")
+def api_teams():
+    from tournament import BASE_TEAM_DB
+    return jsonify(sorted(BASE_TEAM_DB.keys()))
+
+
+@app.route("/api/venues")
+def api_venues():
+    return jsonify(list(VENUES.keys()))
+
+
+@app.route("/api/groups")
+def api_groups():
+    try:
+        with open("data/wc2026_groups.json") as f:
+            raw = json.load(f)
+    except FileNotFoundError:
+        return jsonify({"error": "groups file not found"}), 404
+
+    team_db = load_team_db()
+    # Round-robin pairing order: standard WC schedule within a 4-team group
+    # R1: 0v1, 2v3  |  R2: 0v2, 1v3  |  R3: 0v3, 1v2
+    ROUND_PAIRS = [(0,1),(2,3),(0,2),(1,3),(0,3),(1,2)]
+
+    result = {}
+    for gid, teams in raw.items():
+        if gid.startswith("_") or not isinstance(teams, list):
+            continue
+        matches = []
+        for (i, j) in ROUND_PAIRS:
+            if i >= len(teams) or j >= len(teams):
+                continue
+            an, bn = teams[i], teams[j]
+            ta = _team_or_default(team_db, an)
+            tb = _team_or_default(team_db, bn)
+            home = None
+            if an in {"USA","Mexico","Canada"}: home = an
+            elif bn in {"USA","Mexico","Canada"}: home = bn
+            pred = stack_predict(ta, tb, home_team=home)
+            lam_a, lam_b = expected_goals(ta, tb, home_team=home)
+            matrix = scoreline_matrix(lam_a, lam_b)
+            top3 = [{"score": m["score"], "prob": m["prob"]} for m in matrix[:3]]
+            matches.append({
+                "round":      ROUND_PAIRS.index((i,j))//2 + 1,
+                "team_a":     an,
+                "team_b":     bn,
+                "p_win_a":    round(pred["p_win_a"], 3),
+                "p_draw":     round(pred["p_draw"],  3),
+                "p_win_b":    round(pred["p_win_b"], 3),
+                "xg_a":       round(lam_a, 2),
+                "xg_b":       round(lam_b, 2),
+                "xg_total":   round(lam_a + lam_b, 2),
+                "top_score":  matrix[0]["score"],
+                "top_scores": top3,
+                "is_host_match": home is not None,
+            })
+        team_elos = {t: team_db.get(t, {}).get("ELO", 0) for t in teams}
+        result[gid] = {"teams": teams, "team_elos": team_elos, "matches": matches}
+
+    return jsonify(result)
+
+
+def _poisson_sample(lam: float) -> int:
+    """Knuth algorithm for Poisson random variate."""
+    if lam <= 0:
+        return 0
+    L = math.exp(-min(lam, 20))
+    k, p = 0, 1.0
+    while p > L:
+        p *= random.random()
+        k += 1
+    return k - 1
+
+
+@app.route("/api/group_standings")
+def api_group_standings():
+    try:
+        with open("data/wc2026_groups.json") as f:
+            raw = json.load(f)
+    except FileNotFoundError:
+        return jsonify({"error": "groups file not found"}), 404
+
+    team_db = load_team_db()
+    ROUND_PAIRS = [(0,1),(2,3),(0,2),(1,3),(0,3),(1,2)]
+    N_SIMS = 8000
+
+    result = {}
+    for gid, teams in raw.items():
+        if gid.startswith("_") or not isinstance(teams, list):
+            continue
+
+        # Pre-compute probabilities and xG for all 6 matches
+        match_data = []
+        for (i, j) in ROUND_PAIRS:
+            an, bn = teams[i], teams[j]
+            ta = _team_or_default(team_db, an)
+            tb = _team_or_default(team_db, bn)
+            home = None
+            if an in {"USA","Mexico","Canada"}: home = an
+            elif bn in {"USA","Mexico","Canada"}: home = bn
+            pred = stack_predict(ta, tb, home_team=home)
+            lam_a, lam_b = expected_goals(ta, tb, home_team=home)
+            match_data.append({
+                "i": i, "j": j,
+                "p_a": pred["p_win_a"],
+                "p_d": pred["p_draw"],
+                "p_b": pred["p_win_b"],
+                "lam_a": lam_a,
+                "lam_b": lam_b,
+            })
+
+        # Monte Carlo group simulation
+        pos_counts = {t: [0, 0, 0, 0] for t in teams}
+        pts_total  = {t: 0 for t in teams}
+        gd_total   = {t: 0 for t in teams}
+
+        for _ in range(N_SIMS):
+            pts = {t: 0 for t in teams}
+            gd  = {t: 0 for t in teams}
+            gf  = {t: 0 for t in teams}
+
+            for m in match_data:
+                an, bn = teams[m["i"]], teams[m["j"]]
+                r = random.random()
+                if r < m["p_a"]:
+                    ga = _poisson_sample(m["lam_a"])
+                    gb = _poisson_sample(m["lam_b"])
+                    if ga <= gb: ga = gb + 1
+                    pts[an] += 3
+                elif r < m["p_a"] + m["p_d"]:
+                    g  = _poisson_sample((m["lam_a"] + m["lam_b"]) / 2)
+                    ga = gb = g
+                    pts[an] += 1
+                    pts[bn] += 1
+                else:
+                    ga = _poisson_sample(m["lam_a"])
+                    gb = _poisson_sample(m["lam_b"])
+                    if gb <= ga: gb = ga + 1
+                    pts[bn] += 3
+
+                gd[an] += ga - gb;  gd[bn] += gb - ga
+                gf[an] += ga;       gf[bn] += gb
+
+            ranked = sorted(teams,
+                key=lambda t: (pts[t], gd[t], gf[t], random.random()),
+                reverse=True)
+            for pos, t in enumerate(ranked):
+                pos_counts[t][pos] += 1
+                pts_total[t] += pts[t]
+                gd_total[t]  += gd[t]
+
+        standings = []
+        for t in teams:
+            c = pos_counts[t]
+            standings.append({
+                "team":      t,
+                "p1":        round(c[0] / N_SIMS, 3),
+                "p2":        round(c[1] / N_SIMS, 3),
+                "p3":        round(c[2] / N_SIMS, 3),
+                "p4":        round(c[3] / N_SIMS, 3),
+                "p_advance": round((c[0] + c[1]) / N_SIMS, 3),
+                "avg_pts":   round(pts_total[t] / N_SIMS, 2),
+                "avg_gd":    round(gd_total[t]  / N_SIMS, 2),
+            })
+        standings.sort(key=lambda x: -x["p_advance"])
+        result[gid] = standings
+
+    return jsonify(result)
+
+
+@app.route("/api/group_odds")
+def api_group_odds():
+    from odds_client import get_all_odds
+    try:
+        with open("data/wc2026_groups.json") as f:
+            raw = json.load(f)
+    except FileNotFoundError:
+        return jsonify({"error": "groups file not found"}), 404
+
+    team_db   = load_team_db()
+    live_odds = get_all_odds()   # dict keyed by frozenset({teamA, teamB}) → odds
+    ROUND_PAIRS = [(0,1),(2,3),(0,2),(1,3),(0,3),(1,2)]
+    ROUND_NAMES = {1:"R1", 2:"R2", 3:"R3"}
+
+    # Normalise team names so our group names match the API's spelling
+    # (API might use "Côte d'Ivoire" vs our "Ivory Coast", etc.)
+    _NAME_NORM = {
+        "Ivory Coast":          "Ivory Coast",
+        "Côte d'Ivoire":        "Ivory Coast",
+        "Curaçao":              "Curaçao",
+        "Curacao":              "Curaçao",
+        "Bosnia & Herzegovina": "Bosnia & Herzegovina",
+        "Bosnia and Herzegovina": "Bosnia & Herzegovina",
+        "DR Congo":             "DR Congo",
+        "Congo DR":             "DR Congo",
+        "Democratic Republic of Congo": "DR Congo",
+        "Cape Verde":           "Cape Verde",
+        "Cabo Verde":           "Cape Verde",
+        "Czech Republic":       "Czech Republic",
+        "Czechia":              "Czech Republic",
+        "USA":                  "USA",
+        "United States":        "USA",
+    }
+
+    def _norm(name):
+        return _NAME_NORM.get(name, name)
+
+    # Re-key live_odds with normalised names
+    normalised_odds = {}
+    for fs, val in live_odds.items():
+        names = list(fs)
+        nkey = frozenset([_norm(names[0]), _norm(names[1])])
+        normalised_odds[nkey] = {**val,
+            "home": _norm(val["home"]),
+            "away": _norm(val["away"])}
+
+    rows = []
+    for gid, teams in raw.items():
+        if gid.startswith("_") or not isinstance(teams, list):
+            continue
+        for ri, (i, j) in enumerate(ROUND_PAIRS):
+            an, bn = teams[i], teams[j]
+            ta = _team_or_default(team_db, an)
+            tb = _team_or_default(team_db, bn)
+            home = None
+            if an in {"USA","Mexico","Canada"}: home = an
+            elif bn in {"USA","Mexico","Canada"}: home = bn
+            pred = stack_predict(ta, tb, home_team=home)
+            lam_a, lam_b = expected_goals(ta, tb, home_team=home)
+            matrix = scoreline_matrix(lam_a, lam_b)
+
+            p_a = pred["p_win_a"]
+            p_d = pred["p_draw"]
+            p_b = pred["p_win_b"]
+
+            # Fair (no-vig) odds
+            fair = {"a": round(1/p_a,2), "draw": round(1/p_d,2), "b": round(1/p_b,2)}
+
+            # Look up live odds using normalised key
+            mkt = None
+            key = frozenset([an, bn])
+            if key in normalised_odds:
+                raw_mkt = normalised_odds[key]
+                if raw_mkt["home"] == an:
+                    mkt = {"a": raw_mkt["a"], "draw": raw_mkt["draw"], "b": raw_mkt["b"]}
+                else:
+                    mkt = {"a": raw_mkt["b"], "draw": raw_mkt["draw"], "b": raw_mkt["a"]}
+
+            # Edge = model_prob - vig-adjusted implied prob
+            # Remove bookmaker margin first so we're comparing fairly
+            ev = None
+            if mkt:
+                raw_a    = 1 / mkt["a"]
+                raw_d    = 1 / mkt["draw"]
+                raw_b    = 1 / mkt["b"]
+                overround = raw_a + raw_d + raw_b          # typically 1.05-1.10
+                impl_a   = raw_a / overround
+                impl_d   = raw_d / overround
+                impl_b   = raw_b / overround
+                ev = {
+                    "a":    round(p_a - impl_a, 3),
+                    "draw": round(p_d - impl_d, 3),
+                    "b":    round(p_b - impl_b, 3),
+                    "impl_a":   round(impl_a, 3),
+                    "impl_d":   round(impl_d, 3),
+                    "impl_b":   round(impl_b, 3),
+                    "overround": round(overround, 4),
+                }
+                ev["max"]  = round(max(ev["a"], ev["draw"], ev["b"]), 3)
+                ev["best"] = max(("a","draw","b"), key=lambda k: ev[k])
+
+            rows.append({
+                "group":     gid,
+                "round":     ROUND_NAMES[ri//2 + 1],
+                "team_a":    an,
+                "team_b":    bn,
+                "xg_a":      round(lam_a, 2),
+                "xg_b":      round(lam_b, 2),
+                "xg_total":  round(lam_a + lam_b, 2),
+                "p_win_a":   round(p_a, 3),
+                "p_draw":    round(p_d, 3),
+                "p_win_b":   round(p_b, 3),
+                "fair":      fair,
+                "market":    mkt,
+                "ev":        ev,
+                "top_scores": [{"score": m["score"], "prob": m["prob"]} for m in matrix[:3]],
+                "is_host":   home is not None,
+            })
+
+    # has_odds = True only if at least some WC matches matched
+    matched = sum(1 for r in rows if r["market"])
+    rows.sort(key=lambda r: -(r["ev"]["max"] if r["ev"] else 0))
+    return jsonify({"has_odds": matched > 0, "matched_count": matched, "matches": rows})
+
+
+@app.route("/api/validate")
+def api_validate():
+    from calibrate import (
+        WC2022_MATCHES, evaluate_individual_models,
+        grid_search_weights, blend_probs, compute_log_loss, accuracy,
+        _make_teams, _predict_outcome
+    )
+    from stacked_predictor import DEFAULT_WEIGHTS, stack_predict as sp
+
+    model_evals = evaluate_individual_models()
+    best_w, best_ll, best_acc = grid_search_weights(model_evals, step=0.05)
+
+    dw3 = {k: DEFAULT_WEIGHTS[k] for k in ["elo","poisson","ml"]}
+    preds_dict = {k: model_evals[k]["preds"] for k in ["elo","poisson","ml"]}
+    blended    = blend_probs(preds_dict, dw3)
+    ll_def     = compute_log_loss(blended, model_evals["results"])
+    acc_def    = accuracy(blended, model_evals["results"])
+
+    stacked_preds = []
+    for m in WC2022_MATCHES:
+        ta, tb = _make_teams(m)
+        pred = sp(ta, tb)
+        stacked_preds.append((pred["p_win_a"], pred["p_draw"], pred["p_win_b"]))
+    ll_stacked  = compute_log_loss(stacked_preds, model_evals["results"])
+    acc_stacked = accuracy(stacked_preds, model_evals["results"])
+
+    results_list = model_evals["results"]
+    matches_detail = []
+    for i, m in enumerate(WC2022_MATCHES):
+        pa, pd, pb = stacked_preds[i]
+        predicted = _predict_outcome(stacked_preds[i])
+        actual    = results_list[i]
+        matches_detail.append({
+            "team_a":    m["name_a"],
+            "team_b":    m["name_b"],
+            "elo_a":     m["elo_a"],
+            "elo_b":     m["elo_b"],
+            "p_win_a":   round(pa, 3),
+            "p_draw":    round(pd, 3),
+            "p_win_b":   round(pb, 3),
+            "predicted": predicted,
+            "actual":    actual,
+            "correct":   predicted == actual,
+        })
+
+    return jsonify({
+        "n_matches": len(WC2022_MATCHES),
+        "models": {
+            "elo":     {"log_loss": round(model_evals["elo"]["log_loss"], 4),
+                        "accuracy": round(model_evals["elo"]["accuracy"], 4)},
+            "poisson": {"log_loss": round(model_evals["poisson"]["log_loss"], 4),
+                        "accuracy": round(model_evals["poisson"]["accuracy"], 4)},
+            "ml":      {"log_loss": round(model_evals["ml"]["log_loss"], 4),
+                        "accuracy": round(model_evals["ml"]["accuracy"], 4)},
+            "stacked": {"log_loss": round(ll_stacked, 4),
+                        "accuracy": round(acc_stacked, 4)},
+        },
+        "optimal_weights": best_w,
+        "optimal_log_loss": round(best_ll, 4),
+        "optimal_accuracy": round(best_acc, 4),
+        "current_log_loss": round(ll_def, 4),
+        "current_accuracy": round(acc_def, 4),
+        "matches": matches_detail,
+    })
+
+
+@app.route("/api/tournament")
+def api_tournament():
+    try:
+        with open("data/mc_results.json") as f:
+            data = json.load(f)
+        
+        # If it's the old list format, handle it gracefully
+        if isinstance(data, list):
+            data.sort(key=lambda r: -r.get("champion_%", 0))
+            return jsonify({"table": data, "metrics": None})
+            
+        # New dict format
+        data["table"].sort(key=lambda r: -r.get("champion_%", 0))
+        return jsonify(data)
+    except FileNotFoundError:
+        return jsonify({"table": [], "metrics": None})
+
+
+@app.route("/api/predict", methods=["POST"])
+def api_predict():
+    body         = request.get_json(force=True)
+    team_a_name  = body.get("team_a", "")
+    team_b_name  = body.get("team_b", "")
+    manual_odds  = body.get("odds")          # {a, draw, b} or null
+    venue_name   = body.get("venue") or None # optional venue name
+
+    if not team_a_name or not team_b_name:
+        return jsonify({"error": "team_a and team_b required"}), 400
+
+    team_db = load_team_db()
+    ta = _team_or_default(team_db, team_a_name)
+    tb = _team_or_default(team_db, team_b_name)
+
+    # Host advantage (group stage logic — always apply if host nation)
+    home_team = None
+    if team_a_name in {"USA", "Mexico", "Canada"}:
+        home_team = team_a_name
+    elif team_b_name in {"USA", "Mexico", "Canada"}:
+        home_team = team_b_name
+
+    pred  = stack_predict(ta, tb, home_team=home_team, venue_name=venue_name)
+    lam_a, lam_b = expected_goals(ta, tb, home_team=home_team, venue_name=venue_name)
+
+    # Scoreline matrix
+    matrix = scoreline_matrix(lam_a, lam_b)
+
+    # Odds
+    bookie = manual_odds
+    if not bookie:
+        fetched = get_match_odds(team_a_name, team_b_name)
+        if fetched:
+            bookie = {
+                "a":    fetched["ODDS_BOOKIE_A"],
+                "draw": fetched["ODDS_BOOKIE_DRAW"],
+                "b":    fetched["ODDS_BOOKIE_B"],
+            }
+
+    fair_odds = {
+        "a":    round(1 / pred["p_win_a"], 2),
+        "draw": round(1 / pred["p_draw"],  2),
+        "b":    round(1 / pred["p_win_b"], 2),
+    }
+
+    ev = None
+    if bookie and all(bookie.get(k, 0) > 0 for k in ("a", "draw", "b")):
+        ev = {
+            "a":    round(pred["p_win_a"] * bookie["a"]    - 1, 4),
+            "draw": round(pred["p_draw"]  * bookie["draw"] - 1, 4),
+            "b":    round(pred["p_win_b"] * bookie["b"]    - 1, 4),
+        }
+
+    # Key players + xG contribution
+    def enrich_players(name, lam):
+        raw = KEY_PLAYERS.get(name, [])
+        return [{"name": p["name"], "role": p["role"],
+                 "xg": round(lam * p["share"], 2)} for p in raw]
+
+    return jsonify({
+        "team_a":        team_a_name,
+        "team_b":        team_b_name,
+        "probs":         {"win_a": round(pred["p_win_a"], 4),
+                          "draw":  round(pred["p_draw"],  4),
+                          "win_b": round(pred["p_win_b"], 4)},
+        "xg":            {"a": round(lam_a, 2), "b": round(lam_b, 2)},
+        "fair_odds":     fair_odds,
+        "bookie_odds":   bookie,
+        "ev":            ev,
+        "scoreline_matrix": matrix,
+        "top_scorelines":   matrix[:12],
+        "model_breakdown":  pred["model_breakdown"],
+        "penalty_prob_a":   round(penalty_win_prob(team_a_name, team_b_name), 3),
+        "injuries_a":    get_injury_detail(team_a_name),
+        "injuries_b":    get_injury_detail(team_b_name),
+        "players_a":     enrich_players(team_a_name, lam_a),
+        "players_b":     enrich_players(team_b_name, lam_b),
+        "elo_a":         ta.get("ELO", 0),
+        "elo_b":         tb.get("ELO", 0),
+    })
+
+
+@app.route("/api/bets")
+def api_bets():
+    """
+    Returns all group-stage value bets where model probability
+    beats the fixed market line. Quarter-Kelly sizing on $1000 bankroll.
+    """
+    try:
+        with open("data/wc2026_groups.json") as f:
+            raw = json.load(f)
+    except FileNotFoundError:
+        return jsonify({"error": "groups file not found"}), 404
+
+    from stacked_predictor import _compute_lambdas
+
+    team_db = load_team_db()
+    BANKROLL = 1000.0
+
+    # Fixed market lines: (market_odds, implied_prob)
+    FIXED = {
+        "Over 1.5":   1.45,
+        "Under 1.5":  2.80,
+        "Over 2.5":   1.85,
+        "Under 2.5":  1.85,
+        "Over 3.5":   2.05,
+        "Under 3.5":  1.78,
+        "BTTS Yes":   1.82,
+        "BTTS No":    2.02,
+    }
+
+    def kelly(p, odds, frac=0.25, cap=0.04):
+        ev = p * odds - 1
+        if ev <= 0:
+            return 0.0, ev
+        k = ev / (odds - 1)
+        return min(k * frac, cap), ev
+
+    ROUND_PAIRS = [(0,1),(2,3),(0,2),(1,3),(0,3),(1,2)]
+    bets = []
+
+    for gid, teams in raw.items():
+        if gid.startswith("_") or not isinstance(teams, list):
+            continue
+
+        for ri, (i, j) in enumerate(ROUND_PAIRS):
+            an, bn = teams[i], teams[j]
+            ta = _team_or_default(team_db, an)
+            tb = _team_or_default(team_db, bn)
+            home = None
+            if an in {"USA","Mexico","Canada"}: home = an
+            elif bn in {"USA","Mexico","Canada"}: home = bn
+
+            lam_a, lam_b = expected_goals(ta, tb, home_team=home)
+
+            # Build Poisson grid
+            grid = {}
+            for a in range(12):
+                pa = _poisson_pmf(lam_a, a)
+                for b in range(12):
+                    grid[(a, b)] = pa * _poisson_pmf(lam_b, b)
+
+            probs = {
+                "Over 1.5":  sum(v for (a,b),v in grid.items() if a+b > 1),
+                "Under 1.5": sum(v for (a,b),v in grid.items() if a+b <= 1),
+                "Over 2.5":  sum(v for (a,b),v in grid.items() if a+b > 2),
+                "Under 2.5": sum(v for (a,b),v in grid.items() if a+b <= 2),
+                "Over 3.5":  sum(v for (a,b),v in grid.items() if a+b > 3),
+                "Under 3.5": sum(v for (a,b),v in grid.items() if a+b <= 3),
+                "BTTS Yes":  sum(v for (a,b),v in grid.items() if a>=1 and b>=1),
+                "BTTS No":   sum(v for (a,b),v in grid.items() if not(a>=1 and b>=1)),
+            }
+
+            rnd = ri // 2 + 1
+            match_label = f"{an} vs {bn}"
+
+            for mkt, mkt_odds in FIXED.items():
+                p = probs[mkt]
+                p_mkt = 1.0 / mkt_odds
+                if p <= p_mkt:
+                    continue  # no value
+
+                stake_frac, ev = kelly(p, mkt_odds)
+                edge = (p - p_mkt) * 100
+
+                # Categorise market for grouping
+                if "1.5" in mkt:
+                    cat = "O/U 1.5"
+                elif "2.5" in mkt:
+                    cat = "O/U 2.5"
+                elif "3.5" in mkt:
+                    cat = "O/U 3.5"
+                else:
+                    cat = "BTTS"
+
+                bets.append({
+                    "group":      gid,
+                    "round":      rnd,
+                    "match":      match_label,
+                    "team_a":     an,
+                    "team_b":     bn,
+                    "market":     mkt,
+                    "cat":        cat,
+                    "p_model":    round(p, 4),
+                    "p_mkt":      round(p_mkt, 4),
+                    "mkt_odds":   mkt_odds,
+                    "edge":       round(edge, 1),
+                    "ev_pct":     round(ev * 100, 1),
+                    "stake_pct":  round(stake_frac * 100, 2),
+                    "stake_usd":  round(min(stake_frac, 0.04) * BANKROLL, 1),
+                    "xg_a":       round(lam_a, 2),
+                    "xg_b":       round(lam_b, 2),
+                    "xg_total":   round(lam_a + lam_b, 2),
+                })
+
+    bets.sort(key=lambda x: -x["ev_pct"])
+
+    total_stake  = sum(b["stake_usd"] for b in bets)
+    total_ev     = sum(b["stake_usd"] * b["ev_pct"] / 100 for b in bets)
+    roi          = (total_ev / total_stake * 100) if total_stake else 0
+
+    # Suggested parlays
+    top_o25  = sorted([b for b in bets if b["market"] == "Over 2.5"],  key=lambda x: -x["p_model"])[:5]
+    top_u35  = sorted([b for b in bets if b["market"] == "Under 3.5"], key=lambda x: -x["p_model"])[:5]
+    top_btts = sorted([b for b in bets if b["market"] == "BTTS Yes"],  key=lambda x: -x["p_model"])[:5]
+
+    def parlay_info(legs, stake=10):
+        cp = 1.0
+        co = 1.0
+        for b in legs:
+            cp *= b["p_model"]
+            co *= b["mkt_odds"]
+        return {
+            "legs":   [{"match": b["match"], "market": b["market"],
+                        "odds": b["mkt_odds"], "p": round(b["p_model"]*100,1)} for b in legs],
+            "combined_p": round(cp * 100, 2),
+            "combined_odds": round(co, 1),
+            "suggested_stake": stake,
+            "expected_return": round(stake * co * cp, 1),
+        }
+
+    parlays = {
+        "over_25":  parlay_info(top_o25),
+        "under_35": parlay_info(top_u35),
+        "btts":     parlay_info(top_btts),
+    }
+
+    # Per-market summary
+    cats = ["O/U 1.5", "O/U 2.5", "O/U 3.5", "BTTS"]
+    mkt_summary = {}
+    for cat in cats:
+        cat_bets = [b for b in bets if b["cat"] == cat]
+        s = sum(b["stake_usd"] for b in cat_bets)
+        e = sum(b["stake_usd"] * b["ev_pct"] / 100 for b in cat_bets)
+        mkt_summary[cat] = {
+            "count": len(cat_bets),
+            "stake": round(s, 1),
+            "ev":    round(e, 1),
+            "roi":   round(e / s * 100 if s else 0, 1),
+        }
+
+    return jsonify({
+        "bets": bets,
+        "summary": {
+            "total_bets":   len(bets),
+            "total_stake":  round(total_stake, 1),
+            "expected_profit": round(total_ev, 1),
+            "roi":          round(roi, 1),
+        },
+        "by_market": mkt_summary,
+        "parlays":   parlays,
+    })
+
+
+@app.route("/api/strategies")
+def api_strategies():
+    team_db = load_team_db()
+    try:
+        with open("data/wc2026_groups.json") as f:
+            groups = json.load(f)
+    except FileNotFoundError:
+        return jsonify({"error": "groups file not found"}), 404
+    
+    # Run a quick simulation to get qualification probabilities
+    # Using 1000 sims for speed in the web response
+    n_sims = 1000
+    qual_counts = {t: 0 for t in team_db}
+    from tournament import sim_group_stage
+    
+    for _ in range(n_sims):
+        results, best_thirds, _, _ = sim_group_stage(groups, team_db)
+        qualified = set()
+        for letter, res in results.items():
+            if not letter.startswith("_"):
+                qualified.add(res['first'])
+                qualified.add(res['second'])
+        for t in best_thirds:
+            qualified.add(t)
+        for t in qualified:
+            if t in qual_counts:
+                qual_counts[t] += 1
+                
+    qual_probs = {t: count / n_sims for t, count in qual_counts.items()}
+    
+    def get_prob(name):
+        return qual_probs.get(name, 0.5)
+
+    # 90% Strategy: Elite Trio
+    p_spain = get_prob("Spain")
+    p_england = get_prob("England")
+    p_france = get_prob("France")
+    prob_90 = p_spain * p_england * p_france
+    
+    # 80% Strategy: Big Five
+    p_argentina = get_prob("Argentina")
+    p_germany = get_prob("Germany")
+    prob_80 = prob_90 * p_argentina * p_germany
+
+    return jsonify({
+        "strategy_90": {
+            "name": "THE 90% ULTRA-SAFE",
+            "prob": round(prob_90 * 100, 2),
+            "legs": [
+                {"team": "Spain", "prob": round(p_spain * 100, 1)},
+                {"team": "England", "prob": round(p_england * 100, 1)},
+                {"team": "France", "prob": round(p_france * 100, 1)}
+            ]
+        },
+        "strategy_80": {
+            "name": "THE 80% HIGH-VALUE",
+            "prob": round(prob_80 * 100, 2),
+            "legs": [
+                {"team": "Spain", "prob": round(p_spain * 100, 1)},
+                {"team": "England", "prob": round(p_england * 100, 1)},
+                {"team": "France", "prob": round(p_france * 100, 1)},
+                {"team": "Argentina", "prob": round(p_argentina * 100, 1)},
+                {"team": "Germany", "prob": round(p_germany * 100, 1)}
+            ]
+        }
+    })
+
+
+if __name__ == "__main__":
+    print("🌍 WC 2026 Predictor → http://localhost:5007")
+    app.run(debug=True, port=5007)

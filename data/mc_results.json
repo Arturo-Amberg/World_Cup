@@ -1,0 +1,393 @@
+{
+  "table": [
+    {
+      "team": "Spain",
+      "champion_%": 27.43,
+      "final_%": 37.84,
+      "semi_%": 51.02,
+      "quarter_%": 63.78,
+      "third_%": 10.04
+    },
+    {
+      "team": "England",
+      "champion_%": 12.38,
+      "final_%": 22.96,
+      "semi_%": 32.73,
+      "quarter_%": 48.23,
+      "third_%": 6.17
+    },
+    {
+      "team": "France",
+      "champion_%": 12.35,
+      "final_%": 22.48,
+      "semi_%": 31.38,
+      "quarter_%": 46.61,
+      "third_%": 5.82
+    },
+    {
+      "team": "Argentina",
+      "champion_%": 11.89,
+      "final_%": 19.92,
+      "semi_%": 37.57,
+      "quarter_%": 52.06,
+      "third_%": 12.17
+    },
+    {
+      "team": "Portugal",
+      "champion_%": 3.96,
+      "final_%": 9.86,
+      "semi_%": 22.54,
+      "quarter_%": 37.71,
+      "third_%": 6.48
+    },
+    {
+      "team": "Colombia",
+      "champion_%": 3.82,
+      "final_%": 9.66,
+      "semi_%": 22.09,
+      "quarter_%": 38.9,
+      "third_%": 6.16
+    },
+    {
+      "team": "Brazil",
+      "champion_%": 3.46,
+      "final_%": 7.67,
+      "semi_%": 17.58,
+      "quarter_%": 33.98,
+      "third_%": 5.42
+    },
+    {
+      "team": "Belgium",
+      "champion_%": 2.97,
+      "final_%": 6.49,
+      "semi_%": 13.61,
+      "quarter_%": 27.03,
+      "third_%": 3.69
+    },
+    {
+      "team": "Germany",
+      "champion_%": 2.19,
+      "final_%": 5.2,
+      "semi_%": 13.37,
+      "quarter_%": 27.63,
+      "third_%": 4.06
+    },
+    {
+      "team": "Japan",
+      "champion_%": 2.18,
+      "final_%": 5.93,
+      "semi_%": 15.0,
+      "quarter_%": 28.01,
+      "third_%": 4.08
+    },
+    {
+      "team": "Croatia",
+      "champion_%": 2.12,
+      "final_%": 5.64,
+      "semi_%": 11.72,
+      "quarter_%": 27.96,
+      "third_%": 2.9
+    },
+    {
+      "team": "Uruguay",
+      "champion_%": 2.08,
+      "final_%": 5.0,
+      "semi_%": 11.35,
+      "quarter_%": 29.99,
+      "third_%": 3.19
+    },
+    {
+      "team": "Morocco",
+      "champion_%": 1.91,
+      "final_%": 4.58,
+      "semi_%": 11.74,
+      "quarter_%": 25.45,
+      "third_%": 3.51
+    },
+    {
+      "team": "Netherlands",
+      "champion_%": 1.66,
+      "final_%": 4.81,
+      "semi_%": 12.59,
+      "quarter_%": 25.51,
+      "third_%": 3.38
+    },
+    {
+      "team": "Switzerland",
+      "champion_%": 1.12,
+      "final_%": 3.38,
+      "semi_%": 7.41,
+      "quarter_%": 19.11,
+      "third_%": 1.7
+    },
+    {
+      "team": "Senegal",
+      "champion_%": 0.95,
+      "final_%": 2.93,
+      "semi_%": 6.77,
+      "quarter_%": 18.47,
+      "third_%": 1.55
+    },
+    {
+      "team": "Ecuador",
+      "champion_%": 0.85,
+      "final_%": 2.37,
+      "semi_%": 6.9,
+      "quarter_%": 18.4,
+      "third_%": 1.88
+    },
+    {
+      "team": "Turkey",
+      "champion_%": 0.72,
+      "final_%": 2.52,
+      "semi_%": 7.64,
+      "quarter_%": 17.68,
+      "third_%": 2.07
+    },
+    {
+      "team": "Norway",
+      "champion_%": 0.7,
+      "final_%": 2.19,
+      "semi_%": 5.27,
+      "quarter_%": 14.79,
+      "third_%": 1.15
+    },
+    {
+      "team": "Sweden",
+      "champion_%": 0.63,
+      "final_%": 1.9,
+      "semi_%": 5.66,
+      "quarter_%": 13.71,
+      "third_%": 1.49
+    },
+    {
+      "team": "Mexico",
+      "champion_%": 0.57,
+      "final_%": 1.84,
+      "semi_%": 5.24,
+      "quarter_%": 15.73,
+      "third_%": 1.34
+    },
+    {
+      "team": "Iran",
+      "champion_%": 0.43,
+      "final_%": 1.39,
+      "semi_%": 4.25,
+      "quarter_%": 13.51,
+      "third_%": 1.04
+    },
+    {
+      "team": "Austria",
+      "champion_%": 0.4,
+      "final_%": 1.24,
+      "semi_%": 4.24,
+      "quarter_%": 12.93,
+      "third_%": 1.11
+    },
+    {
+      "team": "South Korea",
+      "champion_%": 0.38,
+      "final_%": 1.25,
+      "semi_%": 3.82,
+      "quarter_%": 12.01,
+      "third_%": 0.97
+    },
+    {
+      "team": "USA",
+      "champion_%": 0.31,
+      "final_%": 1.09,
+      "semi_%": 3.76,
+      "quarter_%": 10.77,
+      "third_%": 0.93
+    },
+    {
+      "team": "Czech Republic",
+      "champion_%": 0.29,
+      "final_%": 1.0,
+      "semi_%": 3.34,
+      "quarter_%": 10.25,
+      "third_%": 0.78
+    },
+    {
+      "team": "Scotland",
+      "champion_%": 0.28,
+      "final_%": 0.96,
+      "semi_%": 3.06,
+      "quarter_%": 9.69,
+      "third_%": 0.71
+    },
+    {
+      "team": "Australia",
+      "champion_%": 0.27,
+      "final_%": 0.94,
+      "semi_%": 3.35,
+      "quarter_%": 9.55,
+      "third_%": 0.74
+    },
+    {
+      "team": "Canada",
+      "champion_%": 0.26,
+      "final_%": 1.11,
+      "semi_%": 3.25,
+      "quarter_%": 10.9,
+      "third_%": 0.72
+    },
+    {
+      "team": "Algeria",
+      "champion_%": 0.22,
+      "final_%": 0.88,
+      "semi_%": 2.95,
+      "quarter_%": 9.48,
+      "third_%": 0.74
+    },
+    {
+      "team": "Ivory Coast",
+      "champion_%": 0.22,
+      "final_%": 0.84,
+      "semi_%": 2.83,
+      "quarter_%": 9.3,
+      "third_%": 0.71
+    },
+    {
+      "team": "Bosnia & Herzegovina",
+      "champion_%": 0.17,
+      "final_%": 0.7,
+      "semi_%": 2.25,
+      "quarter_%": 7.93,
+      "third_%": 0.47
+    },
+    {
+      "team": "Paraguay",
+      "champion_%": 0.17,
+      "final_%": 0.61,
+      "semi_%": 2.33,
+      "quarter_%": 6.93,
+      "third_%": 0.49
+    },
+    {
+      "team": "Egypt",
+      "champion_%": 0.15,
+      "final_%": 0.59,
+      "semi_%": 2.09,
+      "quarter_%": 7.71,
+      "third_%": 0.48
+    },
+    {
+      "team": "Tunisia",
+      "champion_%": 0.07,
+      "final_%": 0.25,
+      "semi_%": 0.99,
+      "quarter_%": 3.57,
+      "third_%": 0.21
+    },
+    {
+      "team": "Uzbekistan",
+      "champion_%": 0.07,
+      "final_%": 0.33,
+      "semi_%": 1.35,
+      "quarter_%": 4.76,
+      "third_%": 0.27
+    },
+    {
+      "team": "Panama",
+      "champion_%": 0.05,
+      "final_%": 0.21,
+      "semi_%": 0.83,
+      "quarter_%": 3.4,
+      "third_%": 0.16
+    },
+    {
+      "team": "Saudi Arabia",
+      "champion_%": 0.05,
+      "final_%": 0.21,
+      "semi_%": 0.92,
+      "quarter_%": 3.98,
+      "third_%": 0.18
+    },
+    {
+      "team": "Jordan",
+      "champion_%": 0.05,
+      "final_%": 0.18,
+      "semi_%": 0.76,
+      "quarter_%": 3.11,
+      "third_%": 0.17
+    },
+    {
+      "team": "DR Congo",
+      "champion_%": 0.05,
+      "final_%": 0.24,
+      "semi_%": 0.96,
+      "quarter_%": 3.46,
+      "third_%": 0.19
+    },
+    {
+      "team": "Cape Verde",
+      "champion_%": 0.04,
+      "final_%": 0.17,
+      "semi_%": 0.79,
+      "quarter_%": 3.53,
+      "third_%": 0.16
+    },
+    {
+      "team": "Iraq",
+      "champion_%": 0.03,
+      "final_%": 0.14,
+      "semi_%": 0.5,
+      "quarter_%": 2.13,
+      "third_%": 0.1
+    },
+    {
+      "team": "South Africa",
+      "champion_%": 0.03,
+      "final_%": 0.14,
+      "semi_%": 0.57,
+      "quarter_%": 2.41,
+      "third_%": 0.09
+    },
+    {
+      "team": "Ghana",
+      "champion_%": 0.03,
+      "final_%": 0.13,
+      "semi_%": 0.57,
+      "quarter_%": 2.67,
+      "third_%": 0.11
+    },
+    {
+      "team": "New Zealand",
+      "champion_%": 0.01,
+      "final_%": 0.07,
+      "semi_%": 0.36,
+      "quarter_%": 1.91,
+      "third_%": 0.06
+    },
+    {
+      "team": "Haiti",
+      "champion_%": 0.01,
+      "final_%": 0.06,
+      "semi_%": 0.25,
+      "quarter_%": 1.19,
+      "third_%": 0.05
+    },
+    {
+      "team": "Curaçao",
+      "champion_%": 0.01,
+      "final_%": 0.04,
+      "semi_%": 0.17,
+      "quarter_%": 0.95,
+      "third_%": 0.03
+    },
+    {
+      "team": "Qatar",
+      "champion_%": 0.01,
+      "final_%": 0.05,
+      "semi_%": 0.26,
+      "quarter_%": 1.23,
+      "third_%": 0.05
+    }
+  ],
+  "metrics": {
+    "avg_goals": 264.6,
+    "avg_over_2_5": 45.7,
+    "pct_over_2_5": 43.9
+  }
+}
