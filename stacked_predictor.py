@@ -20,7 +20,8 @@ import os
 # ─────────────────────────────────────────────
 #  Constantes del modelo
 # ─────────────────────────────────────────────
-WC_AVG_GOALS = 0.92          # Promedio de goles por equipo por partido en el Mundial
+WC_AVG_GOALS = 1.30          # Promedio de goles por equipo por partido en el Mundial (WC 2018: 1.32, WC 2022: 1.34)
+DIXON_COLES_RHO = -0.12      # Dixon-Coles correlation parameter for low-score outcomes
 H2H_PATH = os.path.join(os.path.dirname(__file__), "data", "h2h_data.json")
 
 from predictor import VENUES, HIGH_ALTITUDE_TEAMS
@@ -91,9 +92,9 @@ def climate_altitude_adj(team_name: str, venue_name: str) -> float:
 #  Model weights  (calibrated on WC 2018 + 2022 + EURO 2020/2024)
 # ─────────────────────────────────────────────
 DEFAULT_WEIGHTS = {
-    "elo":     0.40,   # base ELO signal
-    "poisson": 0.35,   # Dixon-Coles physics model
-    "ml":      0.25,   # Random Forest + GradBoost ensemble (limited training data)
+    "elo":     0.10,   # base ELO signal
+    "poisson": 0.10,   # Dixon-Coles physics model
+    "ml":      0.80,   # Random Forest + GradBoost ensemble (optimized)
 }
 
 # ─────────────────────────────────────────────
@@ -185,7 +186,7 @@ def _poisson_3way(lam_a: float, lam_b: float, max_goals: int = 9):
     Calcula P(gana A), P(empate), P(gana B) usando distribución de Poisson
     con corrección Dixon-Coles para resultados de bajo marcador.
     """
-    rho = -0.12  # Dixon-Coles correlation parameter
+    rho = DIXON_COLES_RHO
 
     p_win_a = p_draw = p_win_b = 0.0
     for i in range(max_goals + 1):
@@ -231,16 +232,24 @@ def elo_model(team_a: dict, team_b: dict, home_team: str = None, venue_name: str
     name_a = team_a.get("name", "")
     name_b = team_b.get("name", "")
 
-    # Host nation ELO boost (group stage only)
-    if home_team is not None:
-        if name_a == home_team and home_team in HOST_NATIONS:
+    # Host nation ELO boost — only applies if the designated home_team
+    # is actually playing (not both co-hosts simultaneously)
+    if home_team is not None and home_team in HOST_NATIONS:
+        if name_a == home_team:
             elo_a += HOME_ELO_BOOST
-        elif name_b == home_team and home_team in HOST_NATIONS:
+        elif name_b == home_team:
             elo_b += HOME_ELO_BOOST
 
     # Climate / Altitude — calibrated so a 10% climate penalty ≈ 28 ELO drop
     elo_a += (climate_altitude_adj(name_a, venue_name) - 1.0) * 280
     elo_b += (climate_altitude_adj(name_b, venue_name) - 1.0) * 280
+
+    # Squad availability — injuries depress effective ELO
+    # A full-strength team (avail=1.0) gets no penalty; 3 injuries ≈ -40 to -60 ELO
+    avail_a = availability_score(name_a, team_a.get("INJURIES", 0))
+    avail_b = availability_score(name_b, team_b.get("INJURIES", 0))
+    elo_a += (avail_a - 1.0) * 400
+    elo_b += (avail_b - 1.0) * 400
 
     # Extra multiplier (manual override for external intel)
     elo_a += (team_a.get("EXTRA", 1.0) - 1.0) * 800
@@ -277,11 +286,19 @@ def _compute_lambdas(
     lam_a = (gf_a / mu) * (ga_b / mu) * mu
     lam_b = (gf_b / mu) * (ga_a / mu) * mu
 
-    # Host nation goals boost (group stage only)
-    if home_team is not None:
-        if name_a == home_team and home_team in HOST_NATIONS:
+    # FORMA adjustment: scale goal output by form relative to baseline (1.5)
+    # A team with FORMA 2.5 (exceptional) gets ~7% boost; FORMA 1.0 (poor) gets ~3% cut
+    forma_baseline = 1.5
+    forma_a = team_a.get("FORMA", forma_baseline)
+    forma_b = team_b.get("FORMA", forma_baseline)
+    lam_a *= 1.0 + (forma_a - forma_baseline) * 0.07
+    lam_b *= 1.0 + (forma_b - forma_baseline) * 0.07
+
+    # Host nation goals boost — only the designated home_team gets it
+    if home_team is not None and home_team in HOST_NATIONS:
+        if name_a == home_team:
             lam_a *= (1.0 + HOME_GOALS_BOOST)
-        elif name_b == home_team and home_team in HOST_NATIONS:
+        elif name_b == home_team:
             lam_b *= (1.0 + HOME_GOALS_BOOST)
 
     # Climate and altitude penalties
@@ -295,8 +312,10 @@ def _compute_lambdas(
     # Unified availability (squad depth + injuries)
     avail_a = availability_score(name_a, team_a.get("INJURIES", 0))
     avail_b = availability_score(name_b, team_b.get("INJURIES", 0))
-    lam_a *= avail_a
-    lam_b *= avail_b
+    
+    # Injuries hurt attack (own lambda drops) AND defense (opponent lambda increases)
+    lam_a = lam_a * (avail_a / avail_b)
+    lam_b = lam_b * (avail_b / avail_a)
 
     lam_a = max(0.15, min(5.0, lam_a))
     lam_b = max(0.15, min(5.0, lam_b))
@@ -355,10 +374,20 @@ def h2h_model(name_a: str, name_b: str) -> tuple | None:
     else:
         return None
 
-    wr_b = 1 - wr_a
+    # wr_a is points percentage: P(Win A) + 0.5 * P(Draw) = wr_a
     draw = min(0.30, 0.50 - abs(wr_a - 0.5) * 0.80)
-    scale = 1 - draw
-    return wr_a * scale, draw, wr_b * scale
+    
+    p_win_a = wr_a - 0.5 * draw
+    p_win_b = 1.0 - wr_a - 0.5 * draw
+    
+    # Safety bounds
+    p_win_a = max(0.0, p_win_a)
+    p_win_b = max(0.0, p_win_b)
+    
+    total = p_win_a + draw + p_win_b
+    if total <= 0:
+        return 0.33, 0.34, 0.33
+    return p_win_a / total, draw / total, p_win_b / total
 
 
 # ─────────────────────────────────────────────
@@ -404,6 +433,9 @@ def stack_predict(
         team_a.get("name"), team_b.get("name"),
         int(team_a.get("ELO", 1600)), int(team_b.get("ELO", 1600)),
         round(team_a.get("FORMA", 1.0), 2), round(team_b.get("FORMA", 1.0), 2),
+        round(team_a.get("GF_AVG", 1.0), 2), round(team_b.get("GF_AVG", 1.0), 2),
+        round(team_a.get("GA_AVG", 1.0), 2), round(team_b.get("GA_AVG", 1.0), 2),
+        team_a.get("INJURIES", 0), team_b.get("INJURIES", 0),
         home_team, round_number, venue_name
     )
     if _use_default_weights and cache_key in _PREDICTION_CACHE:
@@ -424,6 +456,20 @@ def stack_predict(
         "elo":     weights.get("elo",     0.35),
         "poisson": weights.get("poisson", 0.30),
     }
+
+    # H2H model — add if data available
+    name_a = team_a.get("name", "")
+    name_b = team_b.get("name", "")
+    h2h_p = h2h_model(name_a, name_b)
+    if h2h_p is not None:
+        models["h2h"] = h2h_p
+        h2h_share = 0.08  # small weight — historical H2H is noisy for national teams
+        other_total = sum(active_w.values())
+        if other_total > 0:
+            scale = (1.0 - h2h_share) / other_total
+            for k in active_w:
+                active_w[k] *= scale
+        active_w["h2h"] = h2h_share
 
     # ML model — add if available
     ml = _get_ml_predictor()
@@ -462,7 +508,7 @@ def stack_predict(
         pa, pd, pb = 0.333, 0.334, 0.333
 
     breakdown = {}
-    labels = {"elo": "ELO", "poisson": "Poisson", "ml": "ML"}
+    labels = {"elo": "ELO", "poisson": "Poisson", "ml": "ML", "h2h": "H2H"}
     for k, probs in models.items():
         breakdown[labels[k]] = {
             "win_a":  round(probs[0], 3),

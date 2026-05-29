@@ -55,7 +55,10 @@ def calculate_situational_adj(team_name, venue_name, injuries_count, is_diaspora
         return 0.0
 
     # Home crowd / diaspora advantage
-    if venue_data["country"] == team_name:
+    # Map venue country to team name for host nations
+    _COUNTRY_TO_TEAM = {"USA": "USA", "Mexico": "Mexico", "Canada": "Canada"}
+    venue_team = _COUNTRY_TO_TEAM.get(venue_data["country"])
+    if venue_team is not None and venue_team == team_name:
         adj += 0.05
     elif is_diaspora:
         adj += 0.02
@@ -127,9 +130,12 @@ def calculate_predictions(match_data):
     p_draw_norm = p_draw / total_adj
 
     # PASO 3 - Suavizar con señal ELO pura (80/20 blend)
-    p_final_a = 0.80 * p_win_a_norm + 0.20 * p_elo_a
+    # Convert 2-way ELO to 3-way (with draw) for compatible blending
+    p_elo_a_3way = p_elo_a * (1 - draw_base)
+    p_elo_b_3way = p_elo_b * (1 - draw_base)
+    p_final_a = 0.80 * p_win_a_norm + 0.20 * p_elo_a_3way
     p_final_draw = 0.80 * p_draw_norm + 0.20 * draw_base
-    p_final_b = 1 - p_final_a - p_final_draw
+    p_final_b = 0.80 * p_win_b_norm + 0.20 * p_elo_b_3way
 
     # Safety floor and re-normalize (guards against extreme edge cases)
     p_final_a = max(0.02, p_final_a)
@@ -165,10 +171,17 @@ def calculate_predictions(match_data):
     if ev_draw > 0.05 and p_final_draw > p_impl_draw + 0.03: value_bets.append("draw")
     if ev_b > 0.05 and p_final_b > p_impl_b + 0.03: value_bets.append("team_b")
         
-    # PASO 7 - Kelly
-    kelly_a = min(0.05, max(0, (p_final_a * odd_bookie_a - 1) / (odd_bookie_a - 1)) / 4)
-    kelly_draw = min(0.05, max(0, (p_final_draw * odd_bookie_draw - 1) / (odd_bookie_draw - 1)) / 4)
-    kelly_b = min(0.05, max(0, (p_final_b * odd_bookie_b - 1) / (odd_bookie_b - 1)) / 4)
+    # PASO 7 - Kelly (mutually exclusive outcomes — only bet on best EV outcome)
+    kelly_raw_a = max(0, (p_final_a * odd_bookie_a - 1) / (odd_bookie_a - 1)) / 4
+    kelly_raw_draw = max(0, (p_final_draw * odd_bookie_draw - 1) / (odd_bookie_draw - 1)) / 4
+    kelly_raw_b = max(0, (p_final_b * odd_bookie_b - 1) / (odd_bookie_b - 1)) / 4
+
+    # For mutually exclusive outcomes, only allocate Kelly to the best-EV bet
+    # to avoid overexposure. Zero out the others.
+    best_ev = max(ev_a, ev_draw, ev_b)
+    kelly_a = min(0.05, kelly_raw_a) if ev_a == best_ev and ev_a > 0 else 0.0
+    kelly_draw = min(0.05, kelly_raw_draw) if ev_draw == best_ev and ev_draw > 0 else 0.0
+    kelly_b = min(0.05, kelly_raw_b) if ev_b == best_ev and ev_b > 0 else 0.0
     
     if abs(elo_diff) >= 200:
         confidence = "high"

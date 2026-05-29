@@ -325,10 +325,60 @@ def accuracy(predictions: list, results: list) -> float:
 #  Calibration: individual model evaluation
 # ─────────────────────────────────────────────
 def evaluate_individual_models():
+    """
+    Evaluate each model on WC 2022 matches.
+    For the ML model, we retrain WITHOUT WC 2022 data to avoid data leakage —
+    the calibration set must be out-of-sample for all models.
+    """
     results_list = []
     elo_preds, poi_preds, ml_preds = [], [], []
 
-    ml_predictor = _get_ml_predictor()
+    # Train an ML model excluding WC 2022 data to prevent leakage
+    ml_predictor_oos = None
+    try:
+        from ml_predictor import MLPredictor, TRAINING_DATA, RESULT_MAP, _make_features
+        import numpy as np
+
+        # WC 2022 team names used in calibration
+        wc2022_teams = {m["name_a"] for m in WC2022_MATCHES} | {m["name_b"] for m in WC2022_MATCHES}
+
+        # Filter training data: keep only non-WC2022 rows
+        # WC 2022 rows are approximately indices 0-45 in TRAINING_DATA;
+        # but safer to filter by checking for exact ELO+result combos
+        # that appear in WC2022_MATCHES. Use a simpler heuristic:
+        # WC 2022 matches have comment markers. Since we can't read comments,
+        # exclude the first ~46 rows (WC 2022 group + knockout entries)
+        # and keep WC 2018 + EURO 2020 + EURO 2024 only.
+        # More robust: retrain excluding all rows where (elo_a, elo_b, result)
+        # match a WC2022_MATCHES entry.
+        wc2022_sigs = set()
+        for m in WC2022_MATCHES:
+            wc2022_sigs.add((m["elo_a"], m["elo_b"], m["result"]))
+
+        oos_data = []
+        for row in TRAINING_DATA:
+            elo_a, elo_b = row[0], row[1]
+            result = row[9]
+            if (elo_a, elo_b, result) not in wc2022_sigs:
+                oos_data.append(row)
+
+        if len(oos_data) >= 20:
+            ml_oos = MLPredictor()
+            X = [_make_features(row) for row in oos_data]
+            y = [RESULT_MAP[row[9]] for row in oos_data]
+            X = np.array(X, dtype=float)
+            y = np.array(y, dtype=int)
+            ml_oos.rf.fit(X, y)
+            ml_oos.gb.fit(X, y)
+            ml_oos._fitted = True
+            ml_predictor_oos = ml_oos
+            print(f"  ML model retrained without WC 2022 data ({len(oos_data)} rows, excluded {len(TRAINING_DATA)-len(oos_data)})")
+        else:
+            print(f"  ⚠ Too few non-WC2022 training rows ({len(oos_data)}), using full ML model (leakage warning)")
+            ml_predictor_oos = _get_ml_predictor()
+    except Exception as e:
+        print(f"  ⚠ ML out-of-sample training failed: {e}")
+        ml_predictor_oos = _get_ml_predictor()
 
     for m in WC2022_MATCHES:
         ta, tb = _make_teams(m)
@@ -336,9 +386,9 @@ def evaluate_individual_models():
 
         ep = elo_model(ta, tb)           # (p_a, p_d, p_b)
         pp = poisson_model(ta, tb)
-        
-        if ml_predictor:
-            mp = ml_predictor.predict(ta, tb)
+
+        if ml_predictor_oos:
+            mp = ml_predictor_oos.predict(ta, tb)
         else:
             mp = (0.33, 0.34, 0.33)
 

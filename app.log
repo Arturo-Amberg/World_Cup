@@ -1,0 +1,44 @@
+🌍 WC 2026 Predictor → http://localhost:5007
+ * Serving Flask app 'app'
+ * Debug mode: on
+[31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on http://127.0.0.1:5007
+[33mPress CTRL+C to quit[0m
+ * Restarting with watchdog (fsevents)
+ * Debugger is active!
+ * Debugger PIN: 125-271-671
+127.0.0.1 - - [29/May/2026 10:42:50] "GET / HTTP/1.1" 200 -
+127.0.0.1 - - [29/May/2026 10:42:51] "GET /api/teams HTTP/1.1" 200 -
+127.0.0.1 - - [29/May/2026 10:42:51] "GET /api/tournament HTTP/1.1" 200 -
+127.0.0.1 - - [29/May/2026 10:42:53] "GET /api/groups HTTP/1.1" 200 -
+127.0.0.1 - - [29/May/2026 10:42:53] "GET /api/group_standings HTTP/1.1" 200 -
+127.0.0.1 - - [29/May/2026 10:42:53] "GET /api/valuebets HTTP/1.1" 200 -
+127.0.0.1 - - [29/May/2026 10:42:53] "GET /api/bets HTTP/1.1" 200 -
+127.0.0.1 - - [29/May/2026 10:42:55] "GET /api/group_odds HTTP/1.1" 200 -
+127.0.0.1 - - [29/May/2026 10:44:51] "GET / HTTP/1.1" 200 -
+127.0.0.1 - - [29/May/2026 10:44:51] "GET /api/teams HTTP/1.1" 200 -
+127.0.0.1 - - [29/May/2026 10:44:51] "GET /api/tournament HTTP/1.1" 200 -
+127.0.0.1 - - [29/May/2026 10:44:51] "GET /api/groups HTTP/1.1" 200 -
+127.0.0.1 - - [29/May/2026 10:44:51] "GET /api/group_standings HTTP/1.1" 200 -
+127.0.0.1 - - [29/May/2026 10:44:53] "GET /api/valuebets HTTP/1.1" 200 -
+127.0.0.1 - - [29/May/2026 10:44:53] "GET /api/bets HTTP/1.1" 200 -
+127.0.0.1 - - [29/May/2026 10:44:54] "GET /api/group_odds HTTP/1.1" 200 -
+127.0.0.1 - - [29/May/2026 10:46:20] "GET /api/validate HTTP/1.1" 200 -
+127.0.0.1 - - [29/May/2026 10:47:05] "GET / HTTP/1.1" 200 -
+127.0.0.1 - - [29/May/2026 10:47:05] "GET /api/teams HTTP/1.1" 200 -
+127.0.0.1 - - [29/May/2026 10:47:05] "GET /api/tournament HTTP/1.1" 200 -
+127.0.0.1 - - [29/May/2026 10:47:05] "GET /api/groups HTTP/1.1" 200 -
+127.0.0.1 - - [29/May/2026 10:47:05] "GET /api/group_standings HTTP/1.1" 200 -
+ * Detected change in '/Users/mac/World_Cup/tournament.py.tmp.35393.1780066271780', reloading
+🌍 WC 2026 Predictor → http://localhost:5007
+  ML model retrained without WC 2022 data (69 rows, excluded 36)
+ * Restarting with watchdog (fsevents)
+ * Debugger is active!
+ * Debugger PIN: 125-271-671
+ * Detected change in '/Users/mac/World_Cup/app.py.tmp.35393.1780066301956', reloading
+🌍 WC 2026 Predictor → http://localhost:5007
+ * Restarting with watchdog (fsevents)
+ * Debugger is active!
+ * Debugger PIN: 125-271-671
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/multiprocessing/resource_tracker.py:224: UserWarning: resource_tracker: There appear to be 1 leaked semaphore objects to clean up at shutdown
+  warnings.warn('resource_tracker: There appear to be %d '

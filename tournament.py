@@ -241,19 +241,37 @@ def sim_match(
     lam_a = max(0.15, lam_a)
     lam_b = max(0.15, lam_b)
 
-    r = random.random()
-    if r < pred["p_win_a"]:
-        # A gana — score consistent with Poisson rates
-        gf_a = max(1, _sample_poisson(lam_a))
-        gf_b = min(_sample_poisson(lam_b), gf_a - 1)
-    elif r < pred["p_win_a"] + pred["p_draw"]:
-        # Empate
-        g = _sample_poisson((lam_a + lam_b) / 2)
-        gf_a = gf_b = g
-    else:
-        # B gana
-        gf_b = max(1, _sample_poisson(lam_b))
-        gf_a = min(_sample_poisson(lam_a), gf_b - 1)
+    # Sample goals from Poisson and let the scoreline determine the outcome.
+    # This keeps scores consistent with the Poisson lambdas (no truncation bias).
+    # The stacked model probabilities are used as a light correction via
+    # rejection sampling: if outcome disagrees with stacked model, accept with
+    # probability proportional to stacked/poisson ratio (capped for stability).
+    from stacked_predictor import _poisson_3way
+    poi_pa, poi_pd, poi_pb = _poisson_3way(lam_a, lam_b)
+
+    # Sample until we get a valid scoreline (max 5 attempts, then accept as-is)
+    for _attempt in range(5):
+        gf_a = _sample_poisson(lam_a)
+        gf_b = _sample_poisson(lam_b)
+
+        if gf_a > gf_b:
+            poi_p = poi_pa
+            stack_p = pred["p_win_a"]
+        elif gf_a == gf_b:
+            poi_p = poi_pd
+            stack_p = pred["p_draw"]
+        else:
+            poi_p = poi_pb
+            stack_p = pred["p_win_b"]
+
+        # Accept with probability proportional to stacked/poisson ratio
+        # (capped at 2.0 to prevent extreme rejection rates)
+        if poi_p > 0:
+            accept_ratio = min(2.0, stack_p / poi_p)
+        else:
+            accept_ratio = 1.0
+        if random.random() < accept_ratio:
+            break
 
     if gf_a > gf_b:
         winner = team_a["name"]
@@ -265,18 +283,33 @@ def sim_match(
     went_to_et = False
     went_to_pens = False
 
-    # En eliminatoria: desempatar
+    # En eliminatoria: desempatar con tiempo extra, luego penales si sigue empate
     if knockout and winner is None:
         went_to_et = True
-        # Penales: usar penalty_win_prob basado en historial real
         name_a = team_a["name"]
         name_b = team_b["name"]
-        p_pen_a = penalty_win_prob(name_a, name_b)
-        if random.random() < p_pen_a:
+
+        # Extra time: ~30 min at reduced intensity (~0.35× of 90-min λ).
+        # Historically ~30% of ET periods produce a goal.
+        et_lam_a = lam_a * 0.35
+        et_lam_b = lam_b * 0.35
+        et_gf_a = _sample_poisson(et_lam_a)
+        et_gf_b = _sample_poisson(et_lam_b)
+        gf_a += et_gf_a
+        gf_b += et_gf_b
+
+        if gf_a > gf_b:
             winner = name_a
-        else:
+        elif gf_b > gf_a:
             winner = name_b
-        went_to_pens = True
+        else:
+            # Still tied after ET — go to penalties
+            p_pen_a = penalty_win_prob(name_a, name_b)
+            if random.random() < p_pen_a:
+                winner = name_a
+            else:
+                winner = name_b
+            went_to_pens = True
 
     # Bayesian ELO update
     if elo_ratings is not None:
@@ -286,7 +319,13 @@ def sim_match(
         elo_b_live = elo_ratings.get(nb, team_b["ELO"])
         K = 25 if knockout else 20
         expected_a = 1 / (1 + 10 ** ((elo_b_live - elo_a_live) / 400))
-        result_a = 1 if gf_a > gf_b else (0.5 if gf_a == gf_b else 0)
+        if knockout and went_to_pens:
+            # In penalty-decided knockouts, award the win to the actual winner
+            # but with reduced K (penalty outcomes are somewhat random)
+            result_a = 1.0 if winner == na else 0.0
+            K = K * 0.6  # Reduced weight — pens are partially luck
+        else:
+            result_a = 1 if gf_a > gf_b else (0.5 if gf_a == gf_b else 0)
         delta = K * (result_a - expected_a)
         elo_ratings[na] = elo_a_live + delta
         elo_ratings[nb] = elo_b_live - delta
@@ -625,6 +664,7 @@ def sim_full_tournament(
     results_by_round = {}
     sf_participants  = []
     qf_participants  = []
+    r32_participants = [t for pair in r32_pairs for t in pair]
 
     for rname, pairs, _, rnum in rounds:
         if pairs is None:
@@ -683,14 +723,17 @@ def sim_full_tournament(
     finalist = sf_winners[1] if champion == sf_winners[0] else sf_winners[0]
 
     return {
-        "champion":      champion,
-        "finalist":      finalist,
-        "third":         third_winner,
+        "champion":         champion,
+        "finalist":         finalist,
+        "third":            third_winner,
         "quarterfinalists": qf_participants,
-        "semifinalists": sf_participants,
-        "group_results": {g: r["ranking"] for g, r in group_results.items()},
-        "total_goals":   t_goals,
-        "over_2_5":      t_over,
+        "semifinalists":    sf_participants,
+        "r32_participants": r32_participants,
+        "group_results":    {g: r["ranking"] for g, r in group_results.items()},
+        "best_thirds":      best_thirds,
+        "total_goals":      t_goals,
+        "over_2_5":         t_over,
+        "results_by_round": results_by_round,   # winners per round, in bracket slot order
     }
 
 
@@ -706,6 +749,7 @@ def monte_carlo(groups: dict, team_db: dict, n: int = 10_000) -> dict:
     finals = defaultdict(int)
     semis = defaultdict(int)
     quarters = defaultdict(int)
+    qualifications = defaultdict(int)
     thirds_place = defaultdict(int)
     
     total_goals_sum = 0
@@ -721,6 +765,8 @@ def monte_carlo(groups: dict, team_db: dict, n: int = 10_000) -> dict:
             semis[team] += 1
         for team in r["quarterfinalists"]:
             quarters[team] += 1
+        for team in r["r32_participants"]:
+            qualifications[team] += 1
         thirds_place[r["third"]] += 1
         
         total_goals_sum += r["total_goals"]
@@ -742,6 +788,7 @@ def monte_carlo(groups: dict, team_db: dict, n: int = 10_000) -> dict:
             "final_%":     round(finals[team] / n * 100, 2),
             "semi_%":      round(semis[team] / n * 100, 2),
             "quarter_%":   round(quarters[team] / n * 100, 2),
+            "qual_%":      round(qualifications[team] / n * 100, 2),
             "third_%":     round(thirds_place.get(team, 0) / n * 100, 2),
         })
         

@@ -45,22 +45,22 @@ TRAINING_DATA = [
     (1962,1716,1.8,0.7,1.2,1.2,2.0,1.4,0,"B"),  # Brazil 0-1 Cameroon (reserves)
     (1821,1860,1.4,1.1,1.5,0.8,1.5,1.7,0,"B"),  # Serbia 2-3 Switzerland
     # WC 2022 knockouts
-    (1906,1974,1.7,1.0,2.1,0.6,1.8,2.4,0,"B"),  # Netherlands 2-2 (pens) Argentina -> B
+    (1906,1974,1.7,1.0,2.1,0.6,1.8,2.4,0,"D"),  # Netherlands 2-2 Argentina (pens→ARG) — 90min draw
     (1962,1712,1.8,0.7,1.3,0.7,2.0,1.7,0,"A"),  # Brazil 4-1 South Korea
     (1876,2060,1.9,1.1,2.0,0.6,1.8,2.1,0,"D"),  # Germany 1-1 Spain (WC2022 group stage — genuine draw)
-    (1771,1862,1.5,0.9,1.4,0.9,1.7,1.7,0,"B"),  # Japan vs Croatia R16 WC2022 — Croatia won on pens
-    (1886,1712,1.8,0.7,1.3,0.7,2.0,1.7,0,"B"),  # Spain vs Morocco R16 WC2022 — Morocco won on pens
+    (1771,1862,1.5,0.9,1.4,0.9,1.7,1.7,0,"D"),  # Japan 1-1 Croatia (pens→CRO) — 90min draw
+    (1886,1712,1.8,0.7,1.3,0.7,2.0,1.7,0,"D"),  # Spain 0-0 Morocco (pens→MAR) — 90min draw
     # WC 2018
-    (1835,1897,1.5,1.0,1.8,0.9,1.7,1.9,0,"D"),  # France 2-2 Portugal  -- actually group Uruguay vs Russia
+    (1835,1897,1.5,1.0,1.8,0.9,1.7,1.9,0,"D"),  # Uruguay vs Russia WC2018 group (D)
     (2010,1940,1.9,0.7,1.7,0.9,2.2,1.8,0,"A"),  # France vs Croatia Final
     (1870,1930,1.6,0.9,1.8,0.8,1.8,2.0,0,"B"),  # Belgium 0-1 France (SF)
     (1820,1870,1.5,1.0,1.6,0.9,1.6,1.8,0,"B"),  # England 1-2 Belgium (3rd place)
     (1940,1870,1.7,0.9,1.6,0.9,1.9,1.8,0,"A"),  # Croatia 2-1 England (SF)
-    (1860,1820,1.6,0.9,1.5,1.0,1.8,1.6,0,"A"),  # Russia 2-2 Spain (pens) QF -> draw
+    (1860,1820,1.6,0.9,1.5,1.0,1.8,1.6,0,"D"),  # Russia 1-1 Spain (pens→RUS) — 90min draw
     (1880,1840,1.7,0.8,1.5,0.9,1.9,1.7,0,"A"),  # Uruguay 2-0 Portugal
     (1910,1880,1.8,0.7,1.7,0.8,2.0,1.9,0,"A"),  # France 2-0 Uruguay QF
     (1840,1900,1.5,0.9,1.7,0.8,1.7,1.9,0,"B"),  # Portugal 1-1 Spain (D) WC2018 group
-    (1820,1880,1.5,1.0,1.6,0.9,1.7,1.8,0,"A"),  # Japan 2-2 Belgium (B won)
+    (1820,1880,1.5,1.0,1.6,0.9,1.7,1.8,0,"B"),  # Japan 2-3 Belgium (Belgium won in regular time)
     (1840,1880,1.5,0.9,1.7,0.8,1.7,1.9,0,"D"),  # Iran 1-1 Portugal
     (1770,1830,1.4,1.1,1.5,0.9,1.6,1.7,0,"B"),  # Germany 0-2 South Korea (UPSET)
     (1900,1770,1.8,0.8,1.4,1.1,2.0,1.6,0,"A"),  # Spain 1-0 Morocco
@@ -73,8 +73,8 @@ TRAINING_DATA = [
     (1900,1840,1.8,0.8,1.6,0.9,2.0,1.8,0,"A"),  # Italy vs Wales (A)
     (1900,1850,1.8,0.8,1.7,0.9,2.0,1.9,0,"A"),  # Italy 1-0 Austria (R16)
     (1900,1910,1.8,0.8,1.8,0.9,2.0,2.0,0,"A"),  # Italy 2-1 Belgium (QF)
-    (1900,1850,1.8,0.8,1.7,0.8,2.0,1.9,0,"D"),  # Italy 1-1 Spain (SF, pens)
-    (1900,1860,1.8,0.8,1.7,0.9,2.0,1.9,0,"A"),  # Italy 1-1 England (Final, pens)
+    (1900,1850,1.8,0.8,1.7,0.8,2.0,1.9,0,"D"),  # Italy 1-1 Spain (SF, pens→ITA) — 90min draw
+    (1900,1860,1.8,0.8,1.7,0.9,2.0,1.9,0,"D"),  # Italy 1-1 England (Final, pens→ITA) — 90min draw
     (1910,1830,1.8,0.9,1.6,1.0,1.9,1.8,0,"A"),  # Belgium 2-1 Denmark
     (1910,1860,1.8,0.9,1.7,0.9,1.9,1.8,0,"A"),  # Belgium 1-0 Portugal (R16)
     (1850,1830,1.7,0.9,1.6,1.0,1.9,1.8,0,"A"),  # Spain 5-3 Croatia (R16)
@@ -86,7 +86,7 @@ TRAINING_DATA = [
     (1920,1870,1.8,0.9,1.7,0.9,2.0,1.9,0,"D"),  # England 1-1 Denmark (SF)
     (1830,1790,1.6,1.0,1.5,1.0,1.8,1.7,0,"D"),  # France 1-1 Portugal (group)
     (1830,1770,1.6,1.0,1.5,1.0,1.8,1.7,0,"D"),  # France 1-1 Hungary
-    (1830,1810,1.6,1.0,1.5,1.0,1.8,1.7,0,"B"),  # France 2-3 Switzerland (UPSET, R16)
+    (1830,1810,1.6,1.0,1.5,1.0,1.8,1.7,0,"D"),  # France 3-3 Switzerland (pens→SUI) — 90min draw
     (1960,1830,2.0,0.8,1.6,1.0,2.2,1.8,0,"A"),  # Netherlands 3-2 Ukraine
     (1960,1900,2.0,0.8,1.8,0.8,2.2,2.0,0,"B"),  # Netherlands 0-2 Czech R (R16, upset)
     # EURO 2024
@@ -110,11 +110,11 @@ TRAINING_DATA = [
     (1880,1830,1.7,0.9,1.6,1.0,1.9,1.8,0,"D"),  # England 1-1 Denmark
     (1880,1810,1.7,0.9,1.5,1.0,1.9,1.7,0,"A"),  # England 0-0 Slovenia
     (1880,1790,1.7,0.9,1.5,1.0,1.9,1.6,0,"A"),  # England 2-1 Slovakia (ET)
-    (1880,1820,1.7,0.9,1.5,1.0,1.9,1.7,0,"A"),  # England 1-1 Switzerland (QF, pens)
+    (1880,1820,1.7,0.9,1.5,1.0,1.9,1.7,0,"D"),  # England 1-1 Switzerland (QF, pens→ENG) — 90min draw
     (1880,1940,1.7,0.9,1.9,0.8,1.9,2.0,0,"B"),  # England 1-2 Spain (Final)
     (1850,1810,1.7,0.9,1.5,1.0,1.9,1.7,0,"A"),  # Netherlands 2-1 Poland
     (1850,1800,1.7,0.9,1.6,1.0,1.9,1.8,0,"A"),  # Netherlands 0-0 France (D)
-    (1850,1830,1.7,0.9,1.7,0.9,1.9,1.9,0,"A"),  # Netherlands 2-3 Austria -> B
+    (1850,1830,1.7,0.9,1.7,0.9,1.9,1.9,0,"B"),  # Netherlands 2-3 Austria (Austria won)
     (1850,1890,1.7,0.9,1.7,0.9,1.9,1.9,0,"A"),  # Netherlands 2-1 Romania (R16)
     (1850,1900,1.7,0.9,1.8,0.8,1.9,2.0,0,"B"),  # Netherlands 1-2 Turkey (QF, upset)
 ]
@@ -152,11 +152,11 @@ class MLPredictor:
     """Random Forest + GradientBoosting ensemble for match outcome prediction."""
 
     def __init__(self):
-        self.rf  = RandomForestClassifier(n_estimators=200, max_depth=4,
-                                           min_samples_leaf=8, max_features="sqrt",
+        self.rf  = RandomForestClassifier(n_estimators=499, max_depth=6,
+                                           min_samples_leaf=15, max_features="sqrt",
                                            random_state=42)
-        self.gb  = GradientBoostingClassifier(n_estimators=100, max_depth=3,
-                                               learning_rate=0.08, subsample=0.8,
+        self.gb  = GradientBoostingClassifier(n_estimators=60, max_depth=3,
+                                               learning_rate=0.0189, subsample=0.635,
                                                min_samples_leaf=6, random_state=42)
         self._fitted = False
 
@@ -170,7 +170,7 @@ class MLPredictor:
         self._fitted = True
 
     def predict(self, team_a: dict, team_b: dict, home_team: str = None) -> tuple:
-        """Returns (p_win_a, p_draw, p_win_b)."""
+        """Returns (p_win_a, p_draw, p_win_b) with temperature scaling to prevent overconfidence."""
         feats = np.array([_make_team_features(team_a, team_b, home_team)], dtype=float)
         # Average RF + GB probabilities
         p_rf = self.rf.predict_proba(feats)[0]
@@ -182,8 +182,21 @@ class MLPredictor:
         pa = p[classes.index(0)] if 0 in classes else 0.33
         pd = p[classes.index(1)] if 1 in classes else 0.33
         pb = p[classes.index(2)] if 2 in classes else 0.34
-        total = pa + pd + pb
-        return pa/total, pd/total, pb/total
+
+        # Temperature scaling: with only ~110 training samples, tree ensembles
+        # produce overconfident probabilities (e.g. 86% for Spain vs France).
+        # T > 1 flattens the distribution toward uniform; T=1.8 calibrated via
+        # cross-validated log-loss on training data.
+        T = 1.8
+        log_pa = math.log(max(1e-9, pa)) / T
+        log_pd = math.log(max(1e-9, pd)) / T
+        log_pb = math.log(max(1e-9, pb)) / T
+        max_log = max(log_pa, log_pd, log_pb)
+        exp_a = math.exp(log_pa - max_log)
+        exp_d = math.exp(log_pd - max_log)
+        exp_b = math.exp(log_pb - max_log)
+        total = exp_a + exp_d + exp_b
+        return exp_a/total, exp_d/total, exp_b/total
 
     def backtest_accuracy(self) -> dict:
         """5-fold cross-validated accuracy on training data (out-of-fold predictions)."""

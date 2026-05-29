@@ -779,6 +779,163 @@ def api_bets():
     })
 
 
+@app.route("/api/bracket")
+def api_bracket():
+    """
+    Runs N Monte Carlo simulations and returns a consensus bracket:
+    for each slot in each round, the most likely team(s) with probabilities.
+    Cached to data/bracket_consensus.json for 2 hours.
+    """
+    import time as _time
+    from pathlib import Path
+    from collections import defaultdict
+    from tournament import sim_full_tournament
+
+    cache_path = Path("data/bracket_consensus.json")
+    if cache_path.exists() and _time.time() - cache_path.stat().st_mtime < 7200:
+        with open(cache_path, encoding="utf-8") as f:
+            return jsonify(json.load(f))
+
+    try:
+        with open("data/wc2026_groups.json") as f:
+            groups_raw = json.load(f)
+        groups = {k: v for k, v in groups_raw.items() if not k.startswith("_")}
+    except FileNotFoundError:
+        return jsonify({"error": "groups file not found"}), 404
+
+    team_db = load_team_db()
+    N = 1500
+
+    # Slot counters — each position in the bracket tracked independently
+    def slot_list(n): return [defaultdict(int) for _ in range(n)]
+
+    r32_slot  = slot_list(32)   # 16 matches × 2 sides
+    r32w_slot = slot_list(16)   # 16 R32 winners (= R16 entrants)
+    r16_slot  = slot_list(16)   # 8 matches × 2 sides
+    r16w_slot = slot_list(8)    # 8 R16 winners (= QF entrants)
+    qf_slot   = slot_list(8)    # 4 matches × 2 sides
+    qf_w_slot = slot_list(4)    # 4 QF winners (= SF entrants)
+    sf_slot   = slot_list(4)    # 2 matches × 2 sides
+    sf_w_slot = slot_list(2)    # 2 SF winners → Final
+    final_a   = defaultdict(int)
+    final_b   = defaultdict(int)
+    champ_cnt = defaultdict(int)
+    grp_first  = {g: defaultdict(int) for g in groups}
+    grp_second = {g: defaultdict(int) for g in groups}
+
+    for _ in range(N):
+        r = sim_full_tournament(groups, team_db, silent=True)
+
+        # Group results
+        for g, ranking in r["group_results"].items():
+            if len(ranking) >= 2:
+                grp_first[g][ranking[0]]  += 1
+                grp_second[g][ranking[1]] += 1
+
+        # R32 slots (32 participants in pair order)
+        pts = r["r32_participants"]
+        for i in range(32):
+            r32_slot[i][pts[i]] += 1
+
+        # R32 winners (Ronda de 32)
+        r32w = r["results_by_round"].get("Ronda de 32", [])
+        for i, t in enumerate(r32w):
+            r32w_slot[i][t] += 1
+
+        # R16 slots from R32 winners (pair i = r32w[2i] vs r32w[2i+1])
+        for i in range(8):
+            if 2*i+1 < len(r32w):
+                r16_slot[2*i][r32w[2*i]]     += 1
+                r16_slot[2*i+1][r32w[2*i+1]] += 1
+
+        # R16 winners (Octavos de Final)
+        r16w = r["results_by_round"].get("Octavos de Final", [])
+        for i, t in enumerate(r16w):
+            r16w_slot[i][t] += 1
+
+        # QF slots from R16 winners
+        for i in range(4):
+            if 2*i+1 < len(r16w):
+                qf_slot[2*i][r16w[2*i]]     += 1
+                qf_slot[2*i+1][r16w[2*i+1]] += 1
+
+        # QF winners (Cuartos de Final)
+        qfw = r["results_by_round"].get("Cuartos de Final", [])
+        for i, t in enumerate(qfw):
+            qf_w_slot[i][t] += 1
+
+        # SF slots from QF winners
+        for i in range(2):
+            if 2*i+1 < len(qfw):
+                sf_slot[2*i][qfw[2*i]]     += 1
+                sf_slot[2*i+1][qfw[2*i+1]] += 1
+
+        # SF winners (Semifinales)
+        sfw = r["results_by_round"].get("Semifinales", [])
+        for i, t in enumerate(sfw):
+            sf_w_slot[i][t] += 1
+
+        # Final participants
+        if len(sfw) >= 2:
+            final_a[sfw[0]] += 1
+            final_b[sfw[1]] += 1
+
+        champ_cnt[r["champion"]] += 1
+
+    def top(counter, n=3):
+        total = sum(counter.values()) or 1
+        return [{"team": t, "prob": round(c / total, 4)}
+                for t, c in sorted(counter.items(), key=lambda x: -x[1])[:n]]
+
+    def build_match(slot_a_counter, slot_b_counter):
+        return {"a": top(slot_a_counter, 2), "b": top(slot_b_counter, 2)}
+
+    # Build group stage data
+    group_data = {}
+    for g in sorted(groups.keys()):
+        group_data[g] = {
+            "teams":  groups[g],
+            "first":  top(grp_first[g]),
+            "second": top(grp_second[g]),
+        }
+
+    # Build knockout rounds as list of matches
+    r32_matches  = [build_match(r32_slot[2*i],  r32_slot[2*i+1])  for i in range(16)]
+    r16_matches  = [build_match(r16_slot[2*i],  r16_slot[2*i+1])  for i in range(8)]
+    qf_matches   = [build_match(qf_slot[2*i],   qf_slot[2*i+1])   for i in range(4)]
+    sf_matches   = [build_match(sf_slot[2*i],   sf_slot[2*i+1])   for i in range(2)]
+    final_match  = build_match(final_a, final_b)
+    champion     = top(champ_cnt, 5)
+
+    result = {
+        "groups":    group_data,
+        "r32":       r32_matches,
+        "r16":       r16_matches,
+        "qf":        qf_matches,
+        "sf":        sf_matches,
+        "final":     final_match,
+        "champion":  champion,
+        "n_sims":    N,
+    }
+
+    cache_path.parent.mkdir(parents=True, exist_ok=True)
+    with open(cache_path, "w", encoding="utf-8") as f:
+        json.dump(result, f, ensure_ascii=False)
+
+    return jsonify(result)
+
+
+@app.route("/api/valuebets")
+def api_valuebets():
+    """Returns scraped Coolbet value bets from value_bets.json."""
+    try:
+        with open("data/coolbet/value_bets.json", encoding="utf-8") as f:
+            data = json.load(f)
+        return jsonify(data)
+    except FileNotFoundError:
+        return jsonify([]), 200
+
+
 @app.route("/api/strategies")
 def api_strategies():
     team_db = load_team_db()
