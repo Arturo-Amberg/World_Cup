@@ -1,18 +1,23 @@
 """
-stats_client.py — API-Football stats with Strength of Schedule (SOS) adjustment.
+stats_client.py — API-Football stats with match-level SOS weighting.
 
 Why SOS matters:
   Argentina's FORMA=3.0 was built playing CONMEBOL qualifiers where they dominated.
   Spain's FORMA=2.2 came from UEFA Nations League vs Germany, France, Netherlands.
   Raw stats without SOS heavily bias teams that played weaker opposition.
 
-SOS formula:
-  sos_ratio = avg_opponent_elo / BASELINE_ELO   (BASELINE ≈ 1750)
-  adj_forma  = raw_forma  * sos_ratio ** 0.70   (strongest adjustment)
-  adj_gf     = raw_gf     * sos_ratio ** 0.40   (milder — scoring varies with SOS)
-  adj_ga     = raw_ga     / sos_ratio ** 0.30   (inverse — less credit for low GA vs weak opponents)
+Match-level weighting (replaces single global multiplier):
+  Each match is weighted individually by opponent ELO so goals/wins vs elite count more
+  and blowouts vs minnows are discounted — rather than applying one multiplier to the
+  whole average.
 
-Exponents < 1 prevent over-correction while still capturing the real quality signal.
+  w_i        = (opp_elo_i / BASELINE_ELO) ^ alpha
+  adj_gf     = Σ(gf_i  × w_i)  / Σ(w_i)     alpha=0.40  (attack credit vs strength)
+  adj_ga     = Σ(ga_i  / w_i)  / Σ(1/w_i)   alpha=0.30  (conceding vs weak hurts more)
+  adj_forma  = Σ(pts_i × w_i)  / Σ(w_i)     alpha=0.70  (wins vs elite count most)
+
+  Matches with unknown opponent ELO use BASELINE_ELO (weight=1, no adjustment).
+  Uses last 15 matches for statistical stability of the per-match weighting.
 """
 
 import os
@@ -54,6 +59,77 @@ _NAME_MAP = {
 
 _elo_cache: dict | None = None
 
+# Persistent cache for per-fixture statistics (completed matches never change).
+# Keyed by str(fixture_id) → {str(team_id): {stat_type: value}}.
+_FIXTURE_STATS_PATH = os.path.join(os.path.dirname(__file__), "data", "fixture_stats_cache.json")
+_fixture_stats_mem: dict | None = None
+
+
+def _load_fixture_stats_cache() -> dict:
+    global _fixture_stats_mem
+    if _fixture_stats_mem is None:
+        try:
+            with open(_FIXTURE_STATS_PATH) as f:
+                _fixture_stats_mem = json.load(f)
+        except FileNotFoundError:
+            _fixture_stats_mem = {}
+    return _fixture_stats_mem
+
+
+def _save_fixture_stats_cache() -> None:
+    os.makedirs(os.path.dirname(_FIXTURE_STATS_PATH), exist_ok=True)
+    with open(_FIXTURE_STATS_PATH, "w") as f:
+        json.dump(_fixture_stats_mem, f)
+
+
+def _fetch_fixture_stats(fixture_id: int) -> dict | None:
+    """
+    Fetch statistics for one completed fixture, with permanent local cache.
+    Returns {str(team_id): {stat_type: value}} or None on failure.
+    """
+    cache = _load_fixture_stats_cache()
+    key = str(fixture_id)
+    if key in cache:
+        return cache[key]
+
+    try:
+        res = requests.get(
+            f"{BASE_URL}/fixtures/statistics",
+            headers=HEADERS,
+            params={"fixture": fixture_id},
+            timeout=10,
+        )
+        if res.status_code != 200:
+            return None
+        data = res.json()
+        if not data.get("response"):
+            return None
+
+        stats_by_team: dict[str, dict] = {}
+        for entry in data["response"]:
+            tid = str(entry["team"]["id"])
+            flat: dict = {}
+            for s in entry["statistics"]:
+                val = s["value"]
+                if isinstance(val, str) and val.endswith("%"):
+                    try:
+                        val = float(val.rstrip("%"))
+                    except ValueError:
+                        val = None
+                elif val is not None:
+                    try:
+                        val = float(val)
+                    except (TypeError, ValueError):
+                        val = None
+                flat[s["type"]] = val
+            stats_by_team[tid] = flat
+
+        cache[key] = stats_by_team
+        _save_fixture_stats_cache()
+        return stats_by_team
+    except Exception:
+        return None
+
 
 def _load_elo_cache() -> dict:
     """Load ELO ratings from local cache (no API call needed)."""
@@ -83,20 +159,21 @@ def _lookup_elo(opponent_name: str) -> float | None:
     return None
 
 
-def _sos_multiplier(avg_opp_elo: float) -> dict:
-    """
-    Compute SOS adjustment factors given average opponent ELO.
+# Alpha exponents — controls how aggressively opponent quality rescales each stat.
+# Values < 1 prevent over-correction while preserving the real quality signal.
+_ALPHA_FORMA = 0.70   # Wins vs elite count most
+_ALPHA_GF    = 0.40   # Goals for — mild upweight vs strong opponents
+_ALPHA_GA    = 0.30   # Goals against — inverse: conceding vs weak hurts more
 
-    Returns dict with keys: forma_mult, gf_mult, ga_mult, avg_opp_elo, sos_ratio.
-    """
-    ratio = avg_opp_elo / BASELINE_OPPONENT_ELO
-    return {
-        "forma_mult":   round(ratio ** 0.70, 4),  # Strong: wins vs elite count more
-        "gf_mult":      round(ratio ** 0.40, 4),  # Mild: goals vs strong opponents count more
-        "ga_mult":      round(ratio ** 0.30, 4),  # Inverse applied in caller: ga / ga_mult
-        "avg_opp_elo":  round(avg_opp_elo, 0),
-        "sos_ratio":    round(ratio, 4),
-    }
+
+def _match_weights(opp_elo: float) -> tuple[float, float, float]:
+    """Return (w_forma, w_gf, w_ga_inv) for a single match given opponent ELO."""
+    ratio = opp_elo / BASELINE_OPPONENT_ELO
+    return (
+        ratio ** _ALPHA_FORMA,
+        ratio ** _ALPHA_GF,
+        ratio ** (-_ALPHA_GA),   # inverse weight for GA
+    )
 
 
 def get_team_stats(team_name: str) -> dict | None:
@@ -146,96 +223,170 @@ def get_team_stats(team_name: str) -> dict | None:
                 if "response" in resp:
                     all_fixtures.extend(resp["response"])
 
-        # ── Step 3: Filter completed matches, sort, take last 10 ─────────────
+        # ── Step 3: Filter completed matches, sort, take last 15 ─────────────
+        # 15 matches gives the per-match ELO weighting enough data to be stable.
         played = [
             f for f in all_fixtures
             if f["fixture"]["status"]["short"] in ("FT", "AET", "PEN")
         ]
         played.sort(key=lambda x: x["fixture"]["timestamp"])
-        recent = played[-10:]
+        recent = played[-15:]
 
         if not recent:
             return None
 
-        # ── Step 4: Compute raw stats + collect opponent ELOs ─────────────────
-        total_points = 0
-        total_gf     = 0
-        total_ga     = 0
-        games        = 0
-        opp_elos     = []
-        opponents    = []
-
+        # ── Step 4: Parse matches, resolve opponent ELOs + fetch fixture stats ──
+        match_data = []
         for fix in recent:
-            goals = fix["goals"]
-            teams = fix["teams"]
+            goals    = fix["goals"]
+            teams    = fix["teams"]
+            fix_id   = fix["fixture"]["id"]
 
-            is_home    = (teams["home"]["id"] == team_id)
-            gf         = goals["home"] if is_home else goals["away"]
-            ga         = goals["away"] if is_home else goals["home"]
-            opp_info   = teams["away"] if is_home else teams["home"]
-            opp_name   = opp_info.get("name", "Unknown")
+            is_home  = (teams["home"]["id"] == team_id)
+            gf       = goals["home"] if is_home else goals["away"]
+            ga       = goals["away"] if is_home else goals["home"]
+            our_side = "home" if is_home else "away"
+            opp_side = "away" if is_home else "home"
+            opp_info = teams[opp_side]
+            opp_name = opp_info.get("name", "Unknown")
+            opp_id   = str(opp_info.get("id", ""))
 
             if gf is None or ga is None:
                 continue
 
-            total_gf += gf
-            total_ga += ga
-            games    += 1
+            pts     = 3 if gf > ga else (1 if gf == ga else 0)
+            raw_elo = _lookup_elo(opp_name)
+            eff_elo = raw_elo if raw_elo else BASELINE_OPPONENT_ELO
 
-            if gf > ga:
-                total_points += 3
-            elif gf == ga:
-                total_points += 1
+            # ── Per-fixture extended stats ────────────────────────────────────
+            fx_stats = _fetch_fixture_stats(fix_id) or {}
+            our_s = fx_stats.get(str(team_id), {})
+            opp_s = fx_stats.get(opp_id, {})
 
-            # Opponent ELO lookup
-            opp_elo = _lookup_elo(opp_name)
-            if opp_elo:
-                opp_elos.append(opp_elo)
-            opponents.append({
-                "name": opp_name,
-                "elo":  opp_elo,
-                "gf":   gf,
-                "ga":   ga,
+            # Our corners = "Corner Kicks" in our stats
+            # Opponent corners for us = "Corner Kicks" in opp stats (= our corners against)
+            corners_for     = our_s.get("Corner Kicks")
+            corners_against = opp_s.get("Corner Kicks")
+            sot_for         = our_s.get("Shots on Goal")
+            sot_against     = opp_s.get("Shots on Goal")
+            possession      = our_s.get("Ball Possession")   # already parsed to float (55.0 etc.)
+            yellow_cards    = our_s.get("Yellow Cards", 0) or 0
+            xg_for          = our_s.get("expected_goals")
+            xg_against      = opp_s.get("expected_goals")
+
+            match_data.append({
+                "name":            opp_name,
+                "elo":             raw_elo,
+                "eff_elo":         eff_elo,
+                "gf":              gf,
+                "ga":              ga,
+                "pts":             pts,
+                "corners_for":     corners_for,
+                "corners_against": corners_against,
+                "sot_for":         sot_for,
+                "sot_against":     sot_against,
+                "possession":      possession,
+                "yellow_cards":    yellow_cards,
+                "xg_for":          xg_for,
+                "xg_against":      xg_against,
             })
 
-        if games == 0:
+        if not match_data:
             return None
 
-        raw_forma = round(total_points / games, 2)
-        raw_gf    = round(total_gf / games, 2)
-        raw_ga    = round(total_ga / games, 2)
+        games = len(match_data)
 
-        # ── Step 5: SOS adjustment ────────────────────────────────────────────
-        if opp_elos:
-            avg_opp_elo = sum(opp_elos) / len(opp_elos)
-        else:
-            avg_opp_elo = BASELINE_OPPONENT_ELO  # No data → no adjustment
+        # ── Step 5: Match-level ELO-weighted averages ─────────────────────────
+        # Each match contributes proportionally to opponent quality rather than
+        # equally — a 3-0 win over France counts more than a 3-0 win over Andorra.
+        # Same weighting logic applied to all stats (goals, corners, shots, cards).
 
-        sos = _sos_multiplier(avg_opp_elo)
+        raw_forma   = round(sum(m["pts"] for m in match_data) / games, 2)
+        raw_gf      = round(sum(m["gf"]  for m in match_data) / games, 2)
+        raw_ga      = round(sum(m["ga"]  for m in match_data) / games, 2)
+        avg_opp_elo = sum(m["eff_elo"] for m in match_data) / games
 
-        adj_forma = round(raw_forma * sos["forma_mult"], 2)
-        adj_gf    = round(raw_gf   * sos["gf_mult"],    2)
-        adj_ga    = round(raw_ga   / sos["ga_mult"],     2)  # Inverse: high SOS → higher adj_ga
+        wf_sum = wg_sum = wga_sum = 0.0
+        wf_pts = wg_gf  = wga_ga  = 0.0
 
-        # Clamp to reasonable international ranges
-        adj_forma = max(0.5, min(3.0, adj_forma))
-        adj_gf    = max(0.3, min(4.0, adj_gf))
-        adj_ga    = max(0.2, min(3.0, adj_ga))
+        # Extended stat accumulators — only count matches where stat was available
+        wc_sum = wca_sum = wsot_sum = wsota_sum = wposs_sum = wyc_sum = wxgf_sum = wxga_sum = 0.0
+        wc_cf  = wca_ca  = wsot_s   = wsota_s   = wposs_p  = wyc_y  = wxgf_x   = wxga_x   = 0.0
+
+        for m in match_data:
+            w_forma, w_gf, w_ga_inv = _match_weights(m["eff_elo"])
+            wf_sum  += w_forma;  wf_pts += m["pts"] * w_forma
+            wg_sum  += w_gf;     wg_gf  += m["gf"]  * w_gf
+            wga_sum += w_ga_inv; wga_ga += m["ga"]  * w_ga_inv
+
+            # Corners — same attack/defense weighting as goals
+            if m["corners_for"] is not None:
+                wc_sum += w_gf;     wc_cf  += m["corners_for"]  * w_gf
+            if m["corners_against"] is not None:
+                wca_sum += w_ga_inv; wca_ca += m["corners_against"] * w_ga_inv
+
+            # Shots on target — same direction as GF
+            if m["sot_for"] is not None:
+                wsot_sum  += w_gf;     wsot_s  += m["sot_for"]     * w_gf
+            if m["sot_against"] is not None:
+                wsota_sum += w_ga_inv; wsota_s += m["sot_against"] * w_ga_inv
+
+            # Possession — mildly weighted by strength (facing elites, poss is harder to keep)
+            if m["possession"] is not None:
+                wposs_sum += w_forma; wposs_p += m["possession"] * w_forma
+
+            # Yellow cards — inverse weight: cards vs weak opponents are more meaningful
+            if m["yellow_cards"] is not None:
+                wyc_sum += w_ga_inv; wyc_y += m["yellow_cards"] * w_ga_inv
+
+            # xG — same as goals
+            if m["xg_for"] is not None:
+                wxgf_sum += w_gf;     wxgf_x += m["xg_for"]     * w_gf
+            if m["xg_against"] is not None:
+                wxga_sum += w_ga_inv; wxga_x += m["xg_against"] * w_ga_inv
+
+        adj_forma = round(max(0.5, min(3.0, wf_pts / wf_sum)), 2)
+        adj_gf    = round(max(0.3, min(4.0, wg_gf  / wg_sum)), 2)
+        adj_ga    = round(max(0.2, min(3.0, wga_ga / wga_sum)), 2)
+
+        # Extended stats — fall back to None if no data was available in any match
+        def _wavg(num, den, lo, hi):
+            return round(max(lo, min(hi, num / den)), 2) if den > 0 else None
+
+        adj_corners_for     = _wavg(wc_cf,  wc_sum,  1.0, 12.0)
+        adj_corners_against = _wavg(wca_ca, wca_sum, 1.0, 12.0)
+        adj_sot_for         = _wavg(wsot_s,  wsot_sum,  0.5, 12.0)
+        adj_sot_against     = _wavg(wsota_s, wsota_sum, 0.5, 12.0)
+        adj_possession      = _wavg(wposs_p, wposs_sum, 25.0, 75.0)
+        adj_yellow_cards    = _wavg(wyc_y,  wyc_sum,  0.2, 6.0)
+        adj_xg_for          = _wavg(wxgf_x, wxgf_sum, 0.1, 5.0)
+        adj_xg_against      = _wavg(wxga_x, wxga_sum, 0.1, 5.0)
+
+        sos_ratio = round(avg_opp_elo / BASELINE_OPPONENT_ELO, 4)
 
         return {
-            # SOS-adjusted values — USE THESE in the model
-            "FORMA":       adj_forma,
-            "GF_AVG":      adj_gf,
-            "GA_AVG":      adj_ga,
-            # Raw unadjusted values — for transparency
-            "RAW_FORMA":   raw_forma,
-            "RAW_GF":      raw_gf,
-            "RAW_GA":      raw_ga,
-            # SOS diagnostics
-            "SOS_RATIO":   sos["sos_ratio"],
-            "AVG_OPP_ELO": sos["avg_opp_elo"],
-            "SOS_FORMA_MULT": sos["forma_mult"],
-            "OPPONENTS":   opponents,
+            # ── Core model inputs (SOS-weighted) ──────────────────────────────
+            "FORMA":            adj_forma,
+            "GF_AVG":           adj_gf,
+            "GA_AVG":           adj_ga,
+            # ── Extended stats (SOS-weighted, None if no fixture data) ─────────
+            "CORNERS_FOR":      adj_corners_for,
+            "CORNERS_AGAINST":  adj_corners_against,
+            "SOT_FOR":          adj_sot_for,
+            "SOT_AGAINST":      adj_sot_against,
+            "POSSESSION":       adj_possession,
+            "YELLOW_CARDS":     adj_yellow_cards,
+            "XG_FOR":           adj_xg_for,
+            "XG_AGAINST":       adj_xg_against,
+            # ── Raw unweighted values ─────────────────────────────────────────
+            "RAW_FORMA":        raw_forma,
+            "RAW_GF":           raw_gf,
+            "RAW_GA":           raw_ga,
+            # ── SOS diagnostics ───────────────────────────────────────────────
+            "SOS_RATIO":        sos_ratio,
+            "AVG_OPP_ELO":      round(avg_opp_elo, 0),
+            "SOS_FORMA_MULT":   round((avg_opp_elo / BASELINE_OPPONENT_ELO) ** _ALPHA_FORMA, 4),
+            "OPPONENTS":        [{"name": m["name"], "elo": m["elo"], "gf": m["gf"], "ga": m["ga"]} for m in match_data],
         }
 
     except Exception as e:
@@ -244,15 +395,21 @@ def get_team_stats(team_name: str) -> dict | None:
 
 
 if __name__ == "__main__":
-    print("=== SOS-Adjusted Stats Test ===\n")
+    print("=== Match-Level SOS-Weighted Stats Test ===\n")
     for team in ["Argentina", "Spain", "France", "Tunisia"]:
         stats = get_team_stats(team)
         if stats:
             print(f"{team}:")
             print(f"  Raw:      FORMA={stats['RAW_FORMA']}  GF={stats['RAW_GF']}  GA={stats['RAW_GA']}")
-            print(f"  Adj SOS:  FORMA={stats['FORMA']}      GF={stats['GF_AVG']}  GA={stats['GA_AVG']}")
+            print(f"  Weighted: FORMA={stats['FORMA']}      GF={stats['GF_AVG']}  GA={stats['GA_AVG']}")
+            print(f"  Corners:  FOR={stats['CORNERS_FOR']}  AGAINST={stats['CORNERS_AGAINST']}")
+            print(f"  Shots OT: FOR={stats['SOT_FOR']}      AGAINST={stats['SOT_AGAINST']}")
+            print(f"  Poss={stats['POSSESSION']}%  YellowCards={stats['YELLOW_CARDS']}  xG_for={stats['XG_FOR']}  xG_ag={stats['XG_AGAINST']}")
             print(f"  SOS:      ratio={stats['SOS_RATIO']}  avg_opp_elo={stats['AVG_OPP_ELO']}")
-            print(f"  Opponents: {[o['name'] for o in stats['OPPONENTS']]}")
+            print(f"  Opponents ({len(stats['OPPONENTS'])} matches):")
+            for o in stats["OPPONENTS"]:
+                elo_str = f"ELO {o['elo']:.0f}" if o["elo"] else "ELO ?"
+                print(f"    {o['name']:<25} {elo_str}  {o['gf']}-{o['ga']}")
             print()
         else:
             print(f"{team}: no data\n")

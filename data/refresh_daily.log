@@ -1,0 +1,36 @@
+2026-05-29 22:44:27  ============================================================
+2026-05-29 22:44:27  refresh_daily.py — starting
+2026-05-29 22:44:27  Cache: 3 teams already have stats
+2026-05-29 22:44:27  Fetching 4 teams: ['England', 'Germany', 'Brazil', 'Argentina']
+2026-05-29 22:44:27    [1/4] England …
+2026-05-29 22:44:33      ✓ GF=2.55  GA=0.31  Corners 6.1/3.6  SOT 5.8/2.7  Poss 64%  YC 0.88
+2026-05-29 22:44:35    [2/4] Germany …
+2026-05-29 22:44:35      — no data returned (API miss or team not found)
+2026-05-29 22:44:36    [3/4] Brazil …
+2026-05-29 22:44:36      — no data returned (API miss or team not found)
+2026-05-29 22:44:38    [4/4] Argentina …
+2026-05-29 22:44:38      — no data returned (API miss or team not found)
+2026-05-29 22:44:38  Fetched: ['England']  |  Failed/skipped: ['Germany', 'Brazil', 'Argentina']
+2026-05-29 22:44:38  Regenerating docs/static_data.js …
+2026-05-29 22:45:11    fetching /api/bracket … OK  (9,063 chars)
+2026-05-29 22:45:11      fetching /api/teams … OK  (755 chars)
+2026-05-29 22:45:11      fetching /api/tournament … OK  (6,248 chars)
+2026-05-29 22:45:11      fetching /api/groups … OK  (25,027 chars)
+2026-05-29 22:45:11      fetching /api/group_standings … OK  (6,154 chars)
+2026-05-29 22:45:11      fetching /api/bets … OK  (81,190 chars)
+2026-05-29 22:45:11      fetching /api/group_odds … OK  (39,688 chars)
+2026-05-29 22:45:11      fetching /api/validate …   ML model retrained without WC 2022 data (69 rows, excluded 36)
+2026-05-29 22:45:11    OK  (6,783 chars)
+2026-05-29 22:45:11      fetching /api/valuebets … OK  (25,760 chars)
+2026-05-29 22:45:11    
+2026-05-29 22:45:11    Wrote docs/static_data.js  (174.5 KB)
+2026-05-29 22:45:11    All endpoints OK — ready to deploy.
+2026-05-29 22:45:11    
+2026-05-29 22:45:11    Next steps:
+2026-05-29 22:45:11      git add docs/static_data.js docs/index.html
+2026-05-29 22:45:11      git commit -m 'update static snapshot'
+2026-05-29 22:45:11      git push
+2026-05-29 22:45:11  Pushing to GitHub Pages …
+2026-05-29 22:45:12    Pushed ✓
+2026-05-29 22:45:12  refresh_daily.py — done
+2026-05-29 22:45:12  ============================================================

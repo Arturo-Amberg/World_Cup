@@ -139,6 +139,20 @@ def load_team_db() -> dict:
                 db[team]["GA_AVG"] = round(max(0.3, min(2.5,
                     _LIVE_WEIGHT * live_ga   + _BASE_WEIGHT * base_ga)),   2)
 
+                # Extended stats — use live value directly if available (no BASE baseline)
+                _EXT_DEFAULTS = {
+                    "CORNERS_FOR": 5.0, "CORNERS_AGAINST": 5.0,
+                    "SOT_FOR": 4.0,     "SOT_AGAINST": 4.0,
+                    "POSSESSION": 50.0, "YELLOW_CARDS": 1.8,
+                    "XG_FOR": None,     "XG_AGAINST": None,
+                }
+                for stat, default in _EXT_DEFAULTS.items():
+                    val = d.get(stat)
+                    if val is not None:
+                        db[team][stat] = val
+                    elif stat not in db[team] and default is not None:
+                        db[team][stat] = default
+
                 # Store SOS diagnostics for transparency
                 if "SOS_RATIO" in d:
                     db[team]["SOS_RATIO"]   = d["SOS_RATIO"]

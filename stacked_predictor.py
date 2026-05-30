@@ -20,8 +20,11 @@ import os
 # ─────────────────────────────────────────────
 #  Constantes del modelo
 # ─────────────────────────────────────────────
-WC_AVG_GOALS = 1.30          # Promedio de goles por equipo por partido en el Mundial (WC 2018: 1.32, WC 2022: 1.34)
-DIXON_COLES_RHO = -0.12      # Dixon-Coles correlation parameter for low-score outcomes
+WC_AVG_GOALS   = 1.30   # Goals per team per WC match (WC 2018: 1.32, WC 2022: 1.34)
+WC_AVG_CORNERS = 5.0    # Corners per team per WC match
+WC_AVG_SOT     = 4.0    # Shots on target per team per WC match
+WC_AVG_YELLOWS = 1.8    # Yellow cards per team per WC match
+DIXON_COLES_RHO = -0.12 # Dixon-Coles correlation parameter for low-score outcomes
 H2H_PATH = os.path.join(os.path.dirname(__file__), "data", "h2h_data.json")
 
 from predictor import VENUES, HIGH_ALTITUDE_TEAMS
@@ -309,10 +312,24 @@ def _compute_lambdas(
     lam_a *= team_a.get("EXTRA", 1.0)
     lam_b *= team_b.get("EXTRA", 1.0)
 
+    # Shots on target ratio — teams that convert more shots are more clinical
+    # Uses 15% weight to avoid double-counting with GF_AVG (correlated signals)
+    sot_a = team_a.get("SOT_FOR", WC_AVG_SOT)
+    sot_b = team_b.get("SOT_FOR", WC_AVG_SOT)
+    lam_a *= 1.0 + (sot_a / WC_AVG_SOT - 1.0) * 0.15
+    lam_b *= 1.0 + (sot_b / WC_AVG_SOT - 1.0) * 0.15
+
+    # Possession — high-possession teams generate more chances AND suppress opponent output
+    # Modifier is kept small (xG/GF already capture most of this signal)
+    poss_a = team_a.get("POSSESSION", 50.0) / 100.0
+    poss_b = team_b.get("POSSESSION", 50.0) / 100.0
+    lam_a *= 1.0 + (poss_a - 0.5) * 0.10
+    lam_b *= 1.0 + (poss_b - 0.5) * 0.10
+
     # Unified availability (squad depth + injuries)
     avail_a = availability_score(name_a, team_a.get("INJURIES", 0))
     avail_b = availability_score(name_b, team_b.get("INJURIES", 0))
-    
+
     # Injuries hurt attack (own lambda drops) AND defense (opponent lambda increases)
     lam_a = lam_a * (avail_a / avail_b)
     lam_b = lam_b * (avail_b / avail_a)
@@ -344,6 +361,96 @@ def expected_goals(
     """Devuelve (λ_A, λ_B) — goles esperados por equipo."""
     return _compute_lambdas(team_a, team_b, home_team, round_number, venue_name)
 
+
+def corners_model(
+    team_a: dict,
+    team_b: dict,
+    home_team: str = None,
+    venue_name: str = None,
+) -> tuple[float, float]:
+    """
+    Returns (λ_corners_A, λ_corners_B) — expected corners per team.
+
+    Uses the same Dixon-Coles-style attack × opponent-defence formula as goals:
+        λ_c_a = (cf_a / mu) × (ca_b / mu) × mu
+    where cf = corners for, ca = corners against, mu = WC average.
+
+    Adjustments:
+    - Host nation presses more at home → +8% corners
+    - Climate/altitude: high-heat games tend to be slower → mild penalty
+    - Availability: shorthanded teams generate fewer corners
+    """
+    mu     = WC_AVG_CORNERS
+    name_a = team_a.get("name", "")
+    name_b = team_b.get("name", "")
+
+    cf_a = max(1.0, team_a.get("CORNERS_FOR",     mu))
+    ca_a = max(1.0, team_a.get("CORNERS_AGAINST", mu))
+    cf_b = max(1.0, team_b.get("CORNERS_FOR",     mu))
+    ca_b = max(1.0, team_b.get("CORNERS_AGAINST", mu))
+
+    lam_c_a = (cf_a / mu) * (ca_b / mu) * mu
+    lam_c_b = (cf_b / mu) * (ca_a / mu) * mu
+
+    # Host nation presses more in front of home crowd
+    if home_team is not None and home_team in HOST_NATIONS:
+        if name_a == home_team:
+            lam_c_a *= 1.08
+        elif name_b == home_team:
+            lam_c_b *= 1.08
+
+    # Climate penalty carries over (high heat → fewer set pieces generated)
+    lam_c_a *= climate_altitude_adj(name_a, venue_name)
+    lam_c_b *= climate_altitude_adj(name_b, venue_name)
+
+    # Availability: a depleted team generates fewer attacking corners
+    avail_a = availability_score(name_a, team_a.get("INJURIES", 0))
+    avail_b = availability_score(name_b, team_b.get("INJURIES", 0))
+    lam_c_a *= avail_a
+    lam_c_b *= avail_b
+
+    lam_c_a = max(1.0, min(12.0, lam_c_a))
+    lam_c_b = max(1.0, min(12.0, lam_c_b))
+    return lam_c_a, lam_c_b
+
+
+def cards_model(
+    team_a: dict,
+    team_b: dict,
+) -> tuple[float, float]:
+    """
+    Returns (λ_yellows_A, λ_yellows_B) — expected yellow cards per team.
+
+    Each team's base rate comes from their historical YELLOW_CARDS average.
+    A closeness multiplier boosts cards for evenly-matched games (more
+    contested = more fouls = more bookings).
+    """
+    mu     = WC_AVG_YELLOWS
+    name_a = team_a.get("name", "")
+    name_b = team_b.get("name", "")
+
+    yc_a = max(0.3, team_a.get("YELLOW_CARDS", mu))
+    yc_b = max(0.3, team_b.get("YELLOW_CARDS", mu))
+
+    # Close games (small ELO gap) → more contested → more bookings (up to +12%)
+    elo_a = team_a.get("ELO", 1700)
+    elo_b = team_b.get("ELO", 1700)
+    elo_diff = abs(elo_a - elo_b)
+    closeness_mult = 1.0 + max(0.0, (300 - elo_diff) / 2500)
+
+    # Availability: fewer players → more desperate fouls when chasing the game
+    avail_a = availability_score(name_a, team_a.get("INJURIES", 0))
+    avail_b = availability_score(name_b, team_b.get("INJURIES", 0))
+    # Slightly more cards when depleted (frustration / necessity)
+    inj_mult_a = 1.0 + (1.0 - avail_a) * 0.20
+    inj_mult_b = 1.0 + (1.0 - avail_b) * 0.20
+
+    lam_yc_a = yc_a * closeness_mult * inj_mult_a
+    lam_yc_b = yc_b * closeness_mult * inj_mult_b
+
+    lam_yc_a = max(0.3, min(6.0, lam_yc_a))
+    lam_yc_b = max(0.3, min(6.0, lam_yc_b))
+    return lam_yc_a, lam_yc_b
 
 
 # ─────────────────────────────────────────────

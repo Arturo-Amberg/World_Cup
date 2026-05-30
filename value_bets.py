@@ -521,6 +521,171 @@ def find_value_bets(odds_data: list[dict], mc: dict | None, team_db: dict) -> li
                       f"Under {line}", ou_dict[under_key], p_under, "Total Goals",
                       fair_imp=fair_under)
 
+    # ── 6. CORNERS OVER/UNDER ────────────────────────────────────────────────
+    from stacked_predictor import corners_model
+
+    match_corners: dict[str, dict] = {}
+    for row in odds_data:
+        if row["page"] == "matches" and "Corner" in row.get("market", ""):
+            line_str = str(row.get("line", "")).strip()
+            try:
+                line_val = float(line_str)
+            except (ValueError, TypeError):
+                continue
+            mn = row["match"]
+            if mn not in match_corners:
+                match_corners[mn] = {}
+            key = f"{row['selection']}_{line_val}"
+            match_corners[mn][key] = row["odds"]
+
+    for match_name, c_dict in match_corners.items():
+        parts = match_name.split(" - ", 1)
+        if len(parts) != 2:
+            continue
+        home_raw, away_raw = parts
+        home_team = best_match(home_raw, model_teams)
+        away_team = best_match(away_raw, model_teams)
+        if not home_team or not away_team:
+            continue
+        if home_team not in team_db or away_team not in team_db:
+            continue
+
+        try:
+            lam_c_h, lam_c_a = corners_model(
+                team_db[home_team], team_db[away_team], home_team=home_team
+            )
+        except Exception:
+            continue
+
+        lam_c_total = lam_c_h + lam_c_a
+
+        for line in [7.5, 8.5, 9.5, 10.5, 11.5, 12.5, 13.5]:
+            p_over, p_under = poisson_ou_probs(lam_c_h, lam_c_a, line)
+            over_key  = f"Over_{line}"
+            under_key = f"Under_{line}"
+
+            fair_over = fair_under = None
+            if over_key in c_dict and under_key in c_dict:
+                raw_o = implied(c_dict[over_key])
+                raw_u = implied(c_dict[under_key])
+                fair  = remove_margin([raw_o, raw_u])
+                fair_over, fair_under = fair[0], fair[1]
+
+            if over_key in c_dict:
+                check("matches", match_name, "Corners O/U", str(line),
+                      f"Over {line} Corners", c_dict[over_key], p_over, "Corners",
+                      fair_imp=fair_over)
+            if under_key in c_dict:
+                check("matches", match_name, "Corners O/U", str(line),
+                      f"Under {line} Corners", c_dict[under_key], p_under, "Corners",
+                      fair_imp=fair_under)
+
+    # ── 7. YELLOW CARDS OVER/UNDER ───────────────────────────────────────────
+    from stacked_predictor import cards_model
+
+    match_cards: dict[str, dict] = {}
+    for row in odds_data:
+        if row["page"] == "matches" and any(
+            kw in row.get("market", "") for kw in ("Yellow Card", "Booking", "Cards")
+        ):
+            line_str = str(row.get("line", "")).strip()
+            try:
+                line_val = float(line_str)
+            except (ValueError, TypeError):
+                continue
+            mn = row["match"]
+            if mn not in match_cards:
+                match_cards[mn] = {}
+            key = f"{row['selection']}_{line_val}"
+            match_cards[mn][key] = row["odds"]
+
+    for match_name, cards_dict in match_cards.items():
+        parts = match_name.split(" - ", 1)
+        if len(parts) != 2:
+            continue
+        home_raw, away_raw = parts
+        home_team = best_match(home_raw, model_teams)
+        away_team = best_match(away_raw, model_teams)
+        if not home_team or not away_team:
+            continue
+        if home_team not in team_db or away_team not in team_db:
+            continue
+
+        try:
+            lam_yc_h, lam_yc_a = cards_model(team_db[home_team], team_db[away_team])
+        except Exception:
+            continue
+
+        for line in [1.5, 2.5, 3.5, 4.5, 5.5]:
+            p_over, p_under = poisson_ou_probs(lam_yc_h, lam_yc_a, line)
+            over_key  = f"Over_{line}"
+            under_key = f"Under_{line}"
+
+            fair_over = fair_under = None
+            if over_key in cards_dict and under_key in cards_dict:
+                raw_o = implied(cards_dict[over_key])
+                raw_u = implied(cards_dict[under_key])
+                fair  = remove_margin([raw_o, raw_u])
+                fair_over, fair_under = fair[0], fair[1]
+
+            if over_key in cards_dict:
+                check("matches", match_name, "Yellow Cards O/U", str(line),
+                      f"Over {line} Yellow Cards", cards_dict[over_key], p_over, "Yellow Cards",
+                      fair_imp=fair_over)
+            if under_key in cards_dict:
+                check("matches", match_name, "Yellow Cards O/U", str(line),
+                      f"Under {line} Yellow Cards", cards_dict[under_key], p_under, "Yellow Cards",
+                      fair_imp=fair_under)
+
+    # ── 8. BOTH TEAMS TO SCORE (BTTS) ────────────────────────────────────────
+    match_btts: dict[str, dict] = {}
+    for row in odds_data:
+        if row["page"] == "matches" and "Both Teams" in row.get("market", ""):
+            mn = row["match"]
+            if mn not in match_btts:
+                match_btts[mn] = {}
+            match_btts[mn][row["selection"].lower()] = row["odds"]
+
+    for match_name, btts_dict in match_btts.items():
+        parts = match_name.split(" - ", 1)
+        if len(parts) != 2:
+            continue
+        home_raw, away_raw = parts
+        home_team = best_match(home_raw, model_teams)
+        away_team = best_match(away_raw, model_teams)
+        if not home_team or not away_team:
+            continue
+        if home_team not in team_db or away_team not in team_db:
+            continue
+
+        try:
+            from stacked_predictor import expected_goals as eg
+            lam_h, lam_a = eg(team_db[home_team], team_db[away_team])
+        except Exception:
+            continue
+
+        # P(BTTS Yes) = P(home scores ≥ 1) × P(away scores ≥ 1)
+        p_home_scores = 1.0 - math.exp(-lam_h)
+        p_away_scores = 1.0 - math.exp(-lam_a)
+        p_btts_yes    = p_home_scores * p_away_scores
+        p_btts_no     = 1.0 - p_btts_yes
+
+        fair_yes = fair_no = None
+        if "yes" in btts_dict and "no" in btts_dict:
+            raw_y = implied(btts_dict["yes"])
+            raw_n = implied(btts_dict["no"])
+            fair  = remove_margin([raw_y, raw_n])
+            fair_yes, fair_no = fair[0], fair[1]
+
+        if "yes" in btts_dict:
+            check("matches", match_name, "Both Teams to Score", "",
+                  "BTTS Yes", btts_dict["yes"], p_btts_yes, "BTTS",
+                  fair_imp=fair_yes)
+        if "no" in btts_dict:
+            check("matches", match_name, "Both Teams to Score", "",
+                  "BTTS No", btts_dict["no"], p_btts_no, "BTTS",
+                  fair_imp=fair_no)
+
     # ── Sort by EV ───────────────────────────────────────────────────────────
     value_bets.sort(key=lambda x: -x["ev"])
     return value_bets
