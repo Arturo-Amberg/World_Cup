@@ -10,13 +10,13 @@ Modos de uso:
 """
 import json
 import sys
-from scraper import fetch_elo_ratings
-from odds_client import get_match_odds
-from stats_client import get_team_stats
-from predictor import VENUES
-from stacked_predictor import stack_predict, expected_goals
-from injuries_client import get_injuries, get_injury_detail, set_injury_manual
-from cache import get_elos, get_stats, cache_status
+from src.scrapers.scraper import fetch_elo_ratings
+from src.utils.odds_client import get_match_odds
+from src.utils.stats_client import get_team_stats
+from src.models.predictor import VENUES
+from src.models.stacked_predictor import stack_predict, expected_goals
+from src.utils.injuries_client import get_injuries, get_injury_detail, set_injury_manual
+from src.utils.cache import get_elos, get_stats, cache_status
 
 VENUE_LIST = list(VENUES.keys())
 
@@ -198,7 +198,7 @@ def run_match_predictor():
 #  Modo 2: simulación del torneo
 # ─────────────────────────────────────────────
 def run_tournament(n_sims: int = 1):
-    import tournament as t_module
+    import src.models.tournament as t_module
     team_db = t_module.load_team_db()
     groups  = t_module.load_groups()
 

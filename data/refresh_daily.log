@@ -34,3 +34,373 @@
 2026-05-29 22:45:12    Pushed ✓
 2026-05-29 22:45:12  refresh_daily.py — done
 2026-05-29 22:45:12  ============================================================
+2026-05-30 12:02:43  ============================================================
+2026-05-30 12:02:43  refresh_daily.py — starting
+2026-05-30 12:02:43  Cache: 4 teams already have stats
+2026-05-30 12:02:43  Fetching 4 teams: ['Germany', 'Brazil', 'Argentina', 'Portugal']
+2026-05-30 12:02:43    [1/4] Germany …
+2026-05-30 12:02:50      ✓ GF=2.28  GA=0.98  Corners 5.5/4.2  SOT 5.9/3.4  Poss 62%  YC 1.05
+2026-05-30 12:02:51    [2/4] Brazil …
+2026-05-30 12:02:51      — no data returned (API miss or team not found)
+2026-05-30 12:02:53    [3/4] Argentina …
+2026-05-30 12:02:53      — no data returned (API miss or team not found)
+2026-05-30 12:02:55    [4/4] Portugal …
+2026-05-30 12:02:55      — no data returned (API miss or team not found)
+2026-05-30 12:02:55  Fetched: ['Germany']  |  Failed/skipped: ['Brazil', 'Argentina', 'Portugal']
+2026-05-30 12:02:55  Regenerating docs/static_data.js …
+2026-05-30 12:03:26    fetching /api/bracket … OK  (9,067 chars)
+2026-05-30 12:03:26      fetching /api/teams … OK  (755 chars)
+2026-05-30 12:03:26      fetching /api/tournament … OK  (6,248 chars)
+2026-05-30 12:03:26      fetching /api/groups … OK  (25,036 chars)
+2026-05-30 12:03:26      fetching /api/group_standings … OK  (6,155 chars)
+2026-05-30 12:03:26      fetching /api/bets … OK  (82,222 chars)
+2026-05-30 12:03:26      fetching /api/group_odds … OK  (39,686 chars)
+2026-05-30 12:03:26      fetching /api/validate …   ML model retrained without WC 2022 data (69 rows, excluded 36)
+2026-05-30 12:03:26    OK  (6,787 chars)
+2026-05-30 12:03:26      fetching /api/valuebets … OK  (25,760 chars)
+2026-05-30 12:03:26    
+2026-05-30 12:03:26    Wrote docs/static_data.js  (175.4 KB)
+2026-05-30 12:03:26    All endpoints OK — ready to deploy.
+2026-05-30 12:03:26    
+2026-05-30 12:03:26    Next steps:
+2026-05-30 12:03:26      git add docs/static_data.js docs/index.html
+2026-05-30 12:03:26      git commit -m 'update static snapshot'
+2026-05-30 12:03:26      git push
+2026-05-30 12:03:26  Pushing to GitHub Pages …
+2026-05-30 12:03:28    Pushed ✓
+2026-05-30 12:03:28  refresh_daily.py — done
+2026-05-30 12:03:28  ============================================================
+2026-05-31 14:04:06  ============================================================
+2026-05-31 14:04:06  refresh_daily.py — starting
+2026-05-31 14:04:06  Cache: 5 teams already have stats
+2026-05-31 14:04:06  Fetching 4 teams: ['Brazil', 'Argentina', 'Portugal', 'Netherlands']
+2026-05-31 14:04:06    [1/4] Brazil …
+2026-05-31 14:04:12      ✓ GF=1.81  GA=1.35  Corners 3.5/4.1  SOT 6.4/4.7  Poss 54%  YC 1.53
+2026-05-31 14:04:13    [2/4] Argentina …
+2026-05-31 14:04:14      — no data returned (API miss or team not found)
+2026-05-31 14:04:15    [3/4] Portugal …
+2026-05-31 14:04:15      — no data returned (API miss or team not found)
+2026-05-31 14:04:17    [4/4] Netherlands …
+2026-05-31 14:04:17      — no data returned (API miss or team not found)
+2026-05-31 14:04:17  Fetched: ['Brazil']  |  Failed/skipped: ['Argentina', 'Portugal', 'Netherlands']
+2026-05-31 14:04:17  Regenerating docs/static_data.js …
+2026-05-31 14:04:52    fetching /api/bracket … OK  (9,104 chars)
+2026-05-31 14:04:52      fetching /api/teams … OK  (755 chars)
+2026-05-31 14:04:52      fetching /api/tournament … OK  (6,248 chars)
+2026-05-31 14:04:52      fetching /api/groups … OK  (25,037 chars)
+2026-05-31 14:04:52      fetching /api/group_standings … OK  (6,150 chars)
+2026-05-31 14:04:52      fetching /api/bets … OK  (81,616 chars)
+2026-05-31 14:04:52      fetching /api/group_odds … OK  (39,688 chars)
+2026-05-31 14:04:52      fetching /api/validate …   ML model retrained without WC 2022 data (69 rows, excluded 36)
+2026-05-31 14:04:52    OK  (6,788 chars)
+2026-05-31 14:04:52      fetching /api/valuebets … OK  (25,760 chars)
+2026-05-31 14:04:52    
+2026-05-31 14:04:52    Wrote docs/static_data.js  (174.9 KB)
+2026-05-31 14:04:52    All endpoints OK — ready to deploy.
+2026-05-31 14:04:52    
+2026-05-31 14:04:52    Next steps:
+2026-05-31 14:04:52      git add docs/static_data.js docs/index.html
+2026-05-31 14:04:52      git commit -m 'update static snapshot'
+2026-05-31 14:04:52      git push
+2026-05-31 14:04:52  Pushing to GitHub Pages …
+2026-05-31 14:04:54    Pushed ✓
+2026-05-31 14:04:54  refresh_daily.py — done
+2026-05-31 14:04:54  ============================================================
+2026-05-31 14:07:34  ============================================================
+2026-05-31 14:07:34  refresh_daily.py — starting
+2026-05-31 14:07:34  Cache: 6 teams already have stats
+2026-05-31 14:07:34  Fetching 4 teams: ['Argentina', 'Portugal', 'Netherlands', 'Belgium']
+2026-05-31 14:07:34    [1/4] Argentina …
+2026-05-31 14:09:42      ✓ GF=2.32  GA=0.21  Corners 5.7/2.6  SOT 6.1/1.6  Poss 62%  YC 0.77
+2026-05-31 14:09:42    [2/4] Portugal …
+2026-05-31 14:12:03      ✓ GF=2.6  GA=1.12  Corners 6.6/3.8  SOT 6.4/4.1  Poss 63%  YC 2.04
+2026-05-31 14:12:03    [3/4] Netherlands …
+2026-05-31 14:13:56      ✓ GF=2.6  GA=0.9  Corners 5.3/3.0  SOT 5.8/3.2  Poss 60%  YC 0.98
+2026-05-31 14:13:56    [4/4] Belgium …
+2026-05-31 14:16:03      ✓ GF=2.38  GA=1.17  Corners 9.1/2.6  SOT 6.3/3.3  Poss 62%  YC 1.59
+2026-05-31 14:16:03  Fetched: ['Argentina', 'Portugal', 'Netherlands', 'Belgium']  |  Failed/skipped: []
+2026-05-31 14:16:03  Regenerating docs/static_data.js …
+2026-05-31 14:18:58    fetching /api/bracket … OK  (9,099 chars)
+2026-05-31 14:18:58      fetching /api/teams … OK  (755 chars)
+2026-05-31 14:18:58      fetching /api/tournament … OK  (6,248 chars)
+2026-05-31 14:18:58      fetching /api/groups … OK  (25,042 chars)
+2026-05-31 14:18:58      fetching /api/group_standings … OK  (6,167 chars)
+2026-05-31 14:18:58      fetching /api/bets … OK  (80,813 chars)
+2026-05-31 14:18:58      fetching /api/group_odds … OK  (39,701 chars)
+2026-05-31 14:18:58      fetching /api/validate …   ML model retrained without WC 2022 data (69 rows, excluded 36)
+2026-05-31 14:18:58    OK  (6,785 chars)
+2026-05-31 14:18:58      fetching /api/valuebets … OK  (25,760 chars)
+2026-05-31 14:18:58    
+2026-05-31 14:18:58    Wrote docs/static_data.js  (174.2 KB)
+2026-05-31 14:18:58    All endpoints OK — ready to deploy.
+2026-05-31 14:18:58    
+2026-05-31 14:18:58    Next steps:
+2026-05-31 14:18:58      git add docs/static_data.js docs/index.html
+2026-05-31 14:18:58      git commit -m 'update static snapshot'
+2026-05-31 14:18:58      git push
+2026-05-31 14:18:58  Pushing to GitHub Pages …
+2026-05-31 14:19:00    Pushed ✓
+2026-05-31 14:19:00  refresh_daily.py — done
+2026-05-31 14:19:00  ============================================================
+2026-05-31 14:42:41  ============================================================
+2026-05-31 14:42:41  refresh_daily.py — starting
+2026-05-31 14:42:41  Cache: 10 teams already have stats
+2026-05-31 14:42:41  Fetching 8 teams: ['Croatia', 'Morocco', 'Japan', 'USA', 'Mexico', 'Colombia', 'Uruguay', 'South Korea']
+2026-05-31 14:42:41    [1/8] Croatia …
+2026-05-31 14:42:41      — no data returned (API miss or team not found)
+2026-05-31 14:42:41    [2/8] Morocco …
+2026-05-31 14:42:48      — no data returned (API miss or team not found)
+2026-05-31 14:42:48    [3/8] Japan …
+2026-05-31 14:42:55      — no data returned (API miss or team not found)
+2026-05-31 14:42:55    [4/8] USA …
+2026-05-31 14:43:02      — no data returned (API miss or team not found)
+2026-05-31 14:43:02    [5/8] Mexico …
+2026-05-31 14:43:09      — no data returned (API miss or team not found)
+2026-05-31 14:43:09    [6/8] Colombia …
+2026-05-31 14:43:16      — no data returned (API miss or team not found)
+2026-05-31 14:43:16    [7/8] Uruguay …
+2026-05-31 14:43:23      — no data returned (API miss or team not found)
+2026-05-31 14:43:23    [8/8] South Korea …
+2026-05-31 14:43:30      — no data returned (API miss or team not found)
+2026-05-31 14:43:30  Fetched: []  |  Failed/skipped: ['Croatia', 'Morocco', 'Japan', 'USA', 'Mexico', 'Colombia', 'Uruguay', 'South Korea']
+2026-05-31 14:43:30  Regenerating docs/static_data.js …
+2026-05-31 14:44:08    fetching /api/bracket … OK  (9,081 chars)
+2026-05-31 14:44:08      fetching /api/teams … OK  (755 chars)
+2026-05-31 14:44:08      fetching /api/tournament … OK  (6,248 chars)
+2026-05-31 14:44:08      fetching /api/groups … OK  (25,039 chars)
+2026-05-31 14:44:08      fetching /api/group_standings … OK  (6,155 chars)
+2026-05-31 14:44:08      fetching /api/bets … OK  (80,813 chars)
+2026-05-31 14:44:08      fetching /api/group_odds … OK  (39,698 chars)
+2026-05-31 14:44:08      fetching /api/validate …   ML model retrained without WC 2022 data (69 rows, excluded 36)
+2026-05-31 14:44:08    OK  (6,788 chars)
+2026-05-31 14:44:08      fetching /api/valuebets … OK  (25,760 chars)
+2026-05-31 14:44:08    
+2026-05-31 14:44:08    Wrote docs/static_data.js  (174.2 KB)
+2026-05-31 14:44:08    All endpoints OK — ready to deploy.
+2026-05-31 14:44:08    
+2026-05-31 14:44:08    Next steps:
+2026-05-31 14:44:08      git add docs/static_data.js docs/index.html
+2026-05-31 14:44:08      git commit -m 'update static snapshot'
+2026-05-31 14:44:08      git push
+2026-05-31 14:44:08  Pushing to GitHub Pages …
+2026-05-31 14:44:09    Pushed ✓
+2026-05-31 14:44:09  refresh_daily.py — done
+2026-05-31 14:44:09  ============================================================
+2026-05-31 14:45:30  ============================================================
+2026-05-31 14:45:30  refresh_daily.py — starting
+2026-05-31 14:45:30  Cache: 10 teams already have stats
+2026-05-31 14:45:30  Fetching 8 teams: ['Croatia', 'Morocco', 'Japan', 'USA', 'Mexico', 'Colombia', 'Uruguay', 'South Korea']
+2026-05-31 14:45:30    [1/8] Croatia …
+2026-05-31 14:48:01      ✓ GF=2.27  GA=0.79  Corners 6.6/4.5  SOT 6.8/3.3  Poss 58%  YC 1.70
+2026-05-31 14:48:01    [2/8] Morocco …
+2026-05-31 14:51:09      ✓ GF=2.24  GA=0.52  (goals only — no fixture stats yet)
+2026-05-31 14:51:09    [3/8] Japan …
+2026-05-31 14:51:18      — no data returned (API miss or team not found)
+2026-05-31 14:51:18    [4/8] USA …
+2026-05-31 14:51:28      — no data returned (API miss or team not found)
+2026-05-31 14:51:28    [5/8] Mexico …
+2026-05-31 14:51:37      — no data returned (API miss or team not found)
+2026-05-31 14:51:37    [6/8] Colombia …
+2026-05-31 14:51:47      — no data returned (API miss or team not found)
+2026-05-31 14:51:47    [7/8] Uruguay …
+2026-05-31 14:51:56      — no data returned (API miss or team not found)
+2026-05-31 14:51:56    [8/8] South Korea …
+2026-05-31 14:52:05      — no data returned (API miss or team not found)
+2026-05-31 14:52:05  Fetched: ['Croatia', 'Morocco']  |  Failed/skipped: ['Japan', 'USA', 'Mexico', 'Colombia', 'Uruguay', 'South Korea']
+2026-05-31 14:52:05  Regenerating docs/static_data.js …
+2026-05-31 14:52:38    fetching /api/bracket … OK  (9,062 chars)
+2026-05-31 14:52:38      fetching /api/teams … OK  (755 chars)
+2026-05-31 14:52:38      fetching /api/tournament … OK  (6,248 chars)
+2026-05-31 14:52:38      fetching /api/groups … OK  (25,036 chars)
+2026-05-31 14:52:38      fetching /api/group_standings … OK  (6,161 chars)
+2026-05-31 14:52:38      fetching /api/bets … OK  (79,884 chars)
+2026-05-31 14:52:38      fetching /api/group_odds … OK  (39,689 chars)
+2026-05-31 14:52:38      fetching /api/validate …   ML model retrained without WC 2022 data (69 rows, excluded 36)
+2026-05-31 14:52:38    OK  (6,790 chars)
+2026-05-31 14:52:38      fetching /api/valuebets … OK  (25,760 chars)
+2026-05-31 14:52:38    
+2026-05-31 14:52:38    Wrote docs/static_data.js  (173.4 KB)
+2026-05-31 14:52:38    All endpoints OK — ready to deploy.
+2026-05-31 14:52:38    
+2026-05-31 14:52:38    Next steps:
+2026-05-31 14:52:38      git add docs/static_data.js docs/index.html
+2026-05-31 14:52:38      git commit -m 'update static snapshot'
+2026-05-31 14:52:38      git push
+2026-05-31 14:52:38  Pushing to GitHub Pages …
+2026-05-31 14:52:39    Pushed ✓
+2026-05-31 14:52:39  refresh_daily.py — done
+2026-05-31 14:52:39  ============================================================
+2026-06-01 13:08:35  ============================================================
+2026-06-01 13:08:35  refresh_daily.py — starting
+2026-06-01 13:08:35  Cache: 12 teams already have stats
+2026-06-01 13:08:35  Fetching 8 teams: ['Japan', 'USA', 'Mexico', 'Colombia', 'Uruguay', 'South Korea', 'Switzerland', 'Senegal']
+2026-06-01 13:08:35    [1/8] Japan …
+2026-06-01 13:08:38      — no data returned (API miss or team not found)
+2026-06-01 13:08:38    [2/8] USA …
+2026-06-01 13:08:47      — no data returned (API miss or team not found)
+2026-06-01 13:08:47    [3/8] Mexico …
+2026-06-01 13:08:57      — no data returned (API miss or team not found)
+2026-06-01 13:08:57    [4/8] Colombia …
+2026-06-01 13:09:06      — no data returned (API miss or team not found)
+2026-06-01 13:09:06    [5/8] Uruguay …
+2026-06-01 13:09:16      — no data returned (API miss or team not found)
+2026-06-01 13:09:16    [6/8] South Korea …
+2026-06-01 13:09:25      — no data returned (API miss or team not found)
+2026-06-01 13:09:25    [7/8] Switzerland …
+2026-06-01 13:09:35      — no data returned (API miss or team not found)
+2026-06-01 13:09:35    [8/8] Senegal …
+2026-06-01 13:09:44      — no data returned (API miss or team not found)
+2026-06-01 13:09:44  Fetched: []  |  Failed/skipped: ['Japan', 'USA', 'Mexico', 'Colombia', 'Uruguay', 'South Korea', 'Switzerland', 'Senegal']
+2026-06-01 13:09:44  Regenerating docs/static_data.js …
+2026-06-01 13:10:18    fetching /api/bracket … OK  (9,080 chars)
+2026-06-01 13:10:18      fetching /api/teams … OK  (755 chars)
+2026-06-01 13:10:18      fetching /api/tournament … OK  (6,248 chars)
+2026-06-01 13:10:18      fetching /api/groups … OK  (25,034 chars)
+2026-06-01 13:10:18      fetching /api/group_standings … OK  (6,159 chars)
+2026-06-01 13:10:18      fetching /api/bets … OK  (79,884 chars)
+2026-06-01 13:10:18      fetching /api/group_odds … OK  (39,689 chars)
+2026-06-01 13:10:18      fetching /api/validate …   ML model retrained without WC 2022 data (69 rows, excluded 36)
+2026-06-01 13:10:18    OK  (6,790 chars)
+2026-06-01 13:10:18      fetching /api/valuebets … OK  (25,760 chars)
+2026-06-01 13:10:18    
+2026-06-01 13:10:18    Wrote docs/static_data.js  (173.4 KB)
+2026-06-01 13:10:18    All endpoints OK — ready to deploy.
+2026-06-01 13:10:18    
+2026-06-01 13:10:18    Next steps:
+2026-06-01 13:10:18      git add docs/static_data.js docs/index.html
+2026-06-01 13:10:18      git commit -m 'update static snapshot'
+2026-06-01 13:10:18      git push
+2026-06-01 13:10:18  Pushing to GitHub Pages …
+2026-06-01 13:10:20    Pushed ✓
+2026-06-01 13:10:20  refresh_daily.py — done
+2026-06-01 13:10:20  ============================================================
+2026-06-01 13:22:35  ============================================================
+2026-06-01 13:22:35  refresh_daily.py — starting
+2026-06-01 13:22:35  Cache: 12 teams already have stats
+2026-06-01 13:22:35  Fetching 51 teams: ['Japan', 'USA', 'Mexico', 'Colombia', 'Uruguay', 'South Korea', 'Switzerland', 'Senegal', 'Austria', 'Turkey', 'Norway', 'Sweden', 'Scotland', 'Czech Republic', 'Serbia', 'Ukraine', 'Canada', 'Poland', 'Australia', 'Iran', 'Tunisia', 'Algeria', 'Ivory Coast', 'Ghana', 'Saudi Arabia', 'Egypt', 'Nigeria', 'Cameroon', 'Paraguay', 'Costa Rica', 'Panama', 'Honduras', 'Jamaica', 'Bolivia', 'Venezuela', 'South Africa', 'Iraq', 'Indonesia', 'Uzbekistan', 'Slovakia', 'Romania', 'New Zealand', 'El Salvador', 'Guatemala', 'Qatar', 'Bosnia & Herzegovina', 'DR Congo', 'Cape Verde', 'Jordan', 'Haiti', 'Curaçao']
+2026-06-01 13:22:35    [1/51] Japan …
+2026-06-01 13:22:35      ✓ GF=1.82  GA=0.52  (goals only — GitHub CSV source)
+2026-06-01 13:22:35    [2/51] USA …
+2026-06-01 13:22:35      ✓ GF=1.98  GA=1.38  (goals only — GitHub CSV source)
+2026-06-01 13:22:35    [3/51] Mexico …
+2026-06-01 13:22:35      ✓ GF=1.11  GA=0.72  (goals only — GitHub CSV source)
+2026-06-01 13:22:35    [4/51] Colombia …
+2026-06-01 13:22:35      ✓ GF=1.98  GA=1.19  (goals only — GitHub CSV source)
+2026-06-01 13:22:35    [5/51] Uruguay …
+2026-06-01 13:22:35      ✓ GF=0.93  GA=0.86  (goals only — GitHub CSV source)
+2026-06-01 13:22:35    [6/51] South Korea …
+2026-06-01 13:22:35      ✓ GF=1.69  GA=1.04  (goals only — GitHub CSV source)
+2026-06-01 13:22:35    [7/51] Switzerland …
+2026-06-01 13:22:35      ✓ GF=2.39  GA=0.98  (goals only — GitHub CSV source)
+2026-06-01 13:22:35    [8/51] Senegal …
+2026-06-01 13:22:35      ✓ GF=2.5  GA=0.83  (goals only — GitHub CSV source)
+2026-06-01 13:22:35    [9/51] Austria …
+2026-06-01 13:22:35      ✓ GF=2.38  GA=0.66  (goals only — GitHub CSV source)
+2026-06-01 13:22:35    [10/51] Turkey …
+2026-06-01 13:22:35      ✓ GF=2.09  GA=1.31  (goals only — GitHub CSV source)
+2026-06-01 13:22:35    [11/51] Norway …
+2026-06-01 13:22:35      ✓ GF=3.24  GA=0.91  (goals only — GitHub CSV source)
+2026-06-01 13:22:35    [12/51] Sweden …
+2026-06-01 13:22:35      ✓ GF=2.11  GA=1.38  (goals only — GitHub CSV source)
+2026-06-01 13:22:35    [13/51] Scotland …
+2026-06-01 13:22:35      ✓ GF=1.72  GA=1.14  (goals only — GitHub CSV source)
+2026-06-01 13:22:35    [14/51] Czech Republic …
+2026-06-01 13:22:35      ✓ GF=1.83  GA=0.97  (goals only — GitHub CSV source)
+2026-06-01 13:22:35    [15/51] Serbia …
+2026-06-01 13:22:35      ✓ GF=0.94  GA=1.22  (goals only — GitHub CSV source)
+2026-06-01 13:22:35    [16/51] Ukraine …
+2026-06-01 13:22:35      ✓ GF=1.58  GA=1.64  (goals only — GitHub CSV source)
+2026-06-01 13:22:35    [17/51] Canada …
+2026-06-01 13:22:35      ✓ GF=1.58  GA=0.53  (goals only — GitHub CSV source)
+2026-06-01 13:22:35    [18/51] Poland …
+2026-06-01 13:22:35      ✓ GF=1.51  GA=1.3  (goals only — GitHub CSV source)
+2026-06-01 13:22:35    [19/51] Australia …
+2026-06-01 13:22:35      ✓ GF=1.55  GA=0.86  (goals only — GitHub CSV source)
+2026-06-01 13:22:35    [20/51] Iran …
+2026-06-01 13:22:35      ✓ GF=1.93  GA=0.86  (goals only — GitHub CSV source)
+2026-06-01 13:22:35    [21/51] Tunisia …
+2026-06-01 13:22:35      ✓ GF=1.84  GA=0.85  (goals only — GitHub CSV source)
+2026-06-01 13:22:35    [22/51] Algeria …
+2026-06-01 13:22:35      ✓ GF=2.16  GA=0.48  (goals only — GitHub CSV source)
+2026-06-01 13:22:35    [23/51] Ivory Coast …
+2026-06-01 13:22:35      ✓ GF=1.88  GA=0.53  (goals only — GitHub CSV source)
+2026-06-01 13:22:35    [24/51] Ghana …
+2026-06-01 13:22:35      ✓ GF=1.61  GA=1.13  (goals only — GitHub CSV source)
+2026-06-01 13:22:35    [25/51] Saudi Arabia …
+2026-06-01 13:22:35      ✓ GF=0.99  GA=1.38  (goals only — GitHub CSV source)
+2026-06-01 13:22:35    [26/51] Egypt …
+2026-06-01 13:22:35      ✓ GF=1.12  GA=0.86  (goals only — GitHub CSV source)
+2026-06-01 13:22:35    [27/51] Nigeria …
+2026-06-01 13:22:35      ✓ GF=2.23  GA=0.67  (goals only — GitHub CSV source)
+2026-06-01 13:22:35    [28/51] Cameroon …
+2026-06-01 13:22:35      ✓ GF=1.33  GA=0.64  (goals only — GitHub CSV source)
+2026-06-01 13:22:35    [29/51] Paraguay …
+2026-06-01 13:22:35      ✓ GF=1.27  GA=1.07  (goals only — GitHub CSV source)
+2026-06-01 13:22:35    [30/51] Costa Rica …
+2026-06-01 13:22:35      ✓ GF=2.18  GA=1.39  (goals only — GitHub CSV source)
+2026-06-01 13:22:35    [31/51] Panama …
+2026-06-01 13:22:35      ✓ GF=1.7  GA=1.17  (goals only — GitHub CSV source)
+2026-06-01 13:22:35    [32/51] Honduras …
+2026-06-01 13:22:36      ✓ GF=1.1  GA=0.83  (goals only — GitHub CSV source)
+2026-06-01 13:22:36    [33/51] Jamaica …
+2026-06-01 13:22:36      ✓ GF=1.35  GA=0.83  (goals only — GitHub CSV source)
+2026-06-01 13:22:36    [34/51] Bolivia …
+2026-06-01 13:22:36      ✓ GF=0.77  GA=1.39  (goals only — GitHub CSV source)
+2026-06-01 13:22:36    [35/51] Venezuela …
+2026-06-01 13:22:36      ✓ GF=1.1  GA=1.78  (goals only — GitHub CSV source)
+2026-06-01 13:22:36    [36/51] South Africa …
+2026-06-01 13:22:36      ✓ GF=1.43  GA=0.72  (goals only — GitHub CSV source)
+2026-06-01 13:22:36    [37/51] Iraq …
+2026-06-01 13:22:36      ✓ GF=1.06  GA=0.79  (goals only — GitHub CSV source)
+2026-06-01 13:22:36    [38/51] Indonesia …
+2026-06-01 13:22:36      ✓ GF=1.29  GA=1.34  (goals only — GitHub CSV source)
+2026-06-01 13:22:36    [39/51] Uzbekistan …
+2026-06-01 13:22:36      ✓ GF=1.32  GA=0.66  (goals only — GitHub CSV source)
+2026-06-01 13:22:36    [40/51] Slovakia …
+2026-06-01 13:22:36      ✓ GF=1.12  GA=1.37  (goals only — GitHub CSV source)
+2026-06-01 13:22:36    [41/51] Romania …
+2026-06-01 13:22:36      ✓ GF=1.72  GA=1.27  (goals only — GitHub CSV source)
+2026-06-01 13:22:36    [42/51] New Zealand …
+2026-06-01 13:22:36      ✓ GF=2.35  GA=1.02  (goals only — GitHub CSV source)
+2026-06-01 13:22:36    [43/51] El Salvador …
+2026-06-01 13:22:36      ✓ GF=0.72  GA=1.26  (goals only — GitHub CSV source)
+2026-06-01 13:22:36    [44/51] Guatemala …
+2026-06-01 13:22:36      ✓ GF=1.23  GA=1.71  (goals only — GitHub CSV source)
+2026-06-01 13:22:36    [45/51] Qatar …
+2026-06-01 13:22:36      ✓ GF=1.14  GA=1.66  (goals only — GitHub CSV source)
+2026-06-01 13:22:36    [46/51] Bosnia & Herzegovina …
+2026-06-01 13:22:36      ✓ GF=1.61  GA=1.29  (goals only — GitHub CSV source)
+2026-06-01 13:22:36    [47/51] DR Congo …
+2026-06-01 13:22:36      ✓ GF=1.56  GA=0.51  (goals only — GitHub CSV source)
+2026-06-01 13:22:36    [48/51] Cape Verde …
+2026-06-01 13:22:36      ✓ GF=1.58  GA=0.85  (goals only — GitHub CSV source)
+2026-06-01 13:22:36    [49/51] Jordan …
+2026-06-01 13:22:36      ✓ GF=1.71  GA=1.58  (goals only — GitHub CSV source)
+2026-06-01 13:22:36    [50/51] Haiti …
+2026-06-01 13:22:36      ✓ GF=1.59  GA=1.12  (goals only — GitHub CSV source)
+2026-06-01 13:22:36    [51/51] Curaçao …
+2026-06-01 13:22:36      ✓ GF=1.68  GA=1.3  (goals only — GitHub CSV source)
+2026-06-01 13:22:36  Fetched: ['Japan', 'USA', 'Mexico', 'Colombia', 'Uruguay', 'South Korea', 'Switzerland', 'Senegal', 'Austria', 'Turkey', 'Norway', 'Sweden', 'Scotland', 'Czech Republic', 'Serbia', 'Ukraine', 'Canada', 'Poland', 'Australia', 'Iran', 'Tunisia', 'Algeria', 'Ivory Coast', 'Ghana', 'Saudi Arabia', 'Egypt', 'Nigeria', 'Cameroon', 'Paraguay', 'Costa Rica', 'Panama', 'Honduras', 'Jamaica', 'Bolivia', 'Venezuela', 'South Africa', 'Iraq', 'Indonesia', 'Uzbekistan', 'Slovakia', 'Romania', 'New Zealand', 'El Salvador', 'Guatemala', 'Qatar', 'Bosnia & Herzegovina', 'DR Congo', 'Cape Verde', 'Jordan', 'Haiti', 'Curaçao']  |  Failed/skipped: []
+2026-06-01 13:22:36  Regenerating docs/static_data.js …
+2026-06-01 13:23:08    fetching /api/bracket … OK  (9,148 chars)
+2026-06-01 13:23:08      fetching /api/teams … OK  (755 chars)
+2026-06-01 13:23:08      fetching /api/tournament … OK  (6,248 chars)
+2026-06-01 13:23:08      fetching /api/groups … OK  (25,060 chars)
+2026-06-01 13:23:08      fetching /api/group_standings … OK  (6,163 chars)
+2026-06-01 13:23:08      fetching /api/bets … OK  (75,662 chars)
+2026-06-01 13:23:08      fetching /api/group_odds … OK  (39,705 chars)
+2026-06-01 13:23:08      fetching /api/validate …   ML model retrained without WC 2022 data (69 rows, excluded 36)
+2026-06-01 13:23:08    OK  (6,788 chars)
+2026-06-01 13:23:08      fetching /api/valuebets … OK  (25,760 chars)
+2026-06-01 13:23:08    
+2026-06-01 13:23:08    Wrote docs/static_data.js  (169.8 KB)
+2026-06-01 13:23:08    All endpoints OK — ready to deploy.
+2026-06-01 13:23:08    
+2026-06-01 13:23:08    Next steps:
+2026-06-01 13:23:08      git add docs/static_data.js docs/index.html
+2026-06-01 13:23:08      git commit -m 'update static snapshot'
+2026-06-01 13:23:08      git push
+2026-06-01 13:23:08  Pushing to GitHub Pages …
+2026-06-01 13:23:10    Pushed ✓
+2026-06-01 13:23:10  refresh_daily.py — done
+2026-06-01 13:23:10  ============================================================

@@ -1,0 +1,118 @@
+{
+  "n_training_rows": 29089,
+  "n_features": 107,
+  "class_counts": {
+    "win": 14076,
+    "draw": 6836,
+    "loss": 8177
+  },
+  "base_model_names": [
+    "lgbm",
+    "xgb",
+    "catboost",
+    "rf",
+    "et",
+    "gb",
+    "lr",
+    "mlp",
+    "knn",
+    "svm",
+    "poisson",
+    "rolling_mean"
+  ],
+  "meta_model_names": [
+    "meta_lr",
+    "meta_lgbm",
+    "meta_mlp",
+    "meta_ridge"
+  ],
+  "oof_metrics": {
+    "lgbm": {
+      "log_loss": 0.9295,
+      "accuracy": 0.5474,
+      "brier": 0.1835
+    },
+    "xgb": {
+      "log_loss": 0.8969,
+      "accuracy": 0.5847,
+      "brier": 0.1763
+    },
+    "catboost": {
+      "log_loss": 0.8989,
+      "accuracy": 0.5811,
+      "brier": 0.1767
+    },
+    "rf": {
+      "log_loss": 0.9092,
+      "accuracy": 0.5769,
+      "brier": 0.1789
+    },
+    "et": {
+      "log_loss": 0.9213,
+      "accuracy": 0.5678,
+      "brier": 0.1818
+    },
+    "gb": {
+      "log_loss": 0.9006,
+      "accuracy": 0.5828,
+      "brier": 0.177
+    },
+    "lr": {
+      "log_loss": 0.9018,
+      "accuracy": 0.58,
+      "brier": 0.1774
+    },
+    "mlp": {
+      "log_loss": 0.9097,
+      "accuracy": 0.576,
+      "brier": 0.179
+    },
+    "knn": {
+      "log_loss": 0.9415,
+      "accuracy": 0.5666,
+      "brier": 0.1827
+    },
+    "svm": {
+      "log_loss": 0.9066,
+      "accuracy": 0.5814,
+      "brier": 0.178
+    },
+    "poisson": {
+      "log_loss": 1.0124,
+      "accuracy": 0.5116,
+      "brier": 0.2002
+    },
+    "rolling_mean": {
+      "log_loss": 1.1838,
+      "accuracy": 0.4944,
+      "brier": 0.2078
+    }
+  },
+  "meta_metrics": {
+    "meta_lr": {
+      "log_loss": 0.8951,
+      "accuracy": 0.5847,
+      "brier": 0.1758
+    },
+    "meta_lgbm": {
+      "log_loss": 0.8356,
+      "accuracy": 0.6089,
+      "brier": 0.1651
+    },
+    "meta_mlp": {
+      "log_loss": 0.8877,
+      "accuracy": 0.5884,
+      "brier": 0.1745
+    },
+    "meta_ridge": {
+      "log_loss": 0.8951,
+      "accuracy": 0.5845,
+      "brier": 0.1758
+    }
+  },
+  "ensemble_metrics": {
+    "log_loss": 0.8743,
+    "accuracy": 0.5911,
+    "brier": 0.1723
+  }
+}

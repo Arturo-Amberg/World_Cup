@@ -7,13 +7,13 @@ import math
 import os
 import random
 from flask import Flask, jsonify, request, send_from_directory
-from stacked_predictor import (
+from src.models.stacked_predictor import (
     stack_predict, expected_goals, _poisson_pmf, penalty_win_prob
 )
-from predictor import VENUES
-from tournament import load_team_db
-from injuries_client import get_injury_detail
-from odds_client import get_match_odds
+from src.models.predictor import VENUES
+from src.models.tournament import load_team_db
+from src.utils.injuries_client import get_injury_detail
+from src.utils.odds_client import get_match_odds
 
 app = Flask(__name__, static_folder="static", static_url_path="")
 
@@ -148,7 +148,7 @@ def index():
 
 @app.route("/api/teams")
 def api_teams():
-    from tournament import BASE_TEAM_DB
+    from src.models.tournament import BASE_TEAM_DB
     return jsonify(sorted(BASE_TEAM_DB.keys()))
 
 
@@ -318,7 +318,7 @@ def api_group_standings():
 
 @app.route("/api/group_odds")
 def api_group_odds():
-    from odds_client import get_all_odds
+    from src.utils.odds_client import get_all_odds
     try:
         with open("data/wc2026_groups.json") as f:
             raw = json.load(f)
@@ -443,12 +443,12 @@ def api_group_odds():
 
 @app.route("/api/validate")
 def api_validate():
-    from calibrate import (
+    from src.analysis.calibrate import (
         WC2022_MATCHES, evaluate_individual_models,
         grid_search_weights, blend_probs, compute_log_loss, accuracy,
         _make_teams, _predict_outcome
     )
-    from stacked_predictor import DEFAULT_WEIGHTS, stack_predict as sp
+    from src.models.stacked_predictor import DEFAULT_WEIGHTS, stack_predict as sp
 
     model_evals = evaluate_individual_models()
     best_w, best_ll, best_acc = grid_search_weights(model_evals, step=0.05)
@@ -619,7 +619,7 @@ def api_bets():
     except FileNotFoundError:
         return jsonify({"error": "groups file not found"}), 404
 
-    from stacked_predictor import _compute_lambdas
+    from src.models.stacked_predictor import _compute_lambdas
 
     team_db = load_team_db()
     BANKROLL = 1000.0
@@ -789,7 +789,7 @@ def api_bracket():
     import time as _time
     from pathlib import Path
     from collections import defaultdict
-    from tournament import sim_full_tournament
+    from src.models.tournament import sim_full_tournament
 
     cache_path = Path("data/bracket_consensus.json")
     if cache_path.exists() and _time.time() - cache_path.stat().st_mtime < 7200:
@@ -804,7 +804,7 @@ def api_bracket():
         return jsonify({"error": "groups file not found"}), 404
 
     team_db = load_team_db()
-    N = 1500
+    N = 100000
 
     # Slot counters — each position in the bracket tracked independently
     def slot_list(n): return [defaultdict(int) for _ in range(n)]
@@ -949,7 +949,7 @@ def api_strategies():
     # Using 1000 sims for speed in the web response
     n_sims = 1000
     qual_counts = {t: 0 for t in team_db}
-    from tournament import sim_group_stage
+    from src.models.tournament import sim_group_stage
     
     for _ in range(n_sims):
         results, best_thirds, _, _ = sim_group_stage(groups, team_db)
