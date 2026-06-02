@@ -27,6 +27,26 @@ from src.models.stacked_predictor import (
 from src.models.predictor import VENUES
 
 # ─────────────────────────────────────────────
+#  Ensemble matchup cache
+#  Populated by precompute_ensemble_matchups() before MC runs.
+#  Maps (team_a_name, team_b_name) → (p_win_a, p_draw, p_win_b)
+# ─────────────────────────────────────────────
+_MATCHUP_CACHE: dict = {}
+
+
+def precompute_ensemble_matchups(team_names: list) -> None:
+    """
+    Load the trained EnsemblePredictor and pre-compute win probabilities
+    for every ordered pair from team_names. Populates _MATCHUP_CACHE so
+    sim_match() can use ensemble probs without re-running inference each call.
+    """
+    global _MATCHUP_CACHE
+    from src.models.ensemble_predictor import EnsemblePredictor
+    ep = EnsemblePredictor()
+    ep.load()
+    _MATCHUP_CACHE = ep.precompute_matchups(team_names)
+
+# ─────────────────────────────────────────────
 #  Datos base de equipos (ELO, forma, stats)
 # ─────────────────────────────────────────────
 BASE_TEAM_DB = {
@@ -246,7 +266,14 @@ def sim_match(
             team_b = dict(team_b)
             team_b["ELO"] = elo_ratings[name_b]
 
-    pred = stack_predict(team_a, team_b, home_team=home_team, round_number=round_number, venue_name=venue_name)
+    # Win probabilities: use pre-computed ensemble if available, else stack_predict
+    _key = (team_a.get("name", ""), team_b.get("name", ""))
+    if _key in _MATCHUP_CACHE:
+        _pa, _pd, _pb = _MATCHUP_CACHE[_key]
+        pred = {"p_win_a": _pa, "p_draw": _pd, "p_win_b": _pb}
+    else:
+        pred = stack_predict(team_a, team_b, home_team=home_team, round_number=round_number, venue_name=venue_name)
+
     lam_a, lam_b = expected_goals(team_a, team_b, home_team=home_team, round_number=round_number, venue_name=venue_name)
 
     # Apply fatigue penalties from prior extra time / penalties
@@ -615,56 +642,75 @@ def sim_full_tournament(
     # After group stage, reset fatigue (teams had rest before knockouts)
     current_fatigue = {}
 
-    # Construir bracket de 32 sin duplicados
-    sorted_letters = sorted(groups.keys())
-    n = len(sorted_letters)           # 12
-    half = n // 2                     # 6
-    winners = [group_results[g]["first"]  for g in sorted_letters]
-    runners = [group_results[g]["second"] for g in sorted_letters]
+    if len(groups) != 12:
+        raise ValueError(f"Official bracket expects 12 groups, got {len(groups)}.")
 
-    # 16 matches generated
-    m_list = []
-    # M1-M8: 8 Winners vs 8 Thirds
-    for i in range(8):
-        m_list.append((winners[i], best_thirds[i]))
-    # M9-M12: 4 Winners vs 4 Runners-up
-    for i in range(8, 12):
-        m_list.append((winners[i], runners[i - 8]))
-    # M13-M16: 8 Runners-up vs 8 Runners-up
-    for i in range(4, 8):
-        m_list.append((runners[i], runners[11 - (i - 4)]))
+    # ── Build official FIFA WC 2026 R32 bracket ──────────────────────────
+    winners = {g: group_results[g]["first"]  for g in groups}
+    runners = {g: group_results[g]["second"] for g in groups}
 
-    # Balanced bracket requires exactly 12 groups / 48 teams.
-    if len(sorted_letters) != 12:
-        raise ValueError(
-            f"Balanced bracket expects 12 groups, got {len(sorted_letters)}. "
-            "Update balanced_order if the tournament format has changed."
-        )
+    # Map each 3rd-place team to its source group letter
+    third_to_group = {
+        group_results[g]["ranking"][2]: g
+        for g in groups if len(group_results[g]["ranking"]) >= 3
+    }
+    best_thirds_with_groups = [(t, third_to_group.get(t, "?")) for t in best_thirds]
 
-    # Balance the bracket so top seeds don't eliminate each other early.
-    # Group winners: A-L (indices 0-11 in winners array).
-    # We want to separate A1, B1, C1, etc.
-    # m_list contains: M1-M8 (W1-W8), M9-M12 (W9-W12), M13-M16 (no winners)
-    # Balanced 16-match order (0 to 15 index):
-    balanced_order = [
-        0,   # M1 (A1)
-        15,  # M16
-        7,   # M8 (H1 - Spain)
-        8,   # M9 (I1 - Belgium)
-        3,   # M4 (D1 - Brazil)
-        12,  # M13
-        4,   # M5 (E1 - Germany)
-        11,  # M12 (L1 - Argentina)
-        1,   # M2 (B1)
-        14,  # M15
-        6,   # M7 (G1 - France)
-        9,   # M10 (J1 - England)
-        2,   # M3 (C1)
-        13,  # M14
-        5,   # M6 (F1 - Netherlands)
-        10,  # M11 (K1 - Portugal)
+    # Assign the 8 best-3rd teams to the 8 official slots using backtracking.
+    # Slot constraints = eligible source groups per match (per official draw rules).
+    _THIRDS_SLOTS = [
+        ("M74", frozenset("ABCDF")),   # 1E vs best-3rd(A|B|C|D|F)
+        ("M77", frozenset("CDFGH")),   # 1I vs best-3rd(C|D|F|G|H)
+        ("M79", frozenset("CEFHI")),   # 1A vs best-3rd(C|E|F|H|I)
+        ("M80", frozenset("EHIJK")),   # 1L vs best-3rd(E|H|I|J|K)
+        ("M81", frozenset("BEFIJ")),   # 1D vs best-3rd(B|E|F|I|J)
+        ("M82", frozenset("AEHIJ")),   # 1G vs best-3rd(A|E|H|I|J)
+        ("M85", frozenset("EFGIJ")),   # 1B vs best-3rd(E|F|G|I|J)
+        ("M87", frozenset("DEIJL")),   # 1K vs best-3rd(D|E|I|J|L)
     ]
-    r32_pairs = [m_list[idx] for idx in balanced_order]
+
+    def _backtrack_thirds(slot_idx, remaining):
+        if slot_idx == len(_THIRDS_SLOTS):
+            return {}
+        slot_id, eligible = _THIRDS_SLOTS[slot_idx]
+        for i, (team, grp) in enumerate(remaining):
+            if grp in eligible:
+                rest = remaining[:i] + remaining[i + 1:]
+                sub = _backtrack_thirds(slot_idx + 1, rest)
+                if sub is not None:
+                    return {slot_id: team, **sub}
+        return None
+
+    thirds = _backtrack_thirds(0, best_thirds_with_groups)
+    if thirds is None:
+        # Fallback: ignore group constraints, assign best-to-worst in slot order
+        thirds = {}
+        remaining = list(best_thirds_with_groups)
+        for slot_id, _ in _THIRDS_SLOTS:
+            thirds[slot_id] = remaining.pop(0)[0] if remaining else "TBD"
+
+    # Official R32 pairings (M73–M88 in bracket order)
+    r32_pairs = [
+        (runners["A"],  runners["B"]),     # M73: 2A vs 2B
+        (winners["E"],  thirds["M74"]),    # M74: 1E vs best-3rd(A|B|C|D|F)
+        (winners["F"],  runners["C"]),     # M75: 1F vs 2C
+        (winners["C"],  runners["F"]),     # M76: 1C vs 2F
+        (winners["I"],  thirds["M77"]),    # M77: 1I vs best-3rd(C|D|F|G|H)
+        (runners["E"],  runners["I"]),     # M78: 2E vs 2I
+        (winners["A"],  thirds["M79"]),    # M79: 1A vs best-3rd(C|E|F|H|I)
+        (winners["L"],  thirds["M80"]),    # M80: 1L vs best-3rd(E|H|I|J|K)
+        (winners["D"],  thirds["M81"]),    # M81: 1D vs best-3rd(B|E|F|I|J)
+        (winners["G"],  thirds["M82"]),    # M82: 1G vs best-3rd(A|E|H|I|J)
+        (runners["K"],  runners["L"]),     # M83: 2K vs 2L
+        (winners["H"],  runners["J"]),     # M84: 1H vs 2J
+        (winners["B"],  thirds["M85"]),    # M85: 1B vs best-3rd(E|F|G|I|J)
+        (winners["J"],  runners["H"]),     # M86: 1J vs 2H
+        (winners["K"],  thirds["M87"]),    # M87: 1K vs best-3rd(D|E|I|J|L)
+        (runners["D"],  runners["G"]),     # M88: 2D vs 2G
+    ]
+    # R16: W(M73,M74) → M89, W(M75,M76) → M90, ... sequential pairs
+    # QF:  W(M89,M90) → QF1, W(M91,M92) → QF2, W(M93,M94) → QF3, W(M95,M96) → QF4
+    # SF:  W(QF1,QF2) → SF1, W(QF3,QF4) → SF2
 
     # 16 partidos = 32 equipos únicos ✓
     rounds = [
@@ -768,6 +814,10 @@ def monte_carlo(groups: dict, team_db: dict, n: int = 10_000) -> dict:
     
     total_goals_sum = 0
     total_over_2_5 = 0
+
+    # Pre-compute ensemble matchup cache once for all MC iterations
+    all_team_names = list({t for g in groups.values() if isinstance(g, list) for t in g})
+    precompute_ensemble_matchups(all_team_names)
 
     t0 = time.time()
     for i in range(n):

@@ -273,19 +273,32 @@ class EnsemblePredictor:
                 f"Models not found at {MODELS_DIR}. Run training_pipeline.py first."
             )
 
+        # The base model pickles were saved with __main__ as the module path
+        # (training_pipeline.py was run directly). Remap to the real module so
+        # unpickling works regardless of how this code is invoked.
+        import sys
+        import src.pipelines.training_pipeline as _tp
+        for _attr in dir(_tp):
+            if not _attr.startswith("_"):
+                setattr(sys.modules.get("__main__", _tp), _attr, getattr(_tp, _attr))
+
+        def _safe_load(path):
+            with open(path, "rb") as fh:
+                return pickle.load(fh)
+
         self.feature_names = json.loads(
             (MODELS_DIR / "feature_names.json").read_text()
         )
-        self.scaler      = pickle.load(open(MODELS_DIR / "scaler.pkl",      "rb"))
-        self.meta_scaler = pickle.load(open(MODELS_DIR / "meta_scaler.pkl", "rb"))
+        self.scaler      = _safe_load(MODELS_DIR / "scaler.pkl")
+        self.meta_scaler = _safe_load(MODELS_DIR / "meta_scaler.pkl")
 
         for p in MODELS_DIR.glob("base_*.pkl"):
             name = p.stem[5:]  # strip "base_"
-            self.base_models[name] = pickle.load(open(p, "rb"))
+            self.base_models[name] = _safe_load(p)
 
         for p in MODELS_DIR.glob("meta_*.pkl"):
             name = p.stem        # e.g. "meta_lr"
-            self.meta_models[name] = pickle.load(open(p, "rb"))
+            self.meta_models[name] = _safe_load(p)
 
         # Data for rolling features
         self._df   = pd.read_csv(CSV_PATH, parse_dates=["date"])
@@ -416,6 +429,33 @@ class EnsemblePredictor:
         final_p /= final_p.sum()
 
         return float(final_p[0]), float(final_p[1]), float(final_p[2])
+
+    def precompute_matchups(self, team_names: list) -> dict:
+        """
+        Pre-compute ensemble win probabilities for every ordered pair of teams.
+        Returns {(team_a, team_b): (p_win_a, p_draw, p_win_b), ...}.
+        Both directions are stored so lookup is O(1) during simulation.
+        """
+        if not self._loaded:
+            self.load()
+
+        cache: dict = {}
+        names = list(team_names)
+        total = len(names) * (len(names) - 1) // 2
+        done = 0
+        for i, a in enumerate(names):
+            for b in names[i + 1:]:
+                ta = {"name": a, "ELO": _team_elo(a, self._elos)}
+                tb = {"name": b, "ELO": _team_elo(b, self._elos)}
+                pa, pd, pb = self.predict(ta, tb)
+                cache[(a, b)] = (pa, pd, pb)
+                cache[(b, a)] = (pb, pd, pa)
+                done += 1
+                if done % 100 == 0:
+                    print(f"  [ensemble] pre-computed {done}/{total} matchups …", flush=True)
+
+        print(f"  [ensemble] done — {len(cache)} matchup entries cached.", flush=True)
+        return cache
 
     def predict_with_breakdown(
         self,

@@ -26,9 +26,9 @@ _CSV_CACHE = Path(__file__).parent.parent.parent / "data" / "intl_results.csv"
 _CSV_TTL   = 6 * 3600   # re-download after 6 hours
 
 BASELINE_OPPONENT_ELO = 1750
-_ALPHA_FORMA = 0.70
-_ALPHA_GF    = 0.40
-_ALPHA_GA    = 0.30
+_ALPHA_FORMA = 1.20   # increased from 0.70 — more aggressively discounts weak-opponent wins
+_ALPHA_GF    = 0.70   # increased from 0.40
+_ALPHA_GA    = 0.50   # increased from 0.30
 
 # Map dataset team names → our internal names (ELO cache keys)
 # Direction: dataset name → internal name

@@ -804,6 +804,12 @@ def api_bracket():
         return jsonify({"error": "groups file not found"}), 404
 
     team_db = load_team_db()
+
+    # Pre-compute ensemble predictions for all team pairs once before the MC loop
+    from src.models.tournament import precompute_ensemble_matchups
+    all_team_names = list({t for g in groups.values() if isinstance(g, list) for t in g})
+    precompute_ensemble_matchups(all_team_names)
+
     N = 100000
 
     # Slot counters — each position in the bracket tracked independently

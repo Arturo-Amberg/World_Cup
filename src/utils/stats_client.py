@@ -238,10 +238,10 @@ def _lookup_elo(opponent_name: str) -> float | None:
 
 
 # Alpha exponents — controls how aggressively opponent quality rescales each stat.
-# Values < 1 prevent over-correction while preserving the real quality signal.
-_ALPHA_FORMA = 0.70   # Wins vs elite count most
-_ALPHA_GF    = 0.40   # Goals for — mild upweight vs strong opponents
-_ALPHA_GA    = 0.30   # Goals against — inverse: conceding vs weak hurts more
+# Higher values more aggressively discount wins/goals vs weak opposition.
+_ALPHA_FORMA = 1.20   # increased: warm-up wins vs minnows get much less credit
+_ALPHA_GF    = 0.70   # increased: goals vs weak opponents less inflating
+_ALPHA_GA    = 0.50   # increased: conceding vs elites penalised more
 
 
 def _match_weights(opp_elo: float) -> tuple[float, float, float]:
