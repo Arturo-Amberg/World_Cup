@@ -36,53 +36,14 @@ _RESULT_OVERRIDES: dict[tuple, tuple] = {
 }
 
 BASELINE_OPPONENT_ELO = 1750
-_ALPHA_FORMA = 1.20   # discounts weak-opponent wins aggressively
-_ALPHA_GF    = 0.70
-_ALPHA_GA    = 0.50
+_ALPHA_FORMA = 0.70
+_ALPHA_GF    = 0.40
+_ALPHA_GA    = 0.30
 
-# Matches vs teams rated below this are excluded from stats computation.
-# Keeps Arab Cup (Oman 1490, Syria 1491) and AFCON minnow results out of the sample.
-MIN_OPPONENT_ELO = 1500
-
-# How many recent matches to scan before applying the ELO filter
-MATCH_WINDOW = 22
-
-# Quality weight per tournament — scales SOS weight so Arab Cup clean sheets
-# barely register while UEFA NL / WC Quals count fully.
-_TOURNAMENT_WEIGHT: dict[str, float] = {
-    # Exhibition / regional cups with weak fields
-    "Arab Cup":                              0.35,
-    "Gulf Cup":                              0.35,
-    "CECAFA Cup":                            0.35,
-    "COSAFA Cup":                            0.35,
-    "WAFU Cup":                              0.35,
-    "Merdeka Tournament":                    0.30,
-    "Island Games":                          0.15,
-    "British Home Championship":             0.60,
-    "CFU Caribbean Cup":                     0.40,
-    "CFU Caribbean Cup qualification":       0.40,
-    "Asian Games":                           0.40,
-    # Friendlies — some signal but noisy
-    "Friendly":                              0.65,
-    # Full-weight competitions
-    "FIFA World Cup":                        1.20,
-    "FIFA World Cup qualification":          1.00,
-    "UEFA Euro":                             1.10,
-    "UEFA Euro qualification":               1.00,
-    "UEFA Nations League":                   1.00,
-    "Copa América":                          1.00,
-    "Copa América qualification":            0.90,
-    "CONCACAF Nations League":               0.90,
-    "CONCACAF Nations League qualification": 0.85,
-    "Gold Cup":                              0.85,
-    "Gold Cup qualification":                0.75,
-    "African Cup of Nations":                0.85,
-    "African Cup of Nations qualification":  0.80,
-    "AFC Asian Cup":                         0.85,
-    "AFC Asian Cup qualification":           0.80,
-    "Kirin Cup":                             0.60,
-}
-_DEFAULT_TOURNAMENT_WEIGHT = 0.65  # conservative default for unlisted tournaments
+# Minimum opponent ELO to include in stats (filters minnow friendlies like
+# Puerto Rico, Moldova, South Sudan). Falls back to unfiltered if fewer than
+# 8 qualified matches remain, so no team is left data-starved.
+MIN_OPPONENT_ELO = 1400
 
 # Map dataset team names → our internal names (ELO cache keys)
 # Direction: dataset name → internal name
@@ -233,16 +194,14 @@ def get_team_stats(team_name: str) -> dict | None:
         return None
 
     team_df = team_df.sort_values("date")
-    wider = team_df.tail(MATCH_WINDOW)
+    wider = team_df.tail(20)  # pull extra rows so filter still leaves ~15
 
-    # Build full candidate pool for the wider window
     all_match_data = []
     for _, row in wider.iterrows():
         is_home    = (row["home_team"] == dataset_name)
         gf         = float(row["home_score"] if is_home else row["away_score"])
         ga         = float(row["away_score"] if is_home else row["home_score"])
         opp_name   = row["away_team"] if is_home else row["home_team"]
-        tournament = str(row.get("tournament", "Friendly"))
 
         # Apply on-pitch result correction for forfeit/awarded results
         _date_str = str(row["date"])[:10]
@@ -255,21 +214,17 @@ def get_team_stats(team_name: str) -> dict | None:
         pts     = 3 if gf > ga else (1 if gf == ga else 0)
         raw_elo = _lookup_elo(opp_name)
         eff_elo = raw_elo if raw_elo else BASELINE_OPPONENT_ELO
-        t_weight = _TOURNAMENT_WEIGHT.get(tournament, _DEFAULT_TOURNAMENT_WEIGHT)
 
         all_match_data.append({
-            "name":       opp_name,
-            "elo":        raw_elo,
-            "eff_elo":    eff_elo,
-            "gf":         gf,
-            "ga":         ga,
-            "pts":        pts,
-            "t_weight":   t_weight,
-            "tournament": tournament,
+            "name":    opp_name,
+            "elo":     raw_elo,
+            "eff_elo": eff_elo,
+            "gf":      gf,
+            "ga":      ga,
+            "pts":     pts,
         })
 
-    # Filter out matches vs very weak opponents (Arab Cup minnows etc.)
-    # Fall back to unfiltered if too few qualified matches remain.
+    # Filter out minnow opponents; fall back to unfiltered if too few remain
     qualified = [m for m in all_match_data if m["eff_elo"] >= MIN_OPPONENT_ELO]
     match_data = (qualified if len(qualified) >= 8 else all_match_data)[-15:]
 
@@ -288,10 +243,9 @@ def get_team_stats(team_name: str) -> dict | None:
 
     for m in match_data:
         w_forma, w_gf, w_ga_inv = _match_weights(m["eff_elo"])
-        tw = m["t_weight"]
-        wf_sum  += w_forma * tw;   wf_pts += m["pts"] * w_forma * tw
-        wg_sum  += w_gf   * tw;   wg_gf  += m["gf"]  * w_gf   * tw
-        wga_sum += w_ga_inv * tw;  wga_ga += m["ga"]  * w_ga_inv * tw
+        wf_sum  += w_forma;    wf_pts += m["pts"] * w_forma
+        wg_sum  += w_gf;       wg_gf  += m["gf"]  * w_gf
+        wga_sum += w_ga_inv;   wga_ga += m["ga"]  * w_ga_inv
 
     adj_forma = round(max(0.5, min(3.0, wf_pts / wf_sum)), 2)
     adj_gf    = round(max(0.3, min(4.0, wg_gf  / wg_sum)), 2)
@@ -321,8 +275,7 @@ def get_team_stats(team_name: str) -> dict | None:
         "AVG_OPP_ELO":      round(avg_opp_elo, 0),
         "SOS_FORMA_MULT":   round((avg_opp_elo / BASELINE_OPPONENT_ELO) ** _ALPHA_FORMA, 4),
         "OPPONENTS": [
-            {"name": m["name"], "elo": m["elo"], "gf": int(m["gf"]), "ga": int(m["ga"]),
-             "t_weight": m["t_weight"], "tournament": m["tournament"]}
+            {"name": m["name"], "elo": m["elo"], "gf": int(m["gf"]), "ga": int(m["ga"])}
             for m in match_data
         ],
     }

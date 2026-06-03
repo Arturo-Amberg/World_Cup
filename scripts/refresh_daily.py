@@ -23,7 +23,10 @@ from datetime import date, datetime
 from pathlib import Path
 
 # ── setup ─────────────────────────────────────────────────────────────────────
-os.chdir(Path(__file__).parent.parent)
+_PROJECT_ROOT = Path(__file__).parent.parent
+os.chdir(_PROJECT_ROOT)
+if str(_PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(_PROJECT_ROOT))
 
 LOG_PATH = Path("data/refresh_daily.log")
 LOG_PATH.parent.mkdir(exist_ok=True)
@@ -124,7 +127,7 @@ def regenerate_static() -> bool:
     log.info("Regenerating docs/static_data.js …")
     BRACKET_FILE.unlink(missing_ok=True)  # force fresh bracket sim
     result = subprocess.run(
-        [sys.executable, "generate_static_data.py"],
+        [sys.executable, "scripts/generate_static_data.py"],
         capture_output=True, text=True
     )
     if result.returncode != 0:
