@@ -311,10 +311,30 @@ def sim_match(
             team_b = dict(team_b)
             team_b["ELO"] = elo_ratings[name_b]
 
-    # Win probabilities: use pre-computed ensemble if available, else stack_predict
+    # Win probabilities: use pre-computed ensemble blended with ELO-based probability.
+    # The ensemble's rolling features come from the raw CSV without SOS weighting, so
+    # teams with easy recent schedules (Arab Cup, AFCON minnows) can appear misleadingly
+    # strong. Blending 50% ensemble + 50% ELO anchors predictions to true team quality.
     _key = (team_a.get("name", ""), team_b.get("name", ""))
+    elo_a = float(team_a.get("ELO", 1600))
+    elo_b = float(team_b.get("ELO", 1600))
+
+    # ELO 3-way: expected score → 3-way probs using historical WC draw rate ~22%
+    _DRAW_RATE = 0.22
+    _e_a = 1.0 / (1.0 + 10.0 ** ((elo_b - elo_a) / 400.0))
+    _elo_pa = max(0.0, _e_a - _DRAW_RATE / 2)
+    _elo_pb = max(0.0, (1.0 - _e_a) - _DRAW_RATE / 2)
+    _elo_pd = max(0.0, 1.0 - _elo_pa - _elo_pb)
+    # Renormalize
+    _elo_tot = _elo_pa + _elo_pd + _elo_pb
+    _elo_pa, _elo_pd, _elo_pb = _elo_pa / _elo_tot, _elo_pd / _elo_tot, _elo_pb / _elo_tot
+
     if _key in _MATCHUP_CACHE:
         _pa, _pd, _pb = _MATCHUP_CACHE[_key]
+        # 50% ensemble + 50% ELO
+        _pa = 0.50 * _pa + 0.50 * _elo_pa
+        _pd = 0.50 * _pd + 0.50 * _elo_pd
+        _pb = 0.50 * _pb + 0.50 * _elo_pb
         pred = {"p_win_a": _pa, "p_draw": _pd, "p_win_b": _pb}
     else:
         pred = stack_predict(team_a, team_b, home_team=home_team, round_number=round_number, venue_name=venue_name)
