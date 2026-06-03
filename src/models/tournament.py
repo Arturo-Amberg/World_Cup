@@ -16,9 +16,11 @@ import math
 import random
 import json
 import os
+import pickle
 import sys
 import time
 from collections import defaultdict
+from pathlib import Path
 
 from src.models.stacked_predictor import (
     stack_predict, expected_goals,
@@ -33,18 +35,59 @@ from src.models.predictor import VENUES
 # ─────────────────────────────────────────────
 _MATCHUP_CACHE: dict = {}
 
+_DATA_DIR = Path(__file__).parent.parent.parent / "data"
+_MATCHUP_CACHE_FILE = _DATA_DIR / "matchup_cache.pkl"
+_ELOS_FILE = _DATA_DIR / "elos.json"
+_CSV_FILE  = _DATA_DIR / "intl_results.csv"
+
+
+def _matchup_cache_valid() -> bool:
+    """Return True if the on-disk matchup cache exists and is newer than elos.json + CSV."""
+    if not _MATCHUP_CACHE_FILE.exists():
+        return False
+    cache_mtime = _MATCHUP_CACHE_FILE.stat().st_mtime
+    for dep in [_ELOS_FILE, _CSV_FILE]:
+        if dep.exists() and dep.stat().st_mtime > cache_mtime:
+            return False
+    return True
+
 
 def precompute_ensemble_matchups(team_names: list) -> None:
     """
     Load the trained EnsemblePredictor and pre-compute win probabilities
     for every ordered pair from team_names. Populates _MATCHUP_CACHE so
     sim_match() can use ensemble probs without re-running inference each call.
+
+    Results are cached to disk (data/matchup_cache.pkl) and reused as long as
+    elos.json and intl_results.csv haven't changed, saving ~60 min on re-runs.
     """
     global _MATCHUP_CACHE
+
+    # Try disk cache first
+    if _matchup_cache_valid():
+        try:
+            with open(_MATCHUP_CACHE_FILE, "rb") as f:
+                cached = pickle.load(f)
+            cached_teams = {t for key in cached for t in key}
+            if set(team_names).issubset(cached_teams):
+                _MATCHUP_CACHE = cached
+                print(f"  [ensemble] loaded {len(cached)//2} matchup pairs from disk cache.")
+                return
+        except Exception as e:
+            print(f"  [ensemble] disk cache load failed ({e}), recomputing …")
+
     from src.models.ensemble_predictor import EnsemblePredictor
     ep = EnsemblePredictor()
     ep.load()
     _MATCHUP_CACHE = ep.precompute_matchups(team_names)
+
+    # Save to disk cache
+    try:
+        with open(_MATCHUP_CACHE_FILE, "wb") as f:
+            pickle.dump(dict(_MATCHUP_CACHE), f)
+        print(f"  [ensemble] saved {len(_MATCHUP_CACHE)//2} matchup pairs to disk cache.")
+    except Exception as e:
+        print(f"  [ensemble] could not save disk cache: {e}")
 
 # ─────────────────────────────────────────────
 #  Datos base de equipos (ELO, forma, stats)
@@ -129,12 +172,14 @@ def load_team_db() -> dict:
     db = {name: dict(data) | {"name": name} for name, data in BASE_TEAM_DB.items()}
 
     # Load SOS-adjusted live stats and blend with calibrated BASE values.
-    # stats_client now returns SOS-adjusted FORMA/GF/GA (opponent-quality corrected),
-    # so we can trust the live signal more — use 50/50 blend vs the old 40/60.
-    # SOS adjustment already deflates Argentina's easy-qualifier stats and
-    # upgrades Spain/France's elite UEFA opposition stats.
-    _LIVE_WEIGHT = 0.50
-    _BASE_WEIGHT = 0.50
+    # GA uses a more conservative 40/60 live/base split: even after SOS weighting,
+    # teams with Arab Cup / AFCON group-stage schedules can post unrealistically low
+    # concession rates. The heavier base anchor keeps GA in a credible range.
+    # FORMA and GF use 50/50 — recent attacking form is a better real-time signal.
+    _LIVE_WEIGHT_FORMA_GF = 0.50
+    _BASE_WEIGHT_FORMA_GF = 0.50
+    _LIVE_WEIGHT_GA = 0.40
+    _BASE_WEIGHT_GA = 0.60
     try:
         with open(CACHE_STATS) as f:
             cache = json.load(f)
@@ -153,11 +198,11 @@ def load_team_db() -> dict:
 
                 # Blend SOS-adjusted live data with calibrated BASE, then clamp
                 db[team]["FORMA"]  = round(max(1.0, min(2.6,
-                    _LIVE_WEIGHT * live_forma + _BASE_WEIGHT * base_forma)), 2)
+                    _LIVE_WEIGHT_FORMA_GF * live_forma + _BASE_WEIGHT_FORMA_GF * base_forma)), 2)
                 db[team]["GF_AVG"] = round(max(0.4, min(3.5,
-                    _LIVE_WEIGHT * live_gf   + _BASE_WEIGHT * base_gf)),   2)
+                    _LIVE_WEIGHT_FORMA_GF * live_gf   + _BASE_WEIGHT_FORMA_GF * base_gf)),   2)
                 db[team]["GA_AVG"] = round(max(0.3, min(2.5,
-                    _LIVE_WEIGHT * live_ga   + _BASE_WEIGHT * base_ga)),   2)
+                    _LIVE_WEIGHT_GA * live_ga + _BASE_WEIGHT_GA * base_ga)),   2)
 
                 # Extended stats — use live value directly if available (no BASE baseline)
                 _EXT_DEFAULTS = {
