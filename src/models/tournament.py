@@ -276,6 +276,39 @@ def _sample_poisson(lam: float) -> int:
     return k - 1
 
 
+def match_probs(
+    team_a: dict,
+    team_b: dict,
+    home_team: str = None,
+    round_number: int = 1,
+    venue_name: str = None,
+) -> dict:
+    """
+    Return blended win/draw/lose probabilities (ELO + ensemble) without sampling.
+    Use this wherever you need the probabilities directly instead of a simulated result.
+    """
+    _key = (team_a.get("name", ""), team_b.get("name", ""))
+    elo_a = float(team_a.get("ELO", 1600))
+    elo_b = float(team_b.get("ELO", 1600))
+
+    _DRAW_RATE = 0.22
+    _e_a = 1.0 / (1.0 + 10.0 ** ((elo_b - elo_a) / 400.0))
+    _elo_pa = max(0.0, _e_a - _DRAW_RATE / 2)
+    _elo_pb = max(0.0, (1.0 - _e_a) - _DRAW_RATE / 2)
+    _elo_pd = max(0.0, 1.0 - _elo_pa - _elo_pb)
+    _tot = _elo_pa + _elo_pd + _elo_pb
+    _elo_pa, _elo_pd, _elo_pb = _elo_pa / _tot, _elo_pd / _tot, _elo_pb / _tot
+
+    if _key in _MATCHUP_CACHE:
+        _pa, _pd, _pb = _MATCHUP_CACHE[_key]
+        _pa = 0.30 * _pa + 0.70 * _elo_pa
+        _pd = 0.30 * _pd + 0.70 * _elo_pd
+        _pb = 0.30 * _pb + 0.70 * _elo_pb
+        return {"p_win_a": _pa, "p_draw": _pd, "p_win_b": _pb}
+    else:
+        return stack_predict(team_a, team_b, home_team=home_team, round_number=round_number, venue_name=venue_name)
+
+
 def sim_match(
     team_a: dict,
     team_b: dict,

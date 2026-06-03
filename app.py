@@ -11,7 +11,7 @@ from src.models.stacked_predictor import (
     stack_predict, expected_goals, _poisson_pmf, penalty_win_prob
 )
 from src.models.predictor import VENUES
-from src.models.tournament import load_team_db
+from src.models.tournament import load_team_db, match_probs as _match_probs
 from src.utils.injuries_client import get_injury_detail
 from src.utils.odds_client import get_match_odds
 
@@ -184,7 +184,7 @@ def api_groups():
             home = None
             if an in {"USA","Mexico","Canada"}: home = an
             elif bn in {"USA","Mexico","Canada"}: home = bn
-            pred = stack_predict(ta, tb, home_team=home)
+            pred = _match_probs(ta, tb, home_team=home)
             lam_a, lam_b = expected_goals(ta, tb, home_team=home)
             matrix = scoreline_matrix(lam_a, lam_b)
             top3 = [{"score": m["score"], "prob": m["prob"]} for m in matrix[:3]]
@@ -246,7 +246,7 @@ def api_group_standings():
             home = None
             if an in {"USA","Mexico","Canada"}: home = an
             elif bn in {"USA","Mexico","Canada"}: home = bn
-            pred = stack_predict(ta, tb, home_team=home)
+            pred = _match_probs(ta, tb, home_team=home)
             lam_a, lam_b = expected_goals(ta, tb, home_team=home)
             match_data.append({
                 "i": i, "j": j,
@@ -373,7 +373,7 @@ def api_group_odds():
             home = None
             if an in {"USA","Mexico","Canada"}: home = an
             elif bn in {"USA","Mexico","Canada"}: home = bn
-            pred = stack_predict(ta, tb, home_team=home)
+            pred = _match_probs(ta, tb, home_team=home)
             lam_a, lam_b = expected_goals(ta, tb, home_team=home)
             matrix = scoreline_matrix(lam_a, lam_b)
 

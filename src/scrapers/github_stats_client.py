@@ -45,6 +45,10 @@ _ALPHA_GA    = 0.30
 # 8 qualified matches remain, so no team is left data-starved.
 MIN_OPPONENT_ELO = 1400
 
+# Friendlies count less — a friendly loss/win matters less than a qualifier.
+# All other tournaments (Nations League, WC qualification, AFCON, Copa, etc.) = 1.0
+_FRIENDLY_WEIGHT = 0.5
+
 # Map dataset team names → our internal names (ELO cache keys)
 # Direction: dataset name → internal name
 _DATASET_TO_INTERNAL = {
@@ -211,17 +215,20 @@ def get_team_stats(team_name: str) -> dict | None:
             gf = float(_hs if is_home else _as)
             ga = float(_as if is_home else _hs)
 
-        pts     = 3 if gf > ga else (1 if gf == ga else 0)
-        raw_elo = _lookup_elo(opp_name)
-        eff_elo = raw_elo if raw_elo else BASELINE_OPPONENT_ELO
+        pts        = 3 if gf > ga else (1 if gf == ga else 0)
+        raw_elo    = _lookup_elo(opp_name)
+        eff_elo    = raw_elo if raw_elo else BASELINE_OPPONENT_ELO
+        tournament = str(row.get("tournament", "Friendly"))
+        t_weight   = _FRIENDLY_WEIGHT if tournament == "Friendly" else 1.0
 
         all_match_data.append({
-            "name":    opp_name,
-            "elo":     raw_elo,
-            "eff_elo": eff_elo,
-            "gf":      gf,
-            "ga":      ga,
-            "pts":     pts,
+            "name":     opp_name,
+            "elo":      raw_elo,
+            "eff_elo":  eff_elo,
+            "gf":       gf,
+            "ga":       ga,
+            "pts":      pts,
+            "t_weight": t_weight,
         })
 
     # Filter out minnow opponents; fall back to unfiltered if too few remain
@@ -243,9 +250,10 @@ def get_team_stats(team_name: str) -> dict | None:
 
     for m in match_data:
         w_forma, w_gf, w_ga_inv = _match_weights(m["eff_elo"])
-        wf_sum  += w_forma;    wf_pts += m["pts"] * w_forma
-        wg_sum  += w_gf;       wg_gf  += m["gf"]  * w_gf
-        wga_sum += w_ga_inv;   wga_ga += m["ga"]  * w_ga_inv
+        tw = m["t_weight"]
+        wf_sum  += w_forma   * tw;  wf_pts += m["pts"] * w_forma   * tw
+        wg_sum  += w_gf      * tw;  wg_gf  += m["gf"]  * w_gf      * tw
+        wga_sum += w_ga_inv  * tw;  wga_ga += m["ga"]  * w_ga_inv  * tw
 
     adj_forma = round(max(0.5, min(3.0, wf_pts / wf_sum)), 2)
     adj_gf    = round(max(0.3, min(4.0, wg_gf  / wg_sum)), 2)
