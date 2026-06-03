@@ -911,7 +911,7 @@ def api_bracket():
     qf_matches   = [build_match(qf_slot[2*i],   qf_slot[2*i+1])   for i in range(4)]
     sf_matches   = [build_match(sf_slot[2*i],   sf_slot[2*i+1])   for i in range(2)]
     final_match  = build_match(final_a, final_b)
-    champion     = top(champ_cnt, 5)
+    champion     = top(champ_cnt, 12)
 
     result = {
         "groups":    group_data,

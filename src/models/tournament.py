@@ -331,10 +331,10 @@ def sim_match(
 
     if _key in _MATCHUP_CACHE:
         _pa, _pd, _pb = _MATCHUP_CACHE[_key]
-        # 50% ensemble + 50% ELO
-        _pa = 0.50 * _pa + 0.50 * _elo_pa
-        _pd = 0.50 * _pd + 0.50 * _elo_pd
-        _pb = 0.50 * _pb + 0.50 * _elo_pb
+        # 30% ensemble + 70% ELO
+        _pa = 0.30 * _pa + 0.70 * _elo_pa
+        _pd = 0.30 * _pd + 0.70 * _elo_pd
+        _pb = 0.30 * _pb + 0.70 * _elo_pb
         pred = {"p_win_a": _pa, "p_draw": _pd, "p_win_b": _pb}
     else:
         pred = stack_predict(team_a, team_b, home_team=home_team, round_number=round_number, venue_name=venue_name)
