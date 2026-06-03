@@ -37,16 +37,17 @@ _MATCHUP_CACHE: dict = {}
 
 _DATA_DIR = Path(__file__).parent.parent.parent / "data"
 _MATCHUP_CACHE_FILE = _DATA_DIR / "matchup_cache.pkl"
-_ELOS_FILE = _DATA_DIR / "elos.json"
-_CSV_FILE  = _DATA_DIR / "intl_results.csv"
+_ELOS_FILE  = _DATA_DIR / "elos.json"
+_CSV_FILE   = _DATA_DIR / "intl_results.csv"
+_STATS_FILE = _DATA_DIR / "team_stats.json"
 
 
 def _matchup_cache_valid() -> bool:
-    """Return True if the on-disk matchup cache exists and is newer than elos.json + CSV."""
+    """Return True if the on-disk matchup cache exists and is newer than all stat dependencies."""
     if not _MATCHUP_CACHE_FILE.exists():
         return False
     cache_mtime = _MATCHUP_CACHE_FILE.stat().st_mtime
-    for dep in [_ELOS_FILE, _CSV_FILE]:
+    for dep in [_ELOS_FILE, _CSV_FILE, _STATS_FILE]:
         if dep.exists() and dep.stat().st_mtime > cache_mtime:
             return False
     return True
