@@ -25,6 +25,16 @@ _CSV_URL   = "https://raw.githubusercontent.com/martj42/international_results/ma
 _CSV_CACHE = Path(__file__).parent.parent.parent / "data" / "intl_results.csv"
 _CSV_TTL   = 6 * 3600   # re-download after 6 hours
 
+# Corrected on-pitch scores for matches where the official result was awarded
+# by forfeit/legal ruling rather than reflecting actual play.
+# Key: (date_str, home_team_in_csv, away_team_in_csv)
+# Value: (corrected_home_score, corrected_away_score) — what was actually played
+_RESULT_OVERRIDES: dict[tuple, tuple] = {
+    # AFCON 2026-01-18: Morocco 0-1 Senegal on the pitch;
+    # Senegal disqualified → official awarded 3-0 to Morocco.
+    ("2026-01-18", "Morocco", "Senegal"): (0, 1),
+}
+
 BASELINE_OPPONENT_ELO = 1750
 _ALPHA_FORMA = 1.20   # discounts weak-opponent wins aggressively
 _ALPHA_GF    = 0.70
@@ -233,6 +243,14 @@ def get_team_stats(team_name: str) -> dict | None:
         ga         = float(row["away_score"] if is_home else row["home_score"])
         opp_name   = row["away_team"] if is_home else row["home_team"]
         tournament = str(row.get("tournament", "Friendly"))
+
+        # Apply on-pitch result correction for forfeit/awarded results
+        _date_str = str(row["date"])[:10]
+        _override_key = (_date_str, row["home_team"], row["away_team"])
+        if _override_key in _RESULT_OVERRIDES:
+            _hs, _as = _RESULT_OVERRIDES[_override_key]
+            gf = float(_hs if is_home else _as)
+            ga = float(_as if is_home else _hs)
 
         pts     = 3 if gf > ga else (1 if gf == ga else 0)
         raw_elo = _lookup_elo(opp_name)
