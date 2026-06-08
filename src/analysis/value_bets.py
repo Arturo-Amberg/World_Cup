@@ -763,6 +763,456 @@ def find_value_bets(odds_data: list[dict], mc: dict | None, team_db: dict) -> li
               f"Group {grp_ltr} Under {line_val} Corners", under_odds, p_under, "Group Corners",
               fair_imp=fair_under)
 
+    # ── 10. HANDICAP (3-WAY) ─────────────────────────────────────────────────
+    # line "h_cap - a_cap": effective score = actual + handicap; home win/draw/away win
+
+    def _score_matrix(lam_h, lam_a, max_g=12):
+        """Dixon-Coles corrected joint score probabilities."""
+        from src.models.stacked_predictor import DIXON_COLES_RHO as _rho
+        probs = {}
+        total = 0.0
+        for h in range(max_g + 1):
+            ph = math.exp(-lam_h) * lam_h**h / math.factorial(h)
+            for a in range(max_g + 1):
+                pa = math.exp(-lam_a) * lam_a**a / math.factorial(a)
+                p  = ph * pa
+                if   h == 0 and a == 0: tau = 1.0 - lam_h * lam_a * _rho
+                elif h == 1 and a == 0: tau = 1.0 + lam_a * _rho
+                elif h == 0 and a == 1: tau = 1.0 + lam_h * _rho
+                elif h == 1 and a == 1: tau = 1.0 - _rho
+                else:                   tau = 1.0
+                p *= max(0.01, tau)
+                probs[(h, a)] = p
+                total += p
+        if total > 0:
+            probs = {k: v / total for k, v in probs.items()}
+        return probs
+
+    def _handicap_probs(lam_h, lam_a, h_cap, a_cap):
+        sp = _score_matrix(lam_h, lam_a)
+        p_hw = p_d = p_aw = 0.0
+        for (h, a), p in sp.items():
+            eff_h, eff_a = h + h_cap, a + a_cap
+            if   eff_h > eff_a: p_hw += p
+            elif eff_h == eff_a: p_d  += p
+            else:                p_aw += p
+        return p_hw, p_d, p_aw
+
+    match_hcp: dict[str, dict] = {}
+    for row in odds_data:
+        if row.get("page") == "matches" and row.get("market") == "Handicap (3 Way)":
+            line_str = str(row.get("line", "")).strip()
+            try:
+                parts = line_str.split(" - ")
+                h_cap, a_cap = int(parts[0]), int(parts[1])
+            except Exception:
+                continue
+            mn = row["match"]
+            if mn not in match_hcp:
+                match_hcp[mn] = {}
+            key = f"{h_cap}_{a_cap}"
+            if key not in match_hcp[mn]:
+                match_hcp[mn][key] = {"h_cap": h_cap, "a_cap": a_cap, "odds": {}}
+            match_hcp[mn][key]["odds"][row["selection"]] = row["odds"]
+
+    for match_name, lines_dict in match_hcp.items():
+        parts = match_name.split(" - ", 1)
+        if len(parts) != 2:
+            continue
+        home_raw, away_raw = parts
+        home_team = best_match(home_raw, model_teams)
+        away_team = best_match(away_raw, model_teams)
+        if not home_team or not away_team:
+            continue
+        if home_team not in team_db or away_team not in team_db:
+            continue
+        try:
+            from src.models.stacked_predictor import expected_goals as eg
+            lam_h, lam_a = eg(team_db[home_team], team_db[away_team])
+        except Exception:
+            continue
+
+        for key, ld in lines_dict.items():
+            h_cap, a_cap = ld["h_cap"], ld["a_cap"]
+            odds_map = ld["odds"]
+            p_hw, p_d, p_aw = _handicap_probs(lam_h, lam_a, h_cap, a_cap)
+
+            # Map selections to home/draw/away
+            sel_map = {}
+            for sel, ov in odds_map.items():
+                sl = sel.strip().lower()
+                if sl == home_raw.lower() or sl == home_team.lower():
+                    sel_map["home"] = (sel, ov)
+                elif sl == away_raw.lower() or sl == away_team.lower():
+                    sel_map["away"] = (sel, ov)
+                elif sl in ("draw", "x"):
+                    sel_map["draw"] = (sel, ov)
+
+            fair_probs = {}
+            if len(sel_map) == 3:
+                raw_list = [implied(sel_map[k][1]) for k in ("home", "draw", "away")]
+                fair_list = remove_margin(raw_list)
+                for i, k in enumerate(("home", "draw", "away")):
+                    fair_probs[k] = fair_list[i]
+
+            for side_key, model_p in (("home", p_hw), ("draw", p_d), ("away", p_aw)):
+                if side_key not in sel_map:
+                    continue
+                sel, odds_val = sel_map[side_key]
+                check("matches", match_name, f"Handicap ({h_cap}-{a_cap})", f"{h_cap}-{a_cap}",
+                      f"{sel} HCP {h_cap}-{a_cap}", odds_val, model_p, "Handicap",
+                      fair_imp=fair_probs.get(side_key))
+
+    # ── 11. ADVANCEMENT (To Reach QF / SF / Final) ────────────────────────────
+    if mc:
+        _reach_map = {
+            "Quarter": (mc.get("quarter", {}), "QF"),
+            "Semi":    (mc.get("semi",    {}), "SF"),
+            "Final":   (mc.get("finalist",{}), "Final"),
+        }
+        for row in odds_data:
+            mkt = row.get("market", "")
+            stage_key = None
+            for kw, (prob_dict, lbl) in _reach_map.items():
+                if f"to Reach the {kw}" in mkt or (kw == "Semi" and "Semi-final" in mkt):
+                    stage_key = (prob_dict, lbl)
+                    break
+            if stage_key is None:
+                continue
+            prob_dict, lbl = stage_key
+            # Extract team name from market string
+            for kw in ("to Reach the Quarter-Final", "to Reach the Semi-final", "to Reach the Final"):
+                mkt = mkt.replace(kw, "").strip()
+            team_raw = mkt.strip()
+            team = best_match(team_raw, model_teams)
+            if team is None:
+                continue
+            p_yes = prob_dict.get(team, 0.0)
+            p_no  = 1.0 - p_yes
+            sel   = row.get("selection", "")
+            odds  = row["odds"]
+            if sel == "Yes":
+                check(row["page"], row["match"], row["market"], "", f"{team} to Reach {lbl}",
+                      odds, p_yes, "Advancement")
+            elif sel == "No":
+                check(row["page"], row["match"], row["market"], "", f"{team} NOT {lbl}",
+                      odds, p_no, "Advancement")
+
+    # ── 12. STAGE OF ELIMINATION ──────────────────────────────────────────────
+    if mc:
+        _qual    = mc.get("qual",     {})
+        _quarter = mc.get("quarter",  {})
+        _semi    = mc.get("semi",     {})
+        _fin     = mc.get("finalist", {})
+        _champ   = mc.get("champion", {})
+
+        # Stage probabilities: P(eliminated AT each stage)
+        def _stage_probs(team):
+            q   = _qual.get(team, 0.0)
+            qf  = _quarter.get(team, 0.0)
+            sf  = _semi.get(team, 0.0)
+            f   = _fin.get(team, 0.0)
+            ch  = _champ.get(team, 0.0)
+            return {
+                "Group Stage":  1.0 - q,
+                "Round of 32":  max(0, q - qf) * 0.5,   # split R32+R16 evenly
+                "Round of 16":  max(0, q - qf) * 0.5,
+                "1/4-Final":    max(0, qf - sf),
+                "1/2-Final":    max(0, sf - f),
+                "2nd Place":    max(0, f  - ch),
+                "Winner":       ch,
+            }
+
+        for row in odds_data:
+            if "Stage of Elimination" not in row.get("market", ""):
+                continue
+            mkt      = row["market"].replace("Stage of Elimination", "").strip()
+            team_raw = mkt.strip()
+            team     = best_match(team_raw, model_teams)
+            if team is None:
+                continue
+            sp = _stage_probs(team)
+            sel = row.get("selection", "")
+            if sel not in sp:
+                continue
+            check(row["page"], row["match"], row["market"], "", f"{team} out {sel}",
+                  row["odds"], sp[sel], "Stage of Elimination")
+
+    # ── 13. TOURNAMENT H2H ────────────────────────────────────────────────────
+    # "Argentina-Brazil Tournament H2H" → who finishes further in the tournament
+    if mc:
+        def _expected_progress(team):
+            """Weighted expected 'level' reached, for H2H comparison."""
+            q  = _qual.get(team, 0.0)
+            qf = _quarter.get(team, 0.0)
+            sf = _semi.get(team, 0.0)
+            f  = _fin.get(team, 0.0)
+            ch = _champ.get(team, 0.0)
+            return ch*6 + (f-ch)*5 + (sf-f)*4 + (qf-sf)*3 + (q-qf)*2 + (1-q)*1
+
+        for row in odds_data:
+            mkt = row.get("market", "")
+            if "Tournament H2H" not in mkt:
+                continue
+            # Market = "ArgentinaName-BrazilName Tournament H2H"
+            h2h_part = mkt.replace("Tournament H2H", "").strip().rstrip("-").strip()
+            sep_idx  = h2h_part.find("-")
+            if sep_idx < 0:
+                continue
+            t_a_raw = h2h_part[:sep_idx].strip()
+            t_b_raw = h2h_part[sep_idx+1:].strip()
+            t_a = best_match(t_a_raw, model_teams)
+            t_b = best_match(t_b_raw, model_teams)
+            if not t_a or not t_b:
+                continue
+
+            ep_a = _expected_progress(t_a)
+            ep_b = _expected_progress(t_b)
+            total = ep_a + ep_b
+            if total == 0:
+                continue
+            p_a = ep_a / total
+            p_b = ep_b / total
+
+            sel = row.get("selection", "")
+            t_sel = best_match(sel, model_teams)
+            if t_sel == t_a:
+                check(row["page"], row["match"], mkt, "", f"{t_a} further than {t_b}",
+                      row["odds"], p_a, "Tournament H2H")
+            elif t_sel == t_b:
+                check(row["page"], row["match"], mkt, "", f"{t_b} further than {t_a}",
+                      row["odds"], p_b, "Tournament H2H")
+
+    # ── 14. BOTH TO REACH THE FINAL ───────────────────────────────────────────
+    if mc:
+        _fin_dict = mc.get("finalist", {})
+        for row in odds_data:
+            mkt = row.get("market", "")
+            if "Both to Reach the Final" not in mkt:
+                continue
+            # Market = "ArgentinaName & BrazilName Both to Reach the Final"
+            teams_part = mkt.replace("Both to Reach the Final", "").strip().strip("&").strip()
+            amp_idx    = teams_part.find(" & ")
+            if amp_idx < 0:
+                continue
+            t_a_raw = teams_part[:amp_idx].strip()
+            t_b_raw = teams_part[amp_idx+3:].strip()
+            t_a = best_match(t_a_raw, model_teams)
+            t_b = best_match(t_b_raw, model_teams)
+            if not t_a or not t_b:
+                continue
+            p_a = _fin_dict.get(t_a, 0.0)
+            p_b = _fin_dict.get(t_b, 0.0)
+            # P(both in final) ≈ P(A) × P(B) — independent approximation
+            # (slightly over-estimates when same bracket half, but adequate)
+            p_both = min(p_a, p_b, p_a * p_b * 2.0)  # cap at min of individual probs
+            p_not  = 1.0 - p_both
+            sel    = row.get("selection", "")
+            if sel == "Yes":
+                check(row["page"], row["match"], mkt, "",
+                      f"{t_a} & {t_b} both final", row["odds"], p_both, "Both to Final")
+            elif sel == "No":
+                check(row["page"], row["match"], mkt, "",
+                      f"NOT both {t_a} & {t_b} final", row["odds"], p_not, "Both to Final")
+
+    # ── 15. DOUBLE CHANCE — TOURNAMENT WINNER ─────────────────────────────────
+    if mc:
+        _champ_dict = mc.get("champion", {})
+        for row in odds_data:
+            if row.get("market") != "Winner Double Chance":
+                continue
+            sel = row.get("selection", "")
+            # Format: "Spain or France"
+            or_idx = sel.find(" or ")
+            if or_idx < 0:
+                continue
+            t_a_raw = sel[:or_idx].strip()
+            t_b_raw = sel[or_idx+4:].strip()
+            t_a = best_match(t_a_raw, model_teams)
+            t_b = best_match(t_b_raw, model_teams)
+            if not t_a or not t_b:
+                continue
+            p_either = _champ_dict.get(t_a, 0.0) + _champ_dict.get(t_b, 0.0)
+            check(row["page"], row["match"], row["market"], "",
+                  f"{t_a} or {t_b} wins WC", row["odds"], p_either, "Double Chance Winner")
+
+    # ── 16. TOTAL GOALS IN GROUP ──────────────────────────────────────────────
+    from src.models.stacked_predictor import expected_goals as eg
+
+    grp_goals_lines: dict[str, dict] = {}
+    for row in odds_data:
+        if row.get("market") == "Total Goals in the Group":
+            grp_match = row.get("match", "")
+            m_grp = re.match(r"Group ([A-L]) Specials", grp_match)
+            if not m_grp:
+                continue
+            grp = m_grp.group(1)
+            try:
+                line_val = float(row.get("line", 0))
+            except (TypeError, ValueError):
+                continue
+            if line_val == 0:
+                continue
+            sel = row.get("selection", "")
+            if sel in ("Over", "Under"):
+                grp_goals_lines.setdefault(grp, {})[sel] = (row["odds"], line_val)
+
+    for grp_ltr, sides in grp_goals_lines.items():
+        if "Over" not in sides or "Under" not in sides:
+            continue
+        over_odds, line_val = sides["Over"]
+        under_odds, _       = sides["Under"]
+        if grp_ltr not in groups:
+            continue
+        grp_teams = groups[grp_ltr]
+        valid = [t for t in grp_teams if t in team_db]
+        if len(valid) < 3:
+            continue
+
+        lam_goals = 0.0
+        for ta, tb in _itools.combinations(valid, 2):
+            try:
+                lh, la = eg(team_db[ta], team_db[tb])
+                lam_goals += lh + la
+            except Exception:
+                lam_goals += 2.5
+
+        k_floor = int(line_val)
+        p_over  = 1.0 - _poisson_cdf(k_floor, lam_goals)
+        p_under = 1.0 - p_over
+
+        raw_o = implied(over_odds)
+        raw_u = implied(under_odds)
+        fair  = remove_margin([raw_o, raw_u])
+        fair_over, fair_under = fair[0], fair[1]
+
+        lbl = f"Group {grp_ltr} Specials"
+        check("group_specials", lbl, "Total Goals in the Group", str(line_val),
+              f"Group {grp_ltr} Over {line_val} Goals", over_odds, p_over, "Group Goals",
+              fair_imp=fair_over)
+        check("group_specials", lbl, "Total Goals in the Group", str(line_val),
+              f"Group {grp_ltr} Under {line_val} Goals", under_odds, p_under, "Group Goals",
+              fair_imp=fair_under)
+
+    # ── 17. GROUP STAGE H2H (who finishes higher in group standings) ───────────
+    # Approximation: P(A above B) from direct match prob + relative qual strength
+    for row in odds_data:
+        mkt = row.get("market", "")
+        if "Group Stage H2H" not in mkt:
+            continue
+        # Market = "TeamA - TeamB Group Stage H2H"
+        h2h_part = mkt.replace("Group Stage H2H", "").strip().rstrip("-").strip()
+        sep = h2h_part.rfind(" - ")
+        if sep < 0:
+            continue
+        t_a_raw = h2h_part[:sep].strip()
+        t_b_raw = h2h_part[sep+3:].strip()
+        t_a = best_match(t_a_raw, model_teams)
+        t_b = best_match(t_b_raw, model_teams)
+        if not t_a or not t_b:
+            continue
+        if t_a not in team_db or t_b not in team_db:
+            continue
+
+        # P(A finishes above B in group) ≈ direct match prob + group-strength blend
+        mp = blended_match_prob(team_db, t_a, t_b)
+        p_direct_a = mp["p_win_a"] + 0.5 * mp["p_draw"]
+
+        # Blend with relative qualification strength from MC if available
+        if mc:
+            qa = _qual.get(t_a, 0.5) if mc else 0.5
+            qb = _qual.get(t_b, 0.5) if mc else 0.5
+            p_strength_a = qa / (qa + qb) if (qa + qb) > 0 else 0.5
+            p_a = 0.6 * p_direct_a + 0.4 * p_strength_a
+        else:
+            p_a = p_direct_a
+        p_b = 1.0 - p_a
+
+        sel = row.get("selection", "")
+        t_sel = best_match(sel, model_teams)
+        if t_sel == t_a:
+            check(row["page"], row["match"], mkt, "",
+                  f"{t_a} above {t_b} in group", row["odds"], p_a, "Group H2H")
+        elif t_sel == t_b:
+            check(row["page"], row["match"], mkt, "",
+                  f"{t_b} above {t_a} in group", row["odds"], p_b, "Group H2H")
+
+    # ── 18. EXACT POINTS IN GROUP STAGE ──────────────────────────────────────
+    # For each team: simulate 3 group matches → P(exactly k points)
+    import itertools as _itools2
+
+    def _exact_points_probs(team: str, grp_letter: str) -> dict[int, float]:
+        """
+        Return {points: probability} for 0..9 points from 3 group matches.
+        Uses direct match probabilities for the 3 opponents.
+        """
+        if grp_letter not in groups:
+            return {}
+        opponents = [t for t in groups[grp_letter] if t != team and t in team_db]
+        if len(opponents) < 3:
+            return {}
+        # For each match, get (p_win, p_draw, p_lose)
+        match_probs_list = []
+        for opp in opponents:
+            if team not in team_db or opp not in team_db:
+                continue
+            mp = blended_match_prob(team_db, team, opp)
+            match_probs_list.append((mp["p_win_a"], mp["p_draw"], mp["p_win_b"]))
+        if len(match_probs_list) < 3:
+            return {}
+        # Enumerate all 3^3 = 27 outcomes
+        pts_prob: dict[int, float] = {}
+        for outcomes in _itools2.product(["W","D","L"], repeat=3):
+            prob = 1.0
+            pts  = 0
+            for i, outcome in enumerate(outcomes):
+                pw, pd, pl = match_probs_list[i]
+                if   outcome == "W": prob *= pw; pts += 3
+                elif outcome == "D": prob *= pd; pts += 1
+                else:                prob *= pl
+            pts_prob[pts] = pts_prob.get(pts, 0.0) + prob
+        return pts_prob
+
+    # Build team → group letter map
+    team_to_grp: dict[str, str] = {}
+    for g_ltr, g_teams in groups.items():
+        for t in g_teams:
+            team_to_grp[t] = g_ltr
+
+    for row in odds_data:
+        mkt = row.get("market", "")
+        if "Exact Points in Group Stage" not in mkt:
+            continue
+        team_raw = mkt.replace("Exact Points in Group Stage", "").strip()
+        # Coolbet uses "Czechia" for Czech Republic
+        if team_raw == "Czechia":
+            team_raw = "Czech Republic"
+        elif team_raw == "Turkiye":
+            team_raw = "Turkey"
+        elif team_raw == "Congo DR":
+            team_raw = "DR Congo"
+        team = best_match(team_raw, model_teams)
+        if team is None:
+            continue
+        grp_letter = team_to_grp.get(team)
+        if grp_letter is None:
+            continue
+
+        try:
+            sel_str = str(row.get("selection", "")).strip()
+            pts_val = int(sel_str)
+        except (ValueError, TypeError):
+            continue
+
+        ep = _exact_points_probs(team, grp_letter)
+        if not ep:
+            continue
+        model_p = ep.get(pts_val, 0.0)
+        if model_p <= 0:
+            continue
+        check(row["page"], row["match"], mkt, sel_str,
+              f"{team} exactly {pts_val} pts", row["odds"], model_p, "Exact Points")
+
     # ── Sort by EV ───────────────────────────────────────────────────────────
     value_bets.sort(key=lambda x: -x["ev"])
     return value_bets
