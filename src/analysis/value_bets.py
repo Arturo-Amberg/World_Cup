@@ -686,6 +686,83 @@ def find_value_bets(odds_data: list[dict], mc: dict | None, team_db: dict) -> li
                   "BTTS No", btts_dict["no"], p_btts_no, "BTTS",
                   fair_imp=fair_no)
 
+    # ── 9. GROUP STAGE CORNER TOTALS ─────────────────────────────────────────
+    # Coolbet: "Total Corners in the Group" O/U per group (A–L)
+    # Model: sum corners_model(A,B) for all 6 group matchups → Poisson group total
+
+    import itertools as _itools
+    import math as _m
+
+    def _poisson_cdf(k_max: int, lam: float) -> float:
+        """P(X <= k_max) for Poisson(lam)."""
+        total = 0.0
+        for i in range(k_max + 1):
+            total += _m.exp(-lam) * lam**i / _m.factorial(i)
+        return min(1.0, total)
+
+    # Collect Coolbet group corner O/U lines
+    grp_corner_lines: dict[str, dict] = {}
+    for row in odds_data:
+        if row.get("market") == "Total Corners in the Group":
+            grp_match = row.get("match", "")
+            m_grp = re.match(r"Group ([A-L]) Specials", grp_match)
+            if not m_grp:
+                continue
+            grp = m_grp.group(1)
+            try:
+                line_val = float(row.get("line", 0))
+            except (TypeError, ValueError):
+                continue
+            if line_val == 0:
+                continue
+            sel = row.get("selection", "")
+            if sel in ("Over", "Under"):
+                grp_corner_lines.setdefault(grp, {})[sel] = (row["odds"], line_val)
+
+    for grp_ltr, sides in grp_corner_lines.items():
+        if "Over" not in sides or "Under" not in sides:
+            continue
+        over_odds, line_val = sides["Over"]
+        under_odds, _       = sides["Under"]
+
+        if grp_ltr not in groups:
+            continue
+        grp_teams = groups[grp_ltr]
+        valid = [t for t in grp_teams if t in team_db]
+        if len(valid) < 3:
+            continue
+
+        lam_group = 0.0
+        n_matches = 0
+        for ta, tb in _itools.combinations(valid, 2):
+            try:
+                lam_a, lam_b = corners_model(team_db[ta], team_db[tb])
+                lam_group += lam_a + lam_b
+                n_matches += 1
+            except Exception:
+                lam_group += 9.0
+                n_matches += 1
+
+        if n_matches == 0:
+            continue
+
+        k_floor = int(line_val)   # line is X.5, so P(over) = 1 - P(X <= floor)
+        p_over  = 1.0 - _poisson_cdf(k_floor, lam_group)
+        p_under = 1.0 - p_over
+
+        raw_o = implied(over_odds)
+        raw_u = implied(under_odds)
+        fair  = remove_margin([raw_o, raw_u])
+        fair_over, fair_under = fair[0], fair[1]
+
+        label_ctx = f"Group {grp_ltr} Specials"
+        check("group_specials", label_ctx, "Total Corners in the Group", str(line_val),
+              f"Group {grp_ltr} Over {line_val} Corners", over_odds, p_over, "Group Corners",
+              fair_imp=fair_over)
+        check("group_specials", label_ctx, "Total Corners in the Group", str(line_val),
+              f"Group {grp_ltr} Under {line_val} Corners", under_odds, p_under, "Group Corners",
+              fair_imp=fair_under)
+
     # ── Sort by EV ───────────────────────────────────────────────────────────
     value_bets.sort(key=lambda x: -x["ev"])
     return value_bets
