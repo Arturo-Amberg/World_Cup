@@ -922,6 +922,9 @@ select option { background:var(--bg-surface); }
 .bk-match.champion-match {
  border: 2px solid var(--gold); box-shadow: 0 2px 12px rgba(199,154,0,.25);
 }
+.bk-match.bk-finalist {
+ border: 2px solid rgba(0,122,255,.25);
+}
 .bk-team {
  display: flex; align-items: center; justify-content: space-between;
  padding: 5px 8px; gap: 6px; position: relative;
@@ -1616,6 +1619,18 @@ async function loadBracket() {
    return matches.map(m => `<div class="bk-slot ${hClass}">${mkCard(m)}</div>`).join('');
   }
 
+  // Single-side finalist card (shows top candidates from one half of the draw)
+  function mkFinalistCard(teams) {
+   const top = (teams||[]).slice(0,3);
+   const rows = top.map((t,i) => {
+    return `<div class="bk-team${i===0?' fav':''}">
+     <span class="bk-team-name">${t.team}</span>
+     <span class="bk-prob ${probCls(t.prob)}">${(t.prob*100).toFixed(0)}%</span>
+    </div>`;
+   }).join('');
+   return `<div class="bk-match bk-finalist">${rows}</div>`;
+  }
+
   // Stage header
   document.getElementById('bk-stage-header').innerHTML = `
    <span>Round of 32</span><span>Round of 16</span><span>Quarter-finals</span>
@@ -1643,9 +1658,9 @@ async function loadBracket() {
    <div class="bk-col bk-left">${mkSlots(d.r16.slice(0,4),'h2','left')}</div>
    <div class="bk-col bk-left">${mkSlots(d.qf.slice(0,2),'h4','left')}</div>
    <div class="bk-col bk-left">${mkSlots([d.sf[0]],'h8','left')}</div>
-   <div class="bk-col bk-final bk-left"><div class="bk-slot h8">${mkCard(d.final)}</div></div>
+   <div class="bk-col bk-final bk-left"><div class="bk-slot h8">${mkFinalistCard(d.final.a)}</div></div>
    <div class="bk-champ-col">${champHTML}</div>
-   <div class="bk-col bk-final bk-right"><div class="bk-slot h8">${mkCard(d.final)}</div></div>
+   <div class="bk-col bk-final bk-right"><div class="bk-slot h8">${mkFinalistCard(d.final.b)}</div></div>
    <div class="bk-col bk-right">${mkSlots([d.sf[1]],'h8','right')}</div>
    <div class="bk-col bk-right">${mkSlots(d.qf.slice(2,4),'h4','right')}</div>
    <div class="bk-col bk-right">${mkSlots(d.r16.slice(4,8),'h2','right')}</div>
