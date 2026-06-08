@@ -189,10 +189,17 @@ def blended_match_prob(team_db: dict, team_a: str, team_b: str,
         elo  = mb["ELO"]
         poi  = mb["Poisson"]
         w    = min(1.0, (elo_diff - 300) / 400)   # 0→1 as diff goes 300→700
-        # Conservative blend: lerp from full-stack toward ELO-only
         def lerp(a, b, t): return a * (1 - t) + b * t
-        p_h = lerp(pred["p_win_a"], lerp(elo["win_a"], poi["win_a"], 0.5), w * 0.6)
-        p_a = lerp(pred["p_win_b"], lerp(elo["win_b"], poi["win_b"], 0.5), w * 0.6)
+        # For extreme mismatches the ML model is poorly calibrated (trained on
+        # balanced datasets, rarely sees 400+ ELO gaps).  Use an ELO-dominant
+        # target (80 % ELO / 20 % Poisson) and a stronger correction weight so
+        # that at w=0.5 (ELO diff ~500) we are already 75 % of the way there.
+        elo_w = 0.8   # ELO weight in the target blend
+        target_h = elo_w * elo["win_a"] + (1 - elo_w) * poi["win_a"]
+        target_a = elo_w * elo["win_b"] + (1 - elo_w) * poi["win_b"]
+        blend = min(1.0, w * 1.5)    # 0→1 as w goes 0→0.67 (ELO diff ~567)
+        p_h = lerp(pred["p_win_a"], target_h, blend)
+        p_a = lerp(pred["p_win_b"], target_a, blend)
         p_d = 1.0 - p_h - p_a
         return {"p_win_a": p_h, "p_draw": max(0.05, p_d), "p_win_b": p_a}
 
