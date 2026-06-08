@@ -289,6 +289,11 @@ def find_value_bets(odds_data: list[dict], mc: dict | None, team_db: dict) -> li
             return
         if not (MIN_ODDS <= odds_val <= MAX_ODDS):
             return
+        # Sanity check: reject likely inverted/corrupted Coolbet lines.
+        # A model prob > 60% with odds > 12 (implied < 8%) is almost certainly
+        # a pricing error (e.g. France at 31 to finish above Iraq in group).
+        if model_prob > 0.60 and odds_val > 12:
+            return
         raw_imp = implied(odds_val)
         imp = fair_imp if fair_imp is not None else raw_imp
         edge = model_prob - imp
