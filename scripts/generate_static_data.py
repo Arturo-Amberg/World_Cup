@@ -32,6 +32,7 @@ ENDPOINTS = [
     "/api/group_odds",
     "/api/validate",
     "/api/valuebets",
+    "/api/team_stats",
 ]
 
 

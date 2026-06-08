@@ -942,6 +942,67 @@ def api_valuebets():
         return jsonify([]), 200
 
 
+@app.route("/api/team_stats")
+def api_team_stats():
+    """
+    Per-team corners and shots averages from StatsBomb match data
+    (WC 2018, Euro 2020, WC 2022, Euro/Copa 2024).
+    """
+    import csv as _csv
+    from pathlib import Path as _Path
+
+    stats_path = _Path("data/statsbomb_match_stats.csv")
+    if not stats_path.exists():
+        return jsonify([]), 200
+
+    acc = {}
+    with stats_path.open(encoding="utf-8") as f:
+        reader = _csv.DictReader(f)
+        for row in reader:
+            try:
+                hc = float(row["home_corners"])
+                ac = float(row["away_corners"])
+                hs = float(row["home_shots"])
+                as_ = float(row["away_shots"])
+                hp = float(row["home_possession"]) if row.get("home_possession") else None
+            except (ValueError, KeyError):
+                continue
+
+            for team, c_for, c_ag, s_for, s_ag, poss in [
+                (row["home_team"], hc, ac, hs, as_, hp),
+                (row["away_team"], ac, hc, as_, hs, (100 - hp) if hp is not None else None),
+            ]:
+                if team not in acc:
+                    acc[team] = {"c_for": [], "c_ag": [], "s_for": [], "s_ag": [], "poss": [], "n": 0}
+                acc[team]["c_for"].append(c_for)
+                acc[team]["c_ag"].append(c_ag)
+                acc[team]["s_for"].append(s_for)
+                acc[team]["s_ag"].append(s_ag)
+                if poss is not None:
+                    acc[team]["poss"].append(poss)
+                acc[team]["n"] += 1
+
+    def _avg(lst):
+        return round(sum(lst) / len(lst), 1) if lst else None
+
+    result = []
+    for team, d in sorted(acc.items()):
+        result.append({
+            "team":             team,
+            "matches":          d["n"],
+            "corners_for":      _avg(d["c_for"]),
+            "corners_against":  _avg(d["c_ag"]),
+            "corners_diff":     round(_avg(d["c_for"]) - _avg(d["c_ag"]), 1) if d["c_for"] else None,
+            "shots_for":        _avg(d["s_for"]),
+            "shots_against":    _avg(d["s_ag"]),
+            "shots_diff":       round(_avg(d["s_for"]) - _avg(d["s_ag"]), 1) if d["s_for"] else None,
+            "possession":       _avg(d["poss"]) if d["poss"] else None,
+        })
+
+    result.sort(key=lambda x: -(x["corners_for"] or 0))
+    return jsonify(result)
+
+
 @app.route("/api/strategies")
 def api_strategies():
     team_db = load_team_db()
