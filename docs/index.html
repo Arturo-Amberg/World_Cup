@@ -2342,8 +2342,6 @@ function vbRender() {
  }
  empty.style.display = 'none';
 
- const maxOdds = Math.max(...rows.map(r => r.odds));
-
  tbody.innerHTML = rows.map(r => {
  const modelPct = (r.model_prob * 100).toFixed(1) + '%';
  const implPct = (r.implied_prob * 100).toFixed(1) + '%';
