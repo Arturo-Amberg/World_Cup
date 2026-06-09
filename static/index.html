@@ -113,9 +113,9 @@ header {
  border-color: var(--border-hi);
 }
 .card-title {
- font-size:12px; font-weight:700;
- letter-spacing:0.04em; text-transform:uppercase;
- color:var(--txt-3);
+ font-size:13px; font-weight:700;
+ letter-spacing:0.02em; text-transform:uppercase;
+ color:var(--txt-2);
  margin-bottom:24px;
  display:flex; align-items:center; gap:12px;
 }
@@ -587,7 +587,7 @@ select option { background:var(--bg-surface); }
 }
 .empty-state-text {
  font-size:24px; font-weight:600;
- color:var(--txt-3); letter-spacing:-0.02em; opacity:0.3;
+ color:var(--txt-3); letter-spacing:-0.02em;
 }
 
 /* ── Notifications ── */
@@ -602,7 +602,7 @@ select option { background:var(--bg-surface); }
  backdrop-filter: blur(20px);
  border:1px solid var(--border);
  box-shadow: 0 10px 40px rgba(0,0,0,0.1);
- transform:translateX(120%); transition:transform 0.4s cubic-bezier(.4,0,.2,1);
+ transform:translateX(120%); transition:transform 0.2s cubic-bezier(.4,0,.2,1);
  pointer-events:auto; font-weight:600; font-size:14px; color:var(--txt);
  max-width:340px;
 }
@@ -623,6 +623,15 @@ select option { background:var(--bg-surface); }
 /* ── Divider ── */
 .divider { border:none; border-top:1px solid var(--border); margin:32px 0; }
 
+/* ── Reset prediction ── */
+.reset-btn {
+ display:none; background:none; border:none; cursor:pointer;
+ font-size:12px; font-weight:600; color:var(--txt-3);
+ padding:4px 0; text-decoration:underline; text-underline-offset:3px;
+ transition:color 0.15s;
+}
+.reset-btn:hover { color:var(--txt-2); }
+
 /* ── Value Bets Page ── */
 .vb-kpis {
  display: grid;
@@ -631,7 +640,7 @@ select option { background:var(--bg-surface); }
  margin-bottom: 28px;
 }
 .vb-kpi {
- background: #fff;
+ background: var(--bg-card);
  border-radius: 12px;
  padding: 18px 20px;
  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
@@ -683,7 +692,7 @@ select option { background:var(--bg-surface); }
  user-select: none;
 }
 .vb-cat-tab:hover { color: var(--txt-2); background: rgba(255,255,255,.5); }
-.vb-cat-tab.active { color: var(--txt); background: #fff; box-shadow: 0 1px 4px rgba(0,0,0,.1); }
+.vb-cat-tab.active { color: var(--txt); background: var(--bg-card); box-shadow: 0 1px 4px rgba(0,0,0,.1); }
 
 .vb-search {
  flex: 1;
@@ -694,11 +703,11 @@ select option { background:var(--bg-surface); }
  border-radius: 8px;
  font-size: 12px;
 
- background: #fff;
+ background: var(--bg-card);
  color: var(--txt);
  outline: none;
 }
-.vb-search:focus { border-color: #007aff; box-shadow: 0 0 0 3px rgba(0,122,255,.1); }
+.vb-search:focus { border-color: var(--lime); box-shadow: 0 0 0 3px var(--lime-dim); }
 
 .vb-sort-label { font-size: 11px; color: var(--txt-3); font-weight: 600; letter-spacing: .05em; white-space: nowrap; }
 .vb-sort-select {
@@ -707,12 +716,12 @@ select option { background:var(--bg-surface); }
  border-radius: 8px;
  font-size: 12px;
 
- background: #fff;
+ background: var(--bg-card);
  color: var(--txt);
  outline: none;
  cursor: pointer;
 }
-.vb-sort-select:focus { border-color: #007aff; }
+.vb-sort-select:focus { border-color: var(--lime); }
 
 .vb-count {
  font-size: 11px;
@@ -722,7 +731,7 @@ select option { background:var(--bg-surface); }
 }
 
 .vb-table-wrap {
- background: #fff;
+ background: var(--bg-card);
  border-radius: 14px;
  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
  overflow: hidden;
@@ -730,7 +739,7 @@ select option { background:var(--bg-surface); }
 .vb-table {
  width: 100%;
  border-collapse: collapse;
- font-size: 12px;
+ font-size: 14px;
 }
 .vb-table thead tr {
  background: rgba(0,0,0,.025);
@@ -773,7 +782,7 @@ select option { background:var(--bg-surface); }
  text-transform: uppercase;
  white-space: nowrap;
 }
-.vb-cat-badge.match { background: rgba(0,122,255,.1); color: #0055d4; }
+.vb-cat-badge.match { background: var(--bg-raised); color: var(--txt-2); }
 .vb-cat-badge.qual { background: rgba(52,199,89,.12); color: #1a7a3e; }
 .vb-cat-badge.grpwin { background: rgba(255,204,0,.18); color: #8a6a00; }
 .vb-cat-badge.goals { background: rgba(255,59,48,.1); color: #c0392b; }
@@ -790,9 +799,9 @@ select option { background:var(--bg-surface); }
 .vb-prob-bars { display: flex; flex-direction: column; gap: 3px; }
 .vb-prob-row { display: flex; align-items: center; gap: 6px; font-size: 10px; }
 .vb-prob-row-label { width: 38px; color: var(--txt-3); font-size: 9px; letter-spacing:.03em; text-align: right; }
-.vb-bar-track { flex: 1; height: 5px; background: rgba(0,0,0,.07); border-radius: 3px; overflow: hidden; }
+.vb-bar-track { flex: 1; height: 7px; background: rgba(0,0,0,.07); border-radius: 3px; overflow: hidden; }
 .vb-bar-fill { height: 100%; border-radius: 3px; }
-.vb-bar-fill.model { background: #007aff; }
+.vb-bar-fill.model { background: var(--lime); }
 .vb-bar-fill.implied { background: rgba(0,0,0,.22); }
 .vb-prob-row-val { width: 34px; color: var(--txt-2); font-size: 10px; font-variant-numeric: tabular-nums; }
 
@@ -837,6 +846,15 @@ select option { background:var(--bg-surface); }
 }
 
 /* ── Bracket page ── */
+.bracket-rotate-hint {
+ display: none;
+ font-size: 11px; color: var(--txt-3); font-weight: 600;
+ text-align: center; margin-bottom: 12px;
+ text-transform: uppercase; letter-spacing: 0.04em;
+}
+@media (max-width: 768px) and (orientation: portrait) {
+ .bracket-rotate-hint { display: block; }
+}
 .bracket-wrap {
   overflow-x: auto;
   padding-bottom: 16px;
@@ -901,7 +919,7 @@ select option { background:var(--bg-surface); }
   font-weight: 600;
 }
 .bk-match {
-  background: #fff;
+  background: var(--bg-card);
   border-radius: 8px;
   box-shadow: 0 1px 3px rgba(0,0,0,.06);
   overflow: hidden;
@@ -952,7 +970,7 @@ select option { background:var(--bg-surface); }
   margin-bottom: 28px;
 }
 .bk-group-card {
-  background: #fff;
+  background: var(--bg-card);
   border-radius: 10px;
   padding: 10px 12px;
   box-shadow: 0 1px 3px rgba(0,0,0,.06);
@@ -976,7 +994,7 @@ select option { background:var(--bg-surface); }
 .bk-group-team-prob { font-size: 10px; color: var(--txt-3); }
 .bk-group-rank { font-size: 9px; font-weight: 700; margin-right: 4px; color: var(--txt-3); }
 .bk-group-rank.first  { color: var(--lime); }
-.bk-group-rank.second { color: #007aff; }
+.bk-group-rank.second { color: var(--txt-2); }
 </style>
 </head>
 <body>
@@ -1071,6 +1089,10 @@ select option { background:var(--bg-surface); }
  </div>
 
  <div id="loading" class="loading" style="display:none"><div class="spinner"></div> STACKING MODELS…</div>
+
+ <div style="display:flex;justify-content:flex-end;margin-bottom:16px">
+  <button class="reset-btn" id="reset-btn" onclick="resetPredict()">New prediction</button>
+ </div>
 
  <div id="results" style="display:none">
  <div class="tabs">
@@ -1244,10 +1266,10 @@ select option { background:var(--bg-surface); }
  <th>MATCH / MARKET</th>
  <th>SELECTION</th>
  <th class="ta-r" id="th-odds" onclick="vbSetSort('odds')">ODDS</th>
- <th>MODEL vs IMPLIED</th>
- <th class="ta-r" id="th-edge" onclick="vbSetSort('edge')">EDGE</th>
- <th class="ta-r" id="th-ev" onclick="vbSetSort('ev')">EV</th>
- <th class="ta-r" id="th-kelly">KELLY</th>
+ <th title="Model probability vs bookmaker implied probability">MODEL vs IMPLIED</th>
+ <th class="ta-r" id="th-edge" onclick="vbSetSort('edge')" title="Edge: model probability minus bookmaker implied probability">EDGE</th>
+ <th class="ta-r" id="th-ev" onclick="vbSetSort('ev')" title="Expected Value: average profit per unit staked — positive means value bet">EV</th>
+ <th class="ta-r" id="th-kelly" title="Kelly Criterion: suggested stake size as % of bankroll">KELLY</th>
  </tr></thead>
  <tbody id="vb-tbody"></tbody>
  </table>
@@ -1346,7 +1368,8 @@ select option { background:var(--bg-surface); }
     <p style="font-size:11px;color:var(--txt-3)">Most likely team at each slot. % = probability of appearing there.</p>
    </div>
 
-   <div class="bracket-wrap">
+   <p class="bracket-rotate-hint">Rotate device for best view</p>
+  <div class="bracket-wrap">
     <div class="bracket-stage-header" id="bk-stage-header">
      <div class="bracket-stage-label">Round of 32</div>
      <div class="bracket-stage-label">Round of 16</div>
@@ -1885,10 +1908,22 @@ async function runPredict() {
  renderResults(d);
 }
 
+function resetPredict() {
+ document.getElementById('team-a').value = '';
+ document.getElementById('team-b').value = '';
+ document.getElementById('odd-a').value = '';
+ document.getElementById('odd-draw').value = '';
+ document.getElementById('odd-b').value = '';
+ document.getElementById('results').style.display = 'none';
+ document.getElementById('reset-btn').style.display = 'none';
+ document.getElementById('empty-state').style.display = 'block';
+}
+
 function renderResults(d) {
  document.getElementById('loading').style.display = 'none';
  document.getElementById('results').style.display = 'block';
  document.getElementById('empty-state').style.display = 'none';
+ document.getElementById('reset-btn').style.display = 'inline';
 
  const top = d.top_scorelines[0];
 
@@ -1924,13 +1959,13 @@ function renderResults(d) {
 
  // xG
  document.getElementById('xg-display').innerHTML = `
- <div class="xg-block">
+ <div class="xg-block" title="Expected Goals: statistical estimate of how many goals this team is likely to score">
  <div>
  <div class="xg-val c-lime">${d.xg.a}</div>
  <div class="xg-label">${d.team_a} xG</div>
  </div>
  </div>
- <div class="xg-block">
+ <div class="xg-block" title="Expected Goals: statistical estimate of how many goals this team is likely to score">
  <div>
  <div class="xg-val c-red">${d.xg.b}</div>
  <div class="xg-label">${d.team_b} xG</div>
@@ -2264,7 +2299,7 @@ async function loadValueBets() {
  </div>
  <div class="vb-kpi">
  <div class="vb-kpi-label">Best Edge</div>
- <div class="vb-kpi-value" style="color:#007aff">+${(bestEdge*100).toFixed(1)}%</div>
+ <div class="vb-kpi-value" style="color:var(--lime)">+${(bestEdge*100).toFixed(1)}%</div>
  <div class="vb-kpi-sub">model vs implied</div>
  </div>
  <div class="vb-kpi">
