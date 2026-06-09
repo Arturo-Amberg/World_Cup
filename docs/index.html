@@ -1409,31 +1409,6 @@ select option { background:var(--bg-surface); }
  </div>
  </div>
 
- <!-- Over/Under & BTTS bets section -->
- <div id="bets-loading" class="loading"><div class="spinner"></div> Calculando mercados de goles…</div>
- <div id="bets-content" style="display:none;margin-bottom:32px">
- <div class="card card-featured">
- <div class="card-title">Mercados de goles y BTTS</div>
- <div id="bets-kpis" class="vb-kpis" style="margin-bottom:18px"></div>
- <div class="vb-table-wrap">
- <table class="vb-table">
-  <thead><tr>
-   <th>Grupo</th>
-   <th>Partido</th>
-   <th>Mercado</th>
-   <th class="ta-r">Cuota</th>
-   <th>Modelo vs impl.</th>
-   <th class="ta-r">Ventaja</th>
-   <th class="ta-r">VE%</th>
-   <th class="ta-r">Kelly%</th>
-   <th class="ta-r">Stake</th>
-  </tr></thead>
-  <tbody id="bets-tbody"></tbody>
- </table>
- </div>
- </div>
- </div>
-
  <div id="vb-loading" class="loading"><div class="spinner"></div> Buscando valor en el mercado…</div>
  <div id="vb-content" style="display:none">
  <div class="vb-kpis" id="vb-kpis"></div>
@@ -1444,6 +1419,11 @@ select option { background:var(--bg-surface); }
  <div class="vb-cat-tab" data-cat="Group Qualification">Clasificación</div>
  <div class="vb-cat-tab" data-cat="Group Winner">Ganador grupo</div>
  <div class="vb-cat-tab" data-cat="Total Goals">Total goles</div>
+ <div class="vb-cat-tab" data-cat="Group H2H">H2H</div>
+ <div class="vb-cat-tab" data-cat="O/U 1.5">O/U 1.5</div>
+ <div class="vb-cat-tab" data-cat="O/U 2.5">O/U 2.5</div>
+ <div class="vb-cat-tab" data-cat="O/U 3.5">O/U 3.5</div>
+ <div class="vb-cat-tab" data-cat="BTTS">BTTS</div>
  </div>
  <input class="vb-search" id="vb-search" placeholder="Buscar equipo, mercado…" type="text" autocomplete="off">
  <span class="vb-sort-label" style="margin-left:12px">Grupo</span>
@@ -1573,7 +1553,6 @@ function showPage(n) {
  document.querySelectorAll('.page-section').forEach(s => s.classList.toggle('active', s.id === 'page-' + n));
  if (n === 'valuebets') {
   if (!valueBetsLoaded) loadValueBets();
-  if (!betsLoaded) loadBets();
  }
  if (n === 'bracket' && !bracketLoaded) loadBracket();
 }
@@ -2065,10 +2044,15 @@ let _vbSortDir = -1; // -1 = desc
 
 function vbCatBadge(cat) {
  const map = {
- 'Match 1X2': ['match', '1X2'],
- 'Group Qualification':['qual', 'QUAL'],
- 'Group Winner': ['grpwin', 'GRP WIN'],
- 'Total Goals': ['goals', 'GOALS'],
+  'Match 1X2':          ['match',  '1X2'],
+  'Group Qualification':['qual',   'QUAL'],
+  'Group Winner':       ['grpwin', 'GRP WIN'],
+  'Total Goals':        ['goals',  'GOALS'],
+  'Group H2H':          ['qual',   'H2H'],
+  'O/U 1.5':            ['goals',  'O/U 1.5'],
+  'O/U 2.5':            ['goals',  'O/U 2.5'],
+  'O/U 3.5':            ['goals',  'O/U 3.5'],
+  'BTTS':               ['match',  'BTTS'],
  };
  const [cls, label] = map[cat] || ['match', cat];
  return `<span class="vb-cat-badge ${cls}">${label}</span>`;
@@ -2091,7 +2075,11 @@ function vbRender() {
 
   const grp = document.getElementById('vb-group-filter').value;
   if (grp !== 'all') {
-    rows = rows.filter(x => (x.match || '').includes('Group ' + grp) || (x.market || '').includes('Group ' + grp));
+    rows = rows.filter(x =>
+      x.group === grp ||
+      (x.match || '').includes('Group ' + grp) ||
+      (x.market || '').includes('Group ' + grp)
+    );
   }
 
  if (_vbSearch.trim()) {
@@ -2197,103 +2185,43 @@ function vbSetSort(key) {
 
 async function loadValueBets() {
  valueBetsLoaded = true;
+ betsLoaded = true;
  const loading = document.getElementById('vb-loading');
  const content = document.getElementById('vb-content');
  try {
- const res = await fetch('/api/valuebets');
- _vbData = await res.json();
+  // Cargar ambas APIs en paralelo
+  const [resVB, resBets] = await Promise.all([
+   fetch('/api/valuebets'),
+   fetch('/api/bets'),
+  ]);
+  const vbRaw  = await resVB.json();
+  const betsRaw = await resBets.json();
 
- // KPIs
- const totalBets = _vbData.length;
- const avgEV = _vbData.reduce((s,r) => s + r.ev, 0) / totalBets;
- const bestEdge = Math.max(..._vbData.map(r => r.edge));
- const catCounts = {};
- _vbData.forEach(r => { catCounts[r.category] = (catCounts[r.category]||0)+1; });
- const topCat = Object.entries(catCounts).sort((a,b)=>b[1]-a[1])[0];
+  // Normalizar bets al mismo esquema que valuebets
+  const betsNorm = betsRaw.bets.map(b => ({
+   category:     b.cat,
+   edge:         b.edge / 100,
+   ev:           b.ev_pct / 100,
+   implied_prob: b.p_mkt,
+   kelly:        b.stake_pct / 100,
+   odds:         b.mkt_odds,
+   model_prob:   b.p_model,
+   match:        b.match,
+   market:       b.match,
+   selection:    b.market,
+   group:        b.group,
+  }));
 
- document.getElementById('vb-kpis').innerHTML = `
- <div class="vb-kpi">
- <div class="vb-kpi-label">Total apuestas de valor</div>
- <div class="vb-kpi-value">${totalBets}</div>
- <div class="vb-kpi-sub">en ${Object.keys(catCounts).length} categorías</div>
- </div>
- <div class="vb-kpi">
- <div class="vb-kpi-label">Valor esperado medio</div>
- <div class="vb-kpi-value" style="color:var(--lime)">+${avgEV.toFixed(2)}</div>
- <div class="vb-kpi-sub">por unidad apostada</div>
- </div>
- <div class="vb-kpi">
- <div class="vb-kpi-label">Mejor ventaja</div>
- <div class="vb-kpi-value" style="color:var(--lime)">+${(bestEdge*100).toFixed(1)}%</div>
- <div class="vb-kpi-sub">modelo vs implícita</div>
- </div>
- <div class="vb-kpi">
- <div class="vb-kpi-label">Categoría top</div>
- <div class="vb-kpi-value" style="font-size:18px">${topCat[0]}</div>
- <div class="vb-kpi-sub">${topCat[1]} apuestas</div>
- </div>
- `;
+  _vbData = [...vbRaw, ...betsNorm];
 
- // Cat tab click handlers
- document.querySelectorAll('.vb-cat-tab').forEach(tab => {
- tab.addEventListener('click', () => {
- document.querySelectorAll('.vb-cat-tab').forEach(t => t.classList.remove('active'));
- tab.classList.add('active');
- _vbCat = tab.dataset.cat;
- vbRender();
- });
- });
-
- // Search
- document.getElementById('vb-search').addEventListener('input', e => {
- _vbSearch = e.target.value;
- vbRender();
- });
-
- // Sort select
- document.getElementById('vb-sort').addEventListener('change', e => {
- _vbSort = e.target.value;
- _vbSortDir = -1;
- vbRender();
- });
-
- // Header sort
- document.getElementById('th-ev').onclick = () => vbSetSort('ev');
- document.getElementById('th-edge').onclick = () => vbSetSort('edge');
- document.getElementById('th-odds').onclick = () => vbSetSort('odds');
-
- // Initial sort arrow
- document.getElementById('th-ev').classList.add('sorted','sort-arrow');
-
- loading.style.display = 'none';
- content.style.display = '';
- vbRender();
-
- } catch(e) {
- loading.innerHTML = `<span style="color:var(--red)">Failed to load value bets: ${e.message}</span>`;
- }
-}
-
-/* ─────────────────────────────────────────────
- BETS (OVER/UNDER & BTTS)
-───────────────────────────────────────────── */
-async function loadBets() {
- betsLoaded = true;
- const loading = document.getElementById('bets-loading');
- const content = document.getElementById('bets-content');
- try {
-  const res = await fetch('/api/bets');
-  const d = await res.json();
-
-  // ── Parlays ──
+  // ── Parlays (de /api/bets) ──
   const parlayDefs = [
    { key: 'over_25',  title: 'Parlay Over 2.5',  color: 'var(--lime)' },
    { key: 'under_35', title: 'Parlay Under 3.5',  color: 'var(--blue)' },
    { key: 'btts',     title: 'Parlay BTTS Sí',    color: 'var(--gold)' },
   ];
-  const cards = document.getElementById('parlay-cards');
-  cards.innerHTML = parlayDefs.map(({ key, title, color }) => {
-   const p = d.parlays[key];
+  document.getElementById('parlay-cards').innerHTML = parlayDefs.map(({ key, title, color }) => {
+   const p = betsRaw.parlays[key];
    if (!p || !p.legs.length) return '';
    const legs = p.legs.map(l =>
     `<div style="padding:5px 0;border-bottom:1px solid rgba(255,255,255,.06);font-size:11px">
@@ -2305,82 +2233,74 @@ async function loadBets() {
     <div style="font-weight:700;font-size:13px;color:${color};margin-bottom:10px">${title}</div>
     ${legs}
     <div style="margin-top:12px;display:flex;justify-content:space-between;font-size:12px">
-     <span style="opacity:.6">Cuota combinada</span>
-     <strong style="color:${color}">${p.combined_odds.toFixed(1)}x</strong>
+     <span style="opacity:.6">Cuota combinada</span><strong style="color:${color}">${p.combined_odds.toFixed(1)}x</strong>
     </div>
     <div style="display:flex;justify-content:space-between;font-size:12px">
-     <span style="opacity:.6">Prob. modelo</span>
-     <strong>${p.combined_p.toFixed(2)}%</strong>
+     <span style="opacity:.6">Prob. modelo</span><strong>${p.combined_p.toFixed(2)}%</strong>
     </div>
     <div style="display:flex;justify-content:space-between;font-size:12px;margin-top:4px">
-     <span style="opacity:.6">Stake sugerido</span>
-     <strong>$${p.suggested_stake}</strong>
+     <span style="opacity:.6">Stake sugerido</span><strong>$${p.suggested_stake}</strong>
     </div>
     <div style="display:flex;justify-content:space-between;font-size:12px">
-     <span style="opacity:.6">Retorno esperado</span>
-     <strong style="color:${color}">$${p.expected_return}</strong>
+     <span style="opacity:.6">Retorno esperado</span><strong style="color:${color}">$${p.expected_return}</strong>
     </div>
    </div>`;
   }).join('');
   document.getElementById('parlays-container').style.display = '';
 
-  // ── KPIs ──
-  const s = d.summary;
-  document.getElementById('bets-kpis').innerHTML = `
+  // ── KPIs (datos combinados) ──
+  const totalBets = _vbData.length;
+  const avgEV     = _vbData.reduce((s,r) => s + r.ev, 0) / totalBets;
+  const bestEdge  = Math.max(..._vbData.map(r => r.edge));
+  const catCounts = {};
+  _vbData.forEach(r => { catCounts[r.category] = (catCounts[r.category]||0)+1; });
+  const topCat = Object.entries(catCounts).sort((a,b)=>b[1]-a[1])[0];
+
+  document.getElementById('vb-kpis').innerHTML = `
    <div class="vb-kpi">
-    <div class="vb-kpi-label">Total apuestas</div>
-    <div class="vb-kpi-value">${s.total_bets}</div>
-    <div class="vb-kpi-sub">Over/Under y BTTS</div>
+    <div class="vb-kpi-label">Total apuestas de valor</div>
+    <div class="vb-kpi-value">${totalBets}</div>
+    <div class="vb-kpi-sub">en ${Object.keys(catCounts).length} categorías</div>
    </div>
    <div class="vb-kpi">
-    <div class="vb-kpi-label">Stake total</div>
-    <div class="vb-kpi-value">$${s.total_stake}</div>
-    <div class="vb-kpi-sub">de $1 000 bankroll</div>
+    <div class="vb-kpi-label">VE medio</div>
+    <div class="vb-kpi-value" style="color:var(--lime)">+${(avgEV*100).toFixed(1)}%</div>
+    <div class="vb-kpi-sub">por apuesta</div>
    </div>
    <div class="vb-kpi">
-    <div class="vb-kpi-label">Ganancia esperada</div>
-    <div class="vb-kpi-value" style="color:var(--lime)">$${s.expected_profit}</div>
-    <div class="vb-kpi-sub">en valor esperado</div>
+    <div class="vb-kpi-label">Mejor ventaja</div>
+    <div class="vb-kpi-value" style="color:var(--lime)">+${(bestEdge*100).toFixed(1)}%</div>
+    <div class="vb-kpi-sub">modelo vs implícita</div>
    </div>
    <div class="vb-kpi">
-    <div class="vb-kpi-label">ROI esperado</div>
-    <div class="vb-kpi-value" style="color:var(--lime)">+${s.roi}%</div>
-    <div class="vb-kpi-sub">retorno sobre inversión</div>
+    <div class="vb-kpi-label">Categoría top</div>
+    <div class="vb-kpi-value" style="font-size:18px">${topCat[0]}</div>
+    <div class="vb-kpi-sub">${topCat[1]} apuestas</div>
    </div>
   `;
 
-  // ── Tabla ──
-  const catColor = {
-   'O/U 1.5': 'var(--blue)',
-   'O/U 2.5': 'var(--lime)',
-   'O/U 3.5': 'var(--gold)',
-   'BTTS':    '#e879f9',
-  };
-  document.getElementById('bets-tbody').innerHTML = d.bets.map(b => `
-   <tr>
-    <td><span class="vb-badge">${b.group}</span></td>
-    <td style="font-size:11px">${b.match}</td>
-    <td><span style="color:${catColor[b.cat]||'inherit'};font-size:11px;font-weight:600">${b.market}</span></td>
-    <td class="ta-r">${b.mkt_odds.toFixed(2)}</td>
-    <td>
-     <div style="display:flex;align-items:center;gap:6px;font-size:11px">
-      <span style="color:var(--lime)">${(b.p_model*100).toFixed(1)}%</span>
-      <span style="opacity:.4">vs</span>
-      <span style="opacity:.7">${(b.p_mkt*100).toFixed(1)}%</span>
-     </div>
-    </td>
-    <td class="ta-r" style="color:var(--lime)">+${b.edge.toFixed(1)}%</td>
-    <td class="ta-r" style="color:var(--lime)">+${b.ev_pct.toFixed(1)}%</td>
-    <td class="ta-r">${b.stake_pct.toFixed(2)}%</td>
-    <td class="ta-r">$${b.stake_usd.toFixed(1)}</td>
-   </tr>
-  `).join('');
+  // ── Event handlers (una sola vez) ──
+  document.querySelectorAll('.vb-cat-tab').forEach(tab => {
+   tab.addEventListener('click', () => {
+    document.querySelectorAll('.vb-cat-tab').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    _vbCat = tab.dataset.cat;
+    vbRender();
+   });
+  });
+  document.getElementById('vb-search').addEventListener('input', e => { _vbSearch = e.target.value; vbRender(); });
+  document.getElementById('vb-sort').addEventListener('change', e => { _vbSort = e.target.value; _vbSortDir = -1; vbRender(); });
+  document.getElementById('th-ev').onclick    = () => vbSetSort('ev');
+  document.getElementById('th-edge').onclick  = () => vbSetSort('edge');
+  document.getElementById('th-odds').onclick  = () => vbSetSort('odds');
+  document.getElementById('th-ev').classList.add('sorted','sort-arrow');
 
   loading.style.display = 'none';
   content.style.display = '';
+  vbRender();
 
  } catch(e) {
-  loading.innerHTML = `<span style="color:var(--red)">Error al cargar apuestas de goles: ${e.message}</span>`;
+  loading.innerHTML = `<span style="color:var(--red)">Error al cargar apuestas: ${e.message}</span>`;
  }
 }
 
