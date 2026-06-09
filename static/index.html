@@ -180,7 +180,7 @@ header {
  font-size:13px; font-weight:600;
  letter-spacing:-0.01em;
  color:var(--txt-3); cursor:pointer;
- border-radius:999px;
+ border-radius:var(--r-md);
  transition: color 0.15s, background 0.15s, box-shadow 0.15s;
  white-space:nowrap; outline:none;
 }
@@ -233,7 +233,7 @@ header {
  border-radius:var(--r-md); font-size:11px; font-weight:600;
  letter-spacing:0.01em;
 }
-.badge-lime { background:var(--lime-dim); color:var(--lime); }
+.badge-lime { background:var(--accent-dim); color:var(--accent); }
 .badge-red { background:var(--red-dim); color:var(--red); }
 .badge-gold { background:var(--gold-dim); color:var(--gold); }
 
@@ -251,10 +251,10 @@ header {
 /* ── Prob bar ── */
 .prob-bar-wrap {
  height:10px; background:var(--bg-raised);
- border-radius:999px; overflow:hidden;
+ border-radius:var(--r-sm); overflow:hidden;
  display:flex; gap:0;
 }
-.pb-a { background:var(--lime); height:100%; transition:width 0.8s var(--ease-out); min-width:2px; }
+.pb-a { background:var(--accent); height:100%; transition:width 0.8s var(--ease-out); min-width:2px; }
 .pb-draw { background:var(--gold-bg); height:100%; transition:width 0.8s var(--ease-out); min-width:2px; }
 .pb-b { background:var(--red); height:100%; transition:width 0.8s var(--ease-out); min-width:2px; }
 
@@ -356,7 +356,8 @@ header {
 }
 .gm-round-badge {
  font-size:10px; font-weight:700; color:var(--txt-3); background:var(--bg-raised);
- padding:2px 8px; border-radius:999px; text-transform:uppercase;
+ /* Square-ish, not pill — data labels don't need to be round */
+ padding:2px 8px; border-radius:var(--r-sm); letter-spacing:0.01em;
 }
 
 /* Standings strip */
@@ -369,11 +370,11 @@ header {
 .standing-row:last-child { border-bottom:none; }
 .sr-rank { font-family:var(--font-mono); font-size:11px; color:var(--txt-3); width:16px; }
 .sr-team { font-size:13px; font-weight:600; flex:1; margin:0 12px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.sr-bar { width:84px; height:12px; background:rgba(0,0,0,0.05); border-radius:999px; overflow:hidden; flex-shrink:0; margin-right:12px; }
-.sr-bar-fill { height:100%; border-radius:999px; transition:width 0.8s cubic-bezier(.4,0,.2,1); }
+.sr-bar { width:84px; height:12px; background:rgba(0,0,0,0.05); border-radius:var(--r-sm); overflow:hidden; flex-shrink:0; margin-right:12px; }
+.sr-bar-fill { height:100%; border-radius:var(--r-sm); transition:width 0.8s cubic-bezier(.4,0,.2,1); }
 .sr-advance {
  font-size:12px; font-weight:700;
- color:var(--lime); width:36px; text-align:right;
+ color:var(--accent); width:36px; text-align:right;
 }
 
 /* ══════════════════════════════════════════════
@@ -382,8 +383,9 @@ header {
 .data-table { width:100%; border-collapse:collapse; font-size:14px; }
 .data-table thead th {
  padding:12px 16px;
- font-size:11px; font-weight:700;
- text-transform:uppercase;
+ font-size:11px; font-weight:600;
+ /* Keep uppercase for dense data tables — it's conventional, not AI */
+ text-transform:uppercase; letter-spacing:0.01em;
  color:var(--txt-3); text-align:left;
  border-bottom:1px solid var(--border); white-space:nowrap;
 }
@@ -423,8 +425,8 @@ header {
 }
 .team-panel:hover { border-color:var(--border-hi); }
 .panel-label {
- font-size:11px; font-weight:700;
- text-transform:uppercase; color:var(--txt-3);
+ font-size:11px; font-weight:600;
+ text-transform:uppercase; letter-spacing:0.01em; color:var(--txt-3);
 }
 select, input[type=number] {
  background:var(--bg-raised); border:1px solid var(--border);
@@ -446,7 +448,8 @@ select option { background:var(--bg-surface); }
 }
 .predict-btn {
  background:var(--txt); color:var(--bg); border:none;
- padding:14px 28px; border-radius:999px;
+ /* Not a pill — a confident rectangular button */
+ padding:14px 28px; border-radius:var(--r-lg);
  font-size:15px; font-weight:700;
  cursor:pointer; transition: background 0.15s, box-shadow 0.15s, transform 0.1s; width:100%;
  outline:none;
@@ -507,8 +510,8 @@ select option { background:var(--bg-surface); }
 }
 .score-row:hover { background:var(--border); }
 .score-tag { font-family:var(--font-mono); font-size:16px; font-weight:700; width:60px; }
-.score-bar-wrap { flex:1; height:10px; background:rgba(0,0,0,0.05); border-radius:999px; overflow:hidden; }
-.score-bar-fill { height:100%; background:var(--txt); border-radius:999px; }
+.score-bar-wrap { flex:1; height:10px; background:rgba(0,0,0,0.05); border-radius:var(--r-sm); overflow:hidden; }
+.score-bar-fill { height:100%; background:var(--txt); border-radius:var(--r-sm); }
 .score-pct { font-family:var(--font-mono); font-size:13px; font-weight:600; color:var(--txt-2); width:48px; text-align:right; }
 
 /* Win probabilities */
@@ -529,7 +532,7 @@ select option { background:var(--bg-surface); }
  display:flex; align-items:center; justify-content:space-between;
 }
 .xg-val { font-size:32px; font-weight:800; letter-spacing:-0.03em; }
-.xg-label { font-size:11px; font-weight:700; text-transform:uppercase; color:var(--txt-3); }
+.xg-label { font-size:11px; font-weight:600; letter-spacing:0.01em; color:var(--txt-3); }
 
 /* Odds comparison table */
 .odds-comparison {
@@ -563,17 +566,17 @@ select option { background:var(--bg-surface); }
 }
 .odds-comp-col:first-child { padding-left:0; }
 .odds-comp-col:last-child { border-right:none; }
-.occ-label { font-size:11px; font-weight:700; text-transform:uppercase; color:var(--txt-3); }
+.occ-label { font-size:11px; font-weight:600; letter-spacing:0.01em; color:var(--txt-3); }
 .occ-val { font-size:17px; font-weight:700; }
 .occ-sub { font-size:12px; color:var(--txt-3); font-weight:500; }
 
 /* Edge pill */
 .edge-pill {
  display:inline-flex; align-items:center;
- padding:4px 12px; border-radius:999px;
+ padding:4px 12px; border-radius:var(--r-md);
  font-size:13px; font-weight:700;
 }
-.edge-pos { background:var(--lime-dim); color:var(--lime); }
+.edge-pos { background:var(--accent-dim); color:var(--accent); }
 .edge-neg { background:var(--red-dim); color:var(--red); }
 .edge-neu { background:var(--bg-raised); color:var(--txt-3); }
 
@@ -608,8 +611,8 @@ select option { background:var(--bg-surface); }
 }
 .player-card:hover { border-color:var(--border-hi); }
 .player-name { font-size:14px; font-weight:700; margin-bottom:2px; color:var(--txt); }
-.player-role { font-size:11px; color:var(--txt-3); font-weight:600; }
-.player-xg { font-size:24px; font-weight:800; color:var(--lime); letter-spacing:-0.03em; font-variant-numeric:tabular-nums; }
+.player-role { font-size:11px; color:var(--txt-3); font-weight:500; }
+.player-xg { font-size:24px; font-weight:800; color:var(--accent); letter-spacing:-0.03em; font-variant-numeric:tabular-nums; }
 
 /* ══════════════════════════════════════════════
  BETTING SHEET
@@ -628,9 +631,9 @@ select option { background:var(--bg-surface); }
  box-shadow: 0 4px 20px rgba(0,0,0,0.03);
 }
 .parlay-title {
- font-size:12px; font-weight:800;
- text-transform:uppercase;
- color:var(--txt-2); margin-bottom:16px;
+ font-size:12px; font-weight:700;
+ /* No more screaming uppercase on card labels */
+ color:var(--txt-3); margin-bottom:16px; letter-spacing:0.01em; text-transform:uppercase;
 }
 .parlay-leg {
  display:flex; justify-content:space-between; align-items:center;
@@ -666,20 +669,21 @@ select option { background:var(--bg-surface); }
  height:8px; background:var(--bg-raised);
  border-radius:999px; overflow:hidden; width:100px;
 }
-.champ-bar-fill { height:100%; background:var(--lime); border-radius:999px; }
+.champ-bar-fill { height:100%; background:var(--accent); border-radius:999px; }
 
 /* ══════════════════════════════════════════════
  VALIDATION
 ══════════════════════════════════════════════ */
 .val-wrong-row td { background:rgba(255,59,48,0.02) !important; }
-.correct-mark { color:var(--lime); font-weight:800; }
+.correct-mark { color:var(--accent); font-weight:800; }
 .wrong-mark { color:var(--red); font-weight:800; }
 
 /* ══════════════════════════════════════════════
  FILTERS / CONTROLS
 ══════════════════════════════════════════════ */
 .filter-bar { display:flex; gap:12px; margin-bottom:24px; flex-wrap:wrap; }
-.filter-bar select { width:auto; font-size:14px; padding:10px 16px; border-radius:999px; }
+/* Filter controls: square-ish selects, not pill-shaped */
+.filter-bar select { width:auto; font-size:14px; padding:10px 16px; border-radius:var(--r-md); }
 
 /* ══════════════════════════════════════════════
  LOADING / EMPTY
@@ -809,7 +813,7 @@ select option { background:var(--bg-surface); }
 .vb-kpi-label {
  font-size: 10px;
  font-weight: 700;
- letter-spacing: .08em;
+ letter-spacing: .02em;
  color: var(--txt-3);
  text-transform: uppercase;
  margin-bottom: 6px;
@@ -876,6 +880,7 @@ select option { background:var(--bg-surface); }
  border: 1px solid var(--border);
  border-radius: 8px;
  font-size: 12px;
+ width: auto;
 
  background: var(--bg-card);
  color: var(--txt);
@@ -1168,6 +1173,56 @@ select option { background:var(--bg-surface); }
   transition-duration: 0.01ms !important;
  }
 }
+/* Parlay Builder */
+.parlay-builder {
+	position: fixed; bottom: 24px; right: 24px; width: 360px;
+	background: rgba(255, 255, 255, 0.85);
+	backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
+	border: 1px solid rgba(0, 0, 0, 0.08); border-radius: 16px;
+	box-shadow: 0 16px 40px rgba(0,0,0,0.08), 0 4px 12px rgba(0,0,0,0.04);
+	z-index: 1000;
+	display: flex; flex-direction: column; overflow: hidden;
+	font-family: system-ui, -apple-system, sans-serif;
+	transform: translateY(0); transition: transform 0.4s cubic-bezier(0.2, 0, 0, 1);
+}
+.parlay-builder.pb-hidden { transform: translateY(120%); }
+.pb-header {
+	padding: 20px 24px 16px 24px; font-weight: 600; font-size: 15px; color: var(--txt);
+	display: flex; justify-content: space-between; align-items: center;
+	border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+}
+.pb-badge {
+	background: var(--accent); color: #fff; padding: 4px 10px;
+	border-radius: 12px; font-size: 12px; font-weight: 600;
+}
+.pb-body { max-height: 280px; overflow-y: auto; padding: 8px 0; }
+.pb-empty { padding: 32px 24px; text-align: center; color: var(--txt-2); font-size: 14px; }
+.pb-leg {
+	padding: 12px 24px; display: flex; justify-content: space-between;
+	align-items: center; border-bottom: 1px solid rgba(0, 0, 0, 0.04); font-size: 14px;
+}
+.pb-leg:last-child { border-bottom: none; }
+.pb-leg-info { display: flex; flex-direction: column; gap: 4px; max-width: 230px; }
+.pb-match { font-weight: 600; color: var(--txt); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pb-sel { color: var(--txt-2); font-size: 13px; }
+.pb-leg-right { display: flex; align-items: center; gap: 16px; }
+.pb-remove {
+	cursor: pointer; color: var(--txt-2); font-weight: 500; background: none; border: none; padding: 4px;
+	transition: color 0.2s;
+}
+.pb-remove:hover { color: var(--red); }
+.pb-footer {
+	padding: 20px 24px; border-top: 1px solid rgba(0, 0, 0, 0.06);
+	display: flex; justify-content: space-between; align-items: center; font-weight: 600;
+}
+.pb-total-odds { color: var(--accent); font-family: var(--mono); font-size: 18px; font-weight: 700; }
+.add-to-parlay-btn {
+	background: transparent; border: 1px solid var(--border); border-radius: 6px; cursor: pointer;
+	width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center;
+	color: var(--txt-2); transition: all 0.2s; font-family: var(--mono); font-size: 14px;
+}
+.add-to-parlay-btn:hover { background: var(--accent); color: #fff; border-color: var(--accent); }
+.add-to-parlay-btn.added { background: var(--accent); color: #fff; border-color: var(--accent); }
 </style>
 </head>
 <body>
@@ -1206,32 +1261,13 @@ select option { background:var(--bg-surface); }
  <div class="page-tab active" onclick="showPage('overview')">Inicio</div>
  <div class="page-tab" onclick="showPage('predictor')">Predictor</div>
  <div class="page-tab" onclick="showPage('valuebets')">Apuestas</div>
- <div class="page-tab" onclick="showPage('model')">El modelo</div>
  <div class="page-tab" onclick="showPage('bracket')">Cuadro</div>
 </nav>
 
 <!-- ══ OVERVIEW ══ -->
 <div class="page-section active" id="page-overview">
  <div class="section">
- <div class="page-heading">
-  <h1>¿Quién gana el Mundial?</h1>
-  <p>Basado en 100.000 simulaciones Monte Carlo — actualizado con los planteles confirmados.</p>
- </div>
- <div id="tournament-metrics-bar" style="display:flex;gap:16px;margin-bottom:36px"></div>
- <div class="card" style="padding:0;overflow:hidden;margin-bottom:64px">
- <table class="data-table">
- <thead><tr>
- <th style="width:40px">#</th>
- <th>Selección</th>
- <th class="ta-r">Campeón</th>
- <th class="ta-r">Cuota justa</th>
- <th class="ta-r">Final</th>
- <th class="ta-r">Semifinal</th>
- <th class="ta-r">Cuartos</th>
- </tr></thead>
- <tbody id="tournament-body"></tbody>
- </table>
- </div>
+
 
  <div class="page-heading">
   <h1>Fase de grupos</h1>
@@ -1357,51 +1393,7 @@ select option { background:var(--bg-surface); }
 
 <!-- (Tournament Odds merged into Overview above) -->
 
-<!-- ══ MODEL ══ -->
-<div class="page-section" id="page-model">
- <div class="section">
- <div class="page-heading">
- <h1>Cómo funciona el modelo</h1>
- <p>Cuatro modelos independientes, combinados con pesos distintos y validados contra Qatar 2022.</p>
- </div>
-
- <div class="card" style="margin-bottom:24px">
- <div class="card-title">Metodología</div>
- <div style="font-size:14px;line-height:1.75;color:var(--txt-2);max-width:65ch">
- <p style="margin-bottom:14px">No hay un único modelo — hay cuatro, y cada uno aporta algo diferente:</p>
- <p style="margin-bottom:8px"><strong style="color:var(--txt)">ELO (40%)</strong> — El clásico. Ratings actualizados con cada resultado internacional, con penalizaciones por altitud, viaje y bajas. Simple pero con décadas de datos detrás.</p>
- <p style="margin-bottom:8px"><strong style="color:var(--txt)">Dixon-Coles Poisson (35%)</strong> — Modela los goles esperados de cada equipo, teniendo en cuenta la fortaleza ofensiva rival. Corrige la infravaloración estadística de los marcadores bajos (el 0-0 es más probable de lo que parece).</p>
- <p style="margin-bottom:8px"><strong style="color:var(--txt)">ML Ensemble (25%)</strong> — Random Forest y Gradient Boosting entrenados con 110 partidos de Mundiales y Eurocopas. Captura patrones que los modelos matemáticos pierden.</p>
- <p style="margin-bottom:14px"><strong style="color:var(--txt)">H2H — historial directo (8% si hay datos)</strong> — Porque a veces la historia entre dos selecciones sí importa.</p>
- <p>Todo esto se ejecuta en 100.000 iteraciones Monte Carlo, con ELO dinámico, prórroga y fatiga acumulada entre rondas.</p>
- </div>
- </div>
-
- <div class="page-heading sub">
- <h1>Validación — Qatar 2022</h1>
- <p>Cómo le fue al modelo con los resultados reales del último Mundial.</p>
- </div>
- <div id="val-stats" style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:32px"></div>
- <div class="card" style="padding:0;overflow:hidden">
- <table class="data-table">
- <thead><tr>
- <th>Partido</th>
- <th class="ta-r">ELO A</th>
- <th class="ta-r">ELO B</th>
- <th class="ta-r">P(gana A)</th>
- <th class="ta-r">P(empate)</th>
- <th class="ta-r">P(gana B)</th>
- <th>Pred.</th>
- <th>Real</th>
- <th class="ta-c">✓/✗</th>
- </tr></thead>
- <tbody id="val-match-body"></tbody>
- </table>
- </div>
- </div>
-</div>
-
-<!-- ══ VALUE BETS (unified: Coolbet + Betting Sheet + Edges) ══ -->
+<!-- ══ VALUE BETS (unified) ══ -->
 <div class="page-section" id="page-valuebets">
  <div class="section">
  <div class="page-heading">
@@ -1409,15 +1401,14 @@ select option { background:var(--bg-surface); }
  <p>Mercados donde el modelo ve ventaja respecto a las cuotas de mercado.</p>
  </div>
 
- <!-- Inner tabs for the three merged views -->
- <div class="tabs" id="vb-view-tabs">
- <div class="tab active" onclick="switchVBView('live')">Cuotas en vivo</div>
- <div class="tab" onclick="switchVBView('sheet')">Hoja de apuestas</div>
- <div class="tab" onclick="switchVBView('edges')">Todas las ventajas</div>
+ <!-- Parlays block (from loadBets) -->
+ <div id="parlays-container" style="display:none">
+ <div class="card card-featured" style="margin-bottom:24px">
+ <div class="card-title" style="color:var(--gold)">Mejores parlays</div>
+ <div id="parlay-cards" style="display:grid;grid-template-columns:repeat(3,1fr);gap:18px"></div>
+ </div>
  </div>
 
- <!-- ── LIVE ODDS (was standalone Value Bets) ── -->
- <div class="vb-view active" id="vbview-live">
  <div id="vb-loading" class="loading"><div class="spinner"></div> Buscando valor en el mercado…</div>
  <div id="vb-content" style="display:none">
  <div class="vb-kpis" id="vb-kpis"></div>
@@ -1430,7 +1421,14 @@ select option { background:var(--bg-surface); }
  <div class="vb-cat-tab" data-cat="Total Goals">Total goles</div>
  </div>
  <input class="vb-search" id="vb-search" placeholder="Buscar equipo, mercado…" type="text" autocomplete="off">
- <span class="vb-sort-label">Ordenar</span>
+ <span class="vb-sort-label" style="margin-left:12px">Grupo</span>
+ <select class="vb-sort-select" id="vb-group-filter" onchange="vbRender()">
+ <option value="all">Todos</option>
+ <option>A</option><option>B</option><option>C</option><option>D</option>
+ <option>E</option><option>F</option><option>G</option><option>H</option>
+ <option>I</option><option>J</option><option>K</option><option>L</option>
+ </select>
+ <span class="vb-sort-label" style="margin-left:12px">Ordenar</span>
  <select class="vb-sort-select" id="vb-sort">
  <option value="ev">Valor esperado</option>
  <option value="edge">Ventaja %</option>
@@ -1438,7 +1436,7 @@ select option { background:var(--bg-surface); }
  <option value="model">Prob. modelo</option>
  </select>
  <span class="vb-sort-label" style="margin-left:12px">Prob. mín.</span>
- <select class="vb-sort-select" id="vb-min-prob" onchange="renderVB()">
+ <select class="vb-sort-select" id="vb-min-prob" onchange="vbRender()">
  <option value="0">Cualquiera</option>
  <option value="0.10">10%+</option>
  <option value="0.20">20%+</option>
@@ -1466,71 +1464,6 @@ select option { background:var(--bg-surface); }
  </div>
  </div>
  </div>
-
- <!-- ── BETTING SHEET (was standalone page) ── -->
- <div class="vb-view" id="vbview-sheet">
- <div id="bets-loading" class="loading"><div class="spinner"></div> Analizando mercados…</div>
- <div id="bets-content" style="display:none">
- <div class="bets-kpi-bar" id="bets-kpi-bar"></div>
- <div class="card card-featured">
- <div class="card-title" style="color:var(--gold)">Mejores parlays</div>
- <div id="parlay-cards" style="display:grid;grid-template-columns:repeat(3,1fr);gap:18px"></div>
- </div>
- <div class="filter-bar">
- <select id="bets-group-filter" onchange="renderBetsTable()">
- <option value="all">TODOS LOS GRUPOS</option>
- <option>A</option><option>B</option><option>C</option><option>D</option>
- <option>E</option><option>F</option><option>G</option><option>H</option>
- <option>I</option><option>J</option><option>K</option><option>L</option>
- </select>
- <select id="bets-sort" onchange="renderBetsTable()">
- <option value="ev">MAYOR EV %</option>
- <option value="edge">MAYOR VENTAJA</option>
- </select>
- <select id="bets-min-prob" onchange="renderBetsTable()" style="margin-left:8px">
- <option value="0">PROB. MÍN.: CUALQUIERA</option>
- <option value="0.10">PROB. MÍN.: 10%+</option>
- <option value="0.20">PROB. MÍN.: 20%+</option>
- <option value="0.30">PROB. MÍN.: 30%+</option>
- <option value="0.40">PROB. MÍN.: 40%+</option>
- <option value="0.50">PROB. MÍN.: 50%+</option>
- </select>
- </div>
- <div class="card" style="padding:0;overflow:hidden">
- <table class="data-table">
- <thead><tr>
- <th>Grp</th><th>Partido</th><th>Mercado</th>
- <th class="ta-r">Modelo</th><th class="ta-r">Implícita</th>
- <th class="ta-r">Ventaja</th><th class="ta-r">VE %</th><th class="ta-r">Kelly</th><th class="ta-r">Stake</th>
- </tr></thead>
- <tbody id="bets-tbody"></tbody>
- </table>
- </div>
- </div>
- </div>
-
- <!-- ── ALL EDGES (was Revenue Strategy) ── -->
- <div class="vb-view" id="vbview-edges">
- <div id="edges-loading" class="loading"><div class="spinner"></div> Buscando ventajas en el mercado…</div>
- <div id="edges-content" style="display:none">
- <div id="edges-summary" style="display:flex;gap:16px;margin-bottom:24px;flex-wrap:wrap"></div>
- <div class="card" style="padding:0;overflow:hidden">
- <table class="data-table" id="edges-table">
- <thead><tr>
- <th>Grp</th><th>Ronda</th><th>Partido</th>
- <th class="ta-c">Prob. modelo</th><th class="ta-c">Cuota justa</th>
- <th class="ta-c">Cuotas mercado</th><th class="ta-c">Ventaja</th><th class="ta-r">Mejor apuesta</th>
- </tr></thead>
- <tbody id="edges-body"></tbody>
- </table>
- </div>
- <div id="no-odds-msg" style="display:none" class="card">
- <div style="color:var(--txt-2);font-size:14px;text-align:center;padding:20px">
- Sin cuotas de mercado disponibles. Mostrando valores justos del modelo.
- </div>
- </div>
- </div>
- </div>
  </div>
 </div>
 
@@ -1547,13 +1480,13 @@ select option { background:var(--bg-surface); }
   <div id="bk-content" style="display:none">
    <!-- Group consensus -->
    <div class="page-heading" style="margin-top:0;margin-bottom:16px">
-    <h2 style="font-size:14px;font-weight:700;letter-spacing:.06em;color:var(--txt-3);text-transform:uppercase">Consenso fase de grupos</h2>
+    <h2 style="font-size:13px;font-weight:700;letter-spacing:0.01em;color:var(--txt-3);text-transform:uppercase">Consenso fase de grupos</h2>
    </div>
    <div class="bk-groups-grid" id="bk-groups"></div>
 
    <!-- Knockout bracket -->
    <div class="page-heading" style="margin-bottom:16px">
-    <h2 style="font-size:14px;font-weight:700;letter-spacing:.06em;color:var(--txt-3);text-transform:uppercase">Cuadro de eliminación</h2>
+    <h2 style="font-size:13px;font-weight:700;letter-spacing:0.01em;color:var(--txt-3);text-transform:uppercase">Cuadro de eliminación</h2>
     <p style="font-size:11px;color:var(--txt-3)">El equipo más probable en cada puesto. % = probabilidad de llegar.</p>
    </div>
 
@@ -1613,23 +1546,11 @@ function showPage(n) {
  const pages = ['overview','predictor','valuebets','model','bracket'];
  document.querySelectorAll('.page-tab').forEach((t,i) => t.classList.toggle('active', pages[i] === n));
  document.querySelectorAll('.page-section').forEach(s => s.classList.toggle('active', s.id === 'page-' + n));
- if (n === 'model' && !validationLoaded) loadValidation();
  if (n === 'valuebets') {
   if (!valueBetsLoaded) loadValueBets();
-  if (!betsLoaded) loadBets();
-  if (!edgesLoaded) loadEdges();
+  
  }
  if (n === 'bracket' && !bracketLoaded) loadBracket();
-}
-
-function switchVBView(view) {
- document.querySelectorAll('#vb-view-tabs .tab').forEach(t =>
-  t.classList.toggle('active', t.textContent.toLowerCase().replace(/[^a-z]/g,'').includes(view)));
- document.querySelectorAll('.vb-view').forEach(v =>
-  v.classList.toggle('active', v.id === 'vbview-' + view));
- if (view === 'sheet' && !betsLoaded) loadBets();
- if (view === 'edges' && !edgesLoaded) loadEdges();
- if (view === 'live' && !valueBetsLoaded) loadValueBets();
 }
 
 window.addEventListener('keydown', e => {
@@ -1709,10 +1630,10 @@ async function loadBracket() {
   const champ2 = d.champion[1] || {team:'?', prob:0};
 
   const centerHTML = `<div class="bracket-center">
-   <div class="bracket-champion-label">Most Likely Champion</div>
+   <div class="bracket-champion-label">Probable Campeón</div>
    <div class="bracket-champion-team">${champ.team}</div>
    <div class="bracket-champion-prob">${(champ.prob*100).toFixed(1)}%</div>
-   <div style="margin-top:8px;font-size:9px;color:var(--txt-3);text-transform:uppercase;letter-spacing:.05em">2nd</div>
+   <div style="margin-top:8px;font-size:10px;color:var(--txt-3);font-weight:500;letter-spacing:0">2nd</div>
    <div class="bracket-champion-team" style="font-size:12px">${champ2.team}</div>
    <div class="bracket-champion-prob" style="font-size:10px">${(champ2.prob*100).toFixed(1)}%</div>
   </div>`;
@@ -1749,7 +1670,7 @@ async function init() {
   const sa = document.getElementById('team-a'), sb = document.getElementById('team-b');
   teams.forEach(t => { sa.appendChild(new Option(t, t)); sb.appendChild(new Option(t, t)); });
   sa.value = 'Argentina'; sb.value = 'France';
-  renderTournamentTable(tournament);
+  
   fetch('/api/groups').then(r => r.json()).then(d => {
    groupsData = d;
    renderGroups(d);
@@ -1760,39 +1681,7 @@ async function init() {
  }
 }
 
-/* ─────────────────────────────────────────────
- TOURNAMENT
-───────────────────────────────────────────── */
-function renderTournamentTable(data) {
- const t = data.table || [], m = data.metrics;
- const max = t[0]?.['champion_%'] || 1;
 
- if (m) {
- document.getElementById('tournament-metrics-bar').innerHTML = [
- {label:'Avg Goals', val: m.avg_goals.toFixed(2), cls:'lime'},
- {label:'Over 2.5%', val: m.pct_over_2_5.toFixed(1)+'%', cls:'gold'},
- ].map(x => `
- <div class="bets-kpi-card" style="flex:0 0 auto;min-width:160px">
- <div class="kpi"><div class="kpi-val ${x.cls}">${x.val}</div><div class="panel-label">${x.label}</div></div>
- </div>`).join('');
- }
-
- document.getElementById('tournament-body').innerHTML = t.slice(0,48).map((r, i) => `
- <tr>
- <td class="mono c-muted">${i+1}</td>
- <td class="fw7">${r.team}</td>
- <td class="ta-r">
- <div style="display:flex;align-items:center;justify-content:flex-end;gap:10px">
- <div class="champ-bar"><div class="champ-bar-fill" style="width:${(r['champion_%']/max*100)}%"></div></div>
- <span class="mono fw7 c-lime">${r['champion_%'].toFixed(1)}%</span>
- </div>
- </td>
- <td class="ta-r mono c-muted">${(100/r['champion_%']).toFixed(1)}x</td>
- <td class="ta-r mono">${r['final_%'].toFixed(1)}%</td>
- <td class="ta-r mono">${r['semi_%'].toFixed(1)}%</td>
- <td class="ta-r mono c-2">${(r['quarter_%']||0).toFixed(1)}%</td>
- </tr>`).join('');
-}
 
 /* ─────────────────────────────────────────────
  GROUPS
@@ -1831,7 +1720,7 @@ function renderGroups(d) {
  </div>
  <div class="gm-meta">
  <span class="gm-xg">xG ${m.xg_a} — ${m.xg_b}</span>
- <span class="gm-topscore">Best: ${m.top_score} <span style="color:var(--txt-3)">(${(m.top_scores[0].prob*100).toFixed(1)}%)</span></span>
+ <span class="gm-topscore">Res: ${m.top_score} <span style="color:var(--txt-3)">(${(m.top_scores[0].prob*100).toFixed(1)}%)</span></span>
  </div>
  </div>`;
  }).join('');
@@ -1872,211 +1761,9 @@ function renderStandings(data) {
  });
 }
 
-/* ─────────────────────────────────────────────
- BETTING SHEET
-───────────────────────────────────────────── */
-async function loadBets() {
- betsLoaded = true;
- let d;
- try { const r = await fetch('/api/bets'); d = await r.json(); }
- catch(e) { document.getElementById('bets-loading').innerHTML = `<span style="color:var(--red)">Error al cargar — <button onclick="betsLoaded=false;loadBets()" style="background:none;border:none;color:var(--accent);cursor:pointer;font-weight:700">Reintentar</button></span>`; return; }
- allBetsData = d.bets;
- const s = d.summary;
-
- document.getElementById('bets-kpi-bar').innerHTML = [
- {label:'Apuestas de valor', val: s.total_bets, cls:'accent'},
- {label:'Stake total', val: '$' + s.total_stake, cls:''},
- {label:'Profit esperado', val: '$' + s.expected_profit, cls:'accent'},
- {label:'ROI total', val: s.roi + '%', cls:'gold'},
- ].map(x => `
- <div class="bets-kpi-card">
- <div class="kpi">
- <div class="kpi-val ${x.cls}">${x.val}</div>
- <div class="panel-label">${x.label}</div>
- </div>
- </div>`).join('');
-
- document.getElementById('parlay-cards').innerHTML = Object.entries(d.parlays).map(([key, p]) => {
- const title = key === 'over_25' ? 'PARLAY MÁS DE 2.5' : key === 'under_35' ? 'PARLAY MENOS DE 3.5' : 'PARLAY AMBOS MARCAN';
- return `
- <div class="parlay-card">
- <div class="parlay-title">${title}</div>
- ${p.legs.map(l => `
- <div class="parlay-leg">
- <span style="color:var(--txt-2);max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${l.match}</span>
- <span class="badge badge-gold" style="font-size:9px;margin-left:6px">${l.market}</span>
- </div>`).join('')}
- <div class="parlay-footer">
- <span class="c-muted">${p.combined_odds}x</span>
- <span class="c-accent">${p.combined_p}% PROB</span>
- </div>
- </div>`;
- }).join('');
-
- document.getElementById('bets-loading').style.display = 'none';
- document.getElementById('bets-content').style.display = 'block';
- renderBetsTable();
-}
-
-function renderBetsTable() {
- const g = document.getElementById('bets-group-filter').value;
- const sortKey = document.getElementById('bets-sort').value;
- const minProb = parseFloat(document.getElementById('bets-min-prob').value);
-
- let b = allBetsData;
- if (g !== 'all') b = b.filter(x => x.group === g);
- if (minProb > 0) b = b.filter(x => x.p_model >= minProb);
-
- b = [...b].sort((a, z) => z[sortKey === 'ev' ? 'ev_pct' : 'edge'] - a[sortKey === 'ev' ? 'ev_pct' : 'edge']);
-
- document.getElementById('bets-tbody').innerHTML = b.map(x => `
- <tr>
- <td class="mono fw7 c-accent">${x.group}</td>
- <td class="fw7">${x.match}</td>
- <td><span class="badge badge-gold">${x.market}</span></td>
- <td class="ta-r mono fw7">${(x.p_model*100).toFixed(1)}%</td>
- <td class="ta-r mono c-2">${(x.p_mkt*100).toFixed(1)}%</td>
- <td class="ta-r">${edgePill(x.edge/100)}</td>
- <td class="ta-r mono fw7 c-accent">${x.ev_pct.toFixed(1)}%</td>
- <td class="ta-r mono">${x.stake_pct.toFixed(1)}%</td>
- <td class="ta-r mono">\$${x.stake_usd}</td>
- </tr>`).join('');
-}
-
-/* ─────────────────────────────────────────────
- REVENUE STRATEGY / EDGES
-───────────────────────────────────────────── */
-async function loadEdges() {
- edgesLoaded = true;
- try { const r = await fetch('/api/group_odds'); edgesData = await r.json(); }
- catch(e) { document.getElementById('edges-loading').innerHTML = `<span style="color:var(--red)">Error al cargar — <button onclick="edgesLoaded=false;loadEdges()" style="background:none;border:none;color:var(--accent);cursor:pointer;font-weight:700">Reintentar</button></span>`; return; }
- document.getElementById('edges-loading').style.display = 'none';
- document.getElementById('edges-content').style.display = 'block';
-
- const allMatches = edgesData.matches;
- const withOdds = allMatches.filter(m => m.market);
- const withEdge = allMatches.filter(m => m.ev && m.ev.max > 0);
-
- // Summary KPIs
- document.getElementById('edges-summary').innerHTML = [
- {label:'Partidos', val: allMatches.length, cls:''},
- {label:'Con cuotas en vivo', val: withOdds.length, cls:'accent'},
- {label:'Con ventaja positiva', val: withEdge.length, cls:'accent'},
- ].map(x => `
- <div class="bets-kpi-card" style="flex:0 0 auto;min-width:160px">
- <div class="kpi"><div class="kpi-val ${x.cls}">${x.val}</div><div class="panel-label">${x.label}</div></div>
- </div>`).join('');
-
- // Show no-odds message if no live data
- if (withOdds.length === 0) {
- document.getElementById('no-odds-msg').style.display = 'block';
- }
-
- // Build table rows — show ALL matches, mark those without live odds
- const rows = allMatches.map(m => {
- const hasMkt = !!m.market;
-
- // Model probs block
- const probsHtml = `
- <div class="odds-mini">
- <div class="odds-mini-row"><span class="odds-mini-label c-accent">A</span><span class="mono fw7 c-accent">${(m.p_win_a*100).toFixed(1)}%</span></div>
- <div class="odds-mini-row"><span class="odds-mini-label c-gold">D</span><span class="mono fw7 c-gold">${(m.p_draw*100).toFixed(1)}%</span></div>
- <div class="odds-mini-row"><span class="odds-mini-label c-red">B</span><span class="mono fw7 c-red">${(m.p_win_b*100).toFixed(1)}%</span></div>
- </div>`;
-
- // Model fair odds
- const fairHtml = `
- <div class="odds-mini">
- <div class="odds-mini-row"><span class="odds-mini-label c-accent">A</span><span class="mono c-accent">${fmtOdds(m.fair.a)}</span></div>
- <div class="odds-mini-row"><span class="odds-mini-label c-gold">D</span><span class="mono c-gold">${fmtOdds(m.fair.draw)}</span></div>
- <div class="odds-mini-row"><span class="odds-mini-label c-red">B</span><span class="mono c-red">${fmtOdds(m.fair.b)}</span></div>
- </div>`;
-
- // Market odds + edge comparison
- const mktHtml = hasMkt ? `
- <div class="odds-mini">
- <div class="odds-mini-row">
- <span class="odds-mini-label c-accent">A</span>
- <span class="mono" style="width:36px">${fmtOdds(m.market.a)}</span>
- ${m.ev ? edgePill(m.ev.a) : ''}
- </div>
- <div class="odds-mini-row">
- <span class="odds-mini-label c-gold">D</span>
- <span class="mono" style="width:36px">${fmtOdds(m.market.draw)}</span>
- ${m.ev ? edgePill(m.ev.draw) : ''}
- </div>
- <div class="odds-mini-row">
- <span class="odds-mini-label c-red">B</span>
- <span class="mono" style="width:36px">${fmtOdds(m.market.b)}</span>
- ${m.ev ? edgePill(m.ev.b) : ''}
- </div>
- </div>` : '<span class="c-muted mono" style="font-size:11px">NO LIVE ODDS</span>';
-
- // Best edge cell
- let bestCell = '<span class="c-muted mono">—</span>';
- if (m.ev && m.ev.max > 0) {
- const outcomeLabel = m.ev.best === 'a' ? m.team_a : m.ev.best === 'b' ? m.team_b : 'Draw';
- const mktOdds = m.market ? m.market[m.ev.best] : null;
- bestCell = `
- <div style="text-align:right">
- <div class="fw7" style="font-size:13px">${outcomeLabel}</div>
- ${mktOdds ? `<div class="mono c-2" style="font-size:11px">${fmtOdds(mktOdds)} odds</div>` : ''}
- ${edgePill(m.ev.max)}
- </div>`;
- }
-
- return `
- <tr>
- <td class="mono fw7 c-accent">${m.group}</td>
- <td class="mono c-2">${m.round}</td>
- <td>
- <div class="fw7" style="font-size:14px">${m.team_a} <span class="c-muted">vs</span> ${m.team_b}</div>
- <div class="mono c-muted" style="font-size:10px;margin-top:2px">xG ${m.xg_a} — ${m.xg_b}</div>
- </td>
- <td>${probsHtml}</td>
- <td>${fairHtml}</td>
- <td>${mktHtml}</td>
- <td>${m.ev && m.ev.max > 0 ? edgePill(m.ev.max) : '<span class="c-muted mono">—</span>'}</td>
- <td>${bestCell}</td>
- </tr>`;
- });
-
- document.getElementById('edges-body').innerHTML = rows.join('');
-}
-
-/* ─────────────────────────────────────────────
- VALIDATION
-───────────────────────────────────────────── */
-async function loadValidation() {
- validationLoaded = true;
- let d;
- try { const r = await fetch('/api/validate'); d = await r.json(); }
- catch(e) { document.getElementById('val-stats').innerHTML = `<div style="color:var(--red);padding:16px">Error al cargar — <button onclick="validationLoaded=false;loadValidation()" style="background:none;border:none;color:var(--accent);cursor:pointer;font-weight:700">Reintentar</button></div>`; return; }
 
 
- document.getElementById('val-stats').innerHTML = [
- {label:'Partidos Qatar 2022', val: d.n_matches, cls:''},
- {label:'Precisión del modelo', val: (d.current_accuracy*100).toFixed(1)+'%', cls:'accent'},
- {label:'Log-loss', val: d.current_log_loss.toFixed(4), cls:'accent'},
- {label:'Precisión óptima teórica', val: (d.optimal_accuracy*100).toFixed(1)+'%', cls:'gold'},
- ].map(x => `
- <div class="bets-kpi-card">
- <div class="kpi"><div class="kpi-val ${x.cls}">${x.val}</div><div class="panel-label">${x.label}</div></div>
- </div>`).join('');
 
- document.getElementById('val-match-body').innerHTML = d.matches.map(m => `
- <tr class="${m.correct ? '' : 'val-wrong-row'}">
- <td class="fw7">${m.team_a} <span class="c-muted">vs</span> ${m.team_b}</td>
- <td class="ta-r mono">${m.elo_a}</td>
- <td class="ta-r mono">${m.elo_b}</td>
- <td class="ta-r mono c-accent">${(m.p_win_a*100).toFixed(1)}%</td>
- <td class="ta-r mono c-gold">${(m.p_draw*100).toFixed(1)}%</td>
- <td class="ta-r mono c-red">${(m.p_win_b*100).toFixed(1)}%</td>
- <td class="mono">${m.predicted}</td>
- <td class="mono">${m.actual}</td>
- <td class="ta-c"><span class="${m.correct ? 'correct-mark' : 'wrong-mark'}">${m.correct ? '✓' : '✕'}</span></td>
- </tr>`).join('');
-}
 
 /* ─────────────────────────────────────────────
  PREDICTOR
@@ -2377,6 +2064,11 @@ function vbRender() {
  rows = rows.filter(r => r.model_prob >= minProb);
  }
 
+  const grp = document.getElementById('vb-group-filter').value;
+  if (grp !== 'all') {
+    rows = rows.filter(x => (x.match || '').includes('Group ' + grp) || (x.market || '').includes('Group ' + grp));
+  }
+
  if (_vbSearch.trim()) {
  const q = _vbSearch.trim().toLowerCase();
  rows = rows.filter(r =>
@@ -2420,6 +2112,13 @@ function vbRender() {
  const matchName = r.match || r.market_type || '—';
  const mktName = r.market || r.market_type || '';
 
+ const matchSafe = matchName.replace(/'/g, "\\'");
+ const selSafe = (r.selection || '').replace(/'/g, "\\'");
+ const mktSafe = mktName.replace(/'/g, "\\'");
+ const id = `${matchSafe}-${selSafe}-${mktSafe}`;
+ const isAdded = parlayLegs.some(l => l.id === id);
+ const oddsCls = isAdded ? 'add-to-parlay-btn added' : 'add-to-parlay-btn';
+
  return `<tr>
  <td>${vbCatBadge(r.category)}</td>
  <td class="vb-match-cell">
@@ -2427,7 +2126,7 @@ function vbRender() {
  <div class="vb-market-name">${mktName}</div>
  </td>
  <td class="vb-selection">${r.selection || '—'}</td>
- <td class="ta-r"><span class="vb-odds-val">${parseFloat(r.odds).toFixed(2)}</span></td>
+ <td class="ta-r"><button class="${oddsCls}" style="width:auto;padding:2px 8px;font-size:14px" onclick="toggleParlayLeg('${matchSafe}', '${selSafe}', ${r.odds}, '${mktSafe}')">${parseFloat(r.odds).toFixed(2)}</button></td>
  <td class="vb-prob-bar-cell">
  <div class="vb-prob-bars">
  <div class="vb-prob-row">
@@ -2582,6 +2281,81 @@ if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches && window.VAN
  });
 }
 init();
+</script>
+<!-- Parlay Builder -->
+<div id="parlay-builder" class="parlay-builder pb-hidden">
+	<div class="pb-header" onclick="document.getElementById('parlay-builder').classList.toggle('pb-hidden')" style="cursor:pointer">
+		<span style="display:flex;align-items:center;gap:8px;">
+			<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" opacity="0.6">
+				<path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+			</svg>
+			Parlay Builder
+		</span>
+		<span id="pb-count" class="pb-badge">0</span>
+	</div>
+	<div id="pb-body" class="pb-body">
+		<div class="pb-empty">No bets added. Click + to add.</div>
+	</div>
+	<div class="pb-footer">
+		<span>Total Cuota</span>
+		<span id="pb-total" class="pb-total-odds">1.00x</span>
+	</div>
+</div>
+
+<script>
+let parlayLegs = [];
+
+function toggleParlayLeg(match, sel, odds, market) {
+	const id = `${match}-${sel}-${market}`;
+	const exists = parlayLegs.findIndex(l => l.id === id);
+	if (exists > -1) {
+		parlayLegs.splice(exists, 1);
+	} else {
+		parlayLegs.push({id, match, sel, odds: parseFloat(odds), market});
+	}
+	renderParlayBuilder();
+	vbRender();
+}
+
+function removeParlayLeg(id) {
+	parlayLegs = parlayLegs.filter(l => l.id !== id);
+	renderParlayBuilder();
+	vbRender();
+}
+
+function renderParlayBuilder() {
+	const pb = document.getElementById('parlay-builder');
+	const body = document.getElementById('pb-body');
+	const count = document.getElementById('pb-count');
+	const total = document.getElementById('pb-total');
+	
+	count.textContent = parlayLegs.length;
+	if (parlayLegs.length > 0) pb.classList.remove('pb-hidden');
+	
+	if (parlayLegs.length === 0) {
+		body.innerHTML = '<div class="pb-empty">No bets added. Click + to add.</div>';
+		total.textContent = '1.00x';
+		pb.classList.add('pb-hidden');
+		return;
+	}
+	
+	let t = 1;
+	body.innerHTML = parlayLegs.map(l => {
+		t *= l.odds;
+		return `
+		<div class="pb-leg">
+			<div class="pb-leg-info">
+				<span class="pb-match">${l.match}</span>
+				<span class="pb-sel">${l.sel} <span class="badge badge-gold" style="font-size:10px">${l.market}</span></span>
+			</div>
+			<div class="pb-leg-right">
+				<span class="mono c-lime">${l.odds.toFixed(2)}x</span>
+				<button class="pb-remove" onclick="removeParlayLeg('${l.id}')">✕</button>
+			</div>
+		</div>`;
+	}).join('');
+	total.textContent = t.toFixed(2) + 'x';
+}
 </script>
 </body>
 </html>
