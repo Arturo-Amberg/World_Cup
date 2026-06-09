@@ -6,34 +6,43 @@
 <title>WC 2026 — Analytical Terminal</title>
 <style>
 :root {
- --bg: #f5f5f7;
- --bg-surface: #ffffff;
- --bg-card: #ffffff;
- --bg-raised: #f0f0f5;
- --border: #e5e5ea;
- --border-hi: #d1d1d6;
+  /* ── Color system (OKLCH — perceptually uniform, tinted neutrals) ── */
+  --bg:         oklch(96.8% 0.005 255);
+  --bg-surface: oklch(99.4% 0.003 255);
+  --bg-card:    oklch(99.4% 0.003 255);
+  --bg-raised:  oklch(93.8% 0.007 255);
+  --border:     oklch(90.2% 0.006 255);
+  --border-hi:  oklch(84.5% 0.008 255);
 
- --txt: #1d1d1f;
- --txt-2: #48484a;
- --txt-3: #737373;
+  --txt:   oklch(13.5% 0.006 255);
+  --txt-2: oklch(33%   0.006 255);
+  --txt-3: oklch(54%   0.007 255);
 
- --lime: #34c759;
- --lime-dim: rgba(52,199,89,0.1);
- --red: #ff3b30;
- --red-dim: rgba(255,59,48,0.1);
- --gold: #c79a00;
- --gold-bg: #ffcc00;
- --gold-dim: rgba(255,204,0,0.12);
+  --lime:     oklch(72%  0.22  143);
+  --lime-dim: oklch(72%  0.22  143 / 0.1);
+  --red:      oklch(60%  0.22   25);
+  --red-dim:  oklch(60%  0.22   25 / 0.1);
+  --gold:     oklch(72%  0.155  84);
+  --gold-bg:  oklch(88%  0.18   94);
+  --gold-dim: oklch(88%  0.18   94 / 0.18);
+  --blue:     oklch(56%  0.18  252);
+  --blue-dim: oklch(56%  0.18  252 / 0.1);
 
- --r-sm: 4px;
- --r-md: 8px;
- --r-lg: 12px;
- --r-xl: 16px;
+  /* ── Radius scale ── */
+  --r-sm: 4px;
+  --r-md: 8px;
+  --r-lg: 12px;
+  --r-xl: 16px;
 
- --font-ui: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
- --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  /* ── Typography ── */
+  --font-ui:   system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 
- --ease-out: cubic-bezier(.2, 0, 0, 1);
+  /* ── Easing ── */
+  --ease-out:       cubic-bezier(.2, 0, 0, 1);
+  --ease-out-quart: cubic-bezier(0.25, 1, 0.5, 1);
+  --ease-out-quint: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-out-expo:  cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 *,*::before,*::after { margin:0; padding:0; box-sizing:border-box; }
@@ -92,7 +101,7 @@ header {
 }
 .page-tab:hover { color:var(--txt-2); background: rgba(0,0,0,0.03); }
 .page-tab:focus-visible { box-shadow: 0 0 0 2px var(--lime); }
-.page-tab.active { color:var(--txt); background: #ffffff; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+.page-tab.active { color:var(--txt); background: var(--bg-card); box-shadow: 0 2px 8px oklch(13.5% 0.006 255 / 0.08); }
 
 /* ── Pages ── */
 .page-section { display:none; }
@@ -347,7 +356,7 @@ select option { background:var(--bg-surface); }
  cursor:pointer; transition: background 0.15s, box-shadow 0.15s; width:100%;
  outline:none;
 }
-.predict-btn:hover { background: #3a3a3c; box-shadow:0 8px 24px rgba(0,0,0,0.12); }
+.predict-btn:hover { background: oklch(27% 0.006 255); }
 .predict-btn:focus-visible { box-shadow: 0 0 0 3px var(--lime); }
 .predict-btn:active { background: #1d1d1f; }
 
@@ -392,7 +401,7 @@ select option { background:var(--bg-surface); }
 }
 .score-row:hover { background:var(--border); }
 .score-tag { font-family:var(--font-mono); font-size:16px; font-weight:700; width:60px; }
-.score-bar-wrap { flex:1; height:10px; background:rgba(0,0,0,0.05); border-radius:999px; overflow:hidden; }
+.score-bar-wrap { flex:1; height:10px; background:var(--bg-raised); border-radius:999px; overflow:hidden; }
 .score-bar-fill { height:100%; background:var(--txt); border-radius:999px; }
 .score-pct { font-family:var(--font-mono); font-size:13px; font-weight:600; color:var(--txt-2); width:48px; text-align:right; }
 
@@ -631,7 +640,7 @@ select option { background:var(--bg-surface); }
  margin-bottom: 28px;
 }
 .vb-kpi {
- background: #fff;
+ background: var(--bg-card);
  border-radius: 12px;
  padding: 18px 20px;
  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
@@ -683,7 +692,7 @@ select option { background:var(--bg-surface); }
  user-select: none;
 }
 .vb-cat-tab:hover { color: var(--txt-2); background: rgba(255,255,255,.5); }
-.vb-cat-tab.active { color: var(--txt); background: #fff; box-shadow: 0 1px 4px rgba(0,0,0,.1); }
+.vb-cat-tab.active { color: var(--txt); background: var(--bg-card); box-shadow: 0 1px 4px oklch(13.5% 0.006 255 / 0.1); }
 
 .vb-search {
  flex: 1;
@@ -694,11 +703,11 @@ select option { background:var(--bg-surface); }
  border-radius: 8px;
  font-size: 12px;
 
- background: #fff;
+ background: var(--bg-card);
  color: var(--txt);
  outline: none;
 }
-.vb-search:focus { border-color: #007aff; box-shadow: 0 0 0 3px rgba(0,122,255,.1); }
+.vb-search:focus { border-color: var(--lime); box-shadow: 0 0 0 3px var(--lime-dim); }
 
 .vb-sort-label { font-size: 11px; color: var(--txt-3); font-weight: 600; letter-spacing: .05em; white-space: nowrap; }
 .vb-sort-select {
@@ -707,12 +716,12 @@ select option { background:var(--bg-surface); }
  border-radius: 8px;
  font-size: 12px;
 
- background: #fff;
+ background: var(--bg-card);
  color: var(--txt);
  outline: none;
  cursor: pointer;
 }
-.vb-sort-select:focus { border-color: #007aff; }
+.vb-sort-select:focus { border-color: var(--lime); }
 
 .vb-count {
  font-size: 11px;
@@ -722,7 +731,7 @@ select option { background:var(--bg-surface); }
 }
 
 .vb-table-wrap {
- background: #fff;
+ background: var(--bg-card);
  border-radius: 14px;
  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
  overflow: hidden;
@@ -792,7 +801,7 @@ select option { background:var(--bg-surface); }
 .vb-prob-row-label { width: 38px; color: var(--txt-3); font-size: 9px; letter-spacing:.03em; text-align: right; }
 .vb-bar-track { flex: 1; height: 5px; background: rgba(0,0,0,.07); border-radius: 3px; overflow: hidden; }
 .vb-bar-fill { height: 100%; border-radius: 3px; }
-.vb-bar-fill.model { background: #007aff; }
+.vb-bar-fill.model { background: var(--blue); }
 .vb-bar-fill.implied { background: rgba(0,0,0,.22); }
 .vb-prob-row-val { width: 34px; color: var(--txt-2); font-size: 10px; font-variant-numeric: tabular-nums; }
 
@@ -834,6 +843,264 @@ select option { background:var(--bg-surface); }
  .pred-selector { grid-template-columns:1fr; }
  .vs-block { flex-direction:row; }
  .odds-comp-header, .odds-comp-row { grid-template-columns:120px 1fr 1fr 1fr 1fr; font-size:11px; }
+}
+
+/* ══════════════════════════════════════════════
+   ENHANCEMENT PASS · Animate · Color · Layout · Delight
+══════════════════════════════════════════════ */
+
+/* ── Keyframes ── */
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes scale-in {
+  from { opacity: 0; transform: scale(0.95); }
+  to   { opacity: 1; transform: scale(1); }
+}
+@keyframes slide-right {
+  from { opacity: 0; transform: translateX(-7px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+/* ── Page section entrance ── */
+.page-section.active {
+  animation: fade-up 300ms var(--ease-out-quint) both;
+}
+
+/* ── Inner tab panel transitions ── */
+.tab-panel.active, .vb-view.active {
+  animation: fade-in 200ms var(--ease-out-quart) both;
+}
+
+/* ── Generic content reveal ── */
+.content-reveal {
+  animation: fade-up 260ms var(--ease-out-quint) both;
+}
+
+/* ── Group cards stagger ── */
+.groups-grid .group-card { animation: fade-up 340ms var(--ease-out-quint) both; }
+.groups-grid .group-card:nth-child(2)   { animation-delay:  45ms; }
+.groups-grid .group-card:nth-child(3)   { animation-delay:  90ms; }
+.groups-grid .group-card:nth-child(4)   { animation-delay: 135ms; }
+.groups-grid .group-card:nth-child(5)   { animation-delay: 180ms; }
+.groups-grid .group-card:nth-child(6)   { animation-delay: 225ms; }
+.groups-grid .group-card:nth-child(7)   { animation-delay: 270ms; }
+.groups-grid .group-card:nth-child(n+8) { animation-delay: 315ms; }
+
+/* ── KPI bar stagger ── */
+.bets-kpi-bar .bets-kpi-card { animation: fade-up 280ms var(--ease-out-quint) both; }
+.bets-kpi-bar .bets-kpi-card:nth-child(2) { animation-delay:  50ms; }
+.bets-kpi-bar .bets-kpi-card:nth-child(3) { animation-delay: 100ms; }
+.bets-kpi-bar .bets-kpi-card:nth-child(4) { animation-delay: 150ms; }
+.vb-kpis .vb-kpi { animation: fade-up 280ms var(--ease-out-quint) both; }
+.vb-kpis .vb-kpi:nth-child(2) { animation-delay:  50ms; }
+.vb-kpis .vb-kpi:nth-child(3) { animation-delay: 100ms; }
+.vb-kpis .vb-kpi:nth-child(4) { animation-delay: 150ms; }
+
+/* ── Tournament table rows stagger ── */
+#tournament-body tr { animation: slide-right 220ms var(--ease-out-quint) both; }
+#tournament-body tr:nth-child(1)   { animation-delay:   0ms; }
+#tournament-body tr:nth-child(2)   { animation-delay:  18ms; }
+#tournament-body tr:nth-child(3)   { animation-delay:  36ms; }
+#tournament-body tr:nth-child(4)   { animation-delay:  54ms; }
+#tournament-body tr:nth-child(5)   { animation-delay:  72ms; }
+#tournament-body tr:nth-child(6)   { animation-delay:  90ms; }
+#tournament-body tr:nth-child(7)   { animation-delay: 108ms; }
+#tournament-body tr:nth-child(8)   { animation-delay: 126ms; }
+#tournament-body tr:nth-child(n+9) { animation-delay: 144ms; }
+
+/* ── Parlay card stagger ── */
+#parlay-cards .parlay-card { animation: fade-up 280ms var(--ease-out-quint) both; }
+#parlay-cards .parlay-card:nth-child(2) { animation-delay:  60ms; }
+#parlay-cards .parlay-card:nth-child(3) { animation-delay: 120ms; }
+
+/* ── Group match card hover lift ── */
+.gm-card {
+  transition: border-color 0.15s,
+              background   0.15s,
+              transform    0.18s var(--ease-out-quart),
+              box-shadow   0.18s var(--ease-out-quart);
+}
+.gm-card:hover {
+  transform:  translateY(-2px);
+  box-shadow: 0 6px 20px oklch(13.5% 0.006 255 / 0.07);
+}
+
+/* ── Group card lift ── */
+.group-card {
+  transition: border-color 0.2s var(--ease-out-quart),
+              box-shadow   0.2s var(--ease-out-quart),
+              transform    0.2s var(--ease-out-quart);
+}
+.group-card:hover {
+  border-color: oklch(72% 0.22 143 / 0.28);
+  box-shadow:   0 12px 36px oklch(13.5% 0.006 255 / 0.07);
+  transform:    translateY(-2px);
+}
+
+/* ── Predict button delight ── */
+.predict-btn {
+  font-size:      13px;
+  letter-spacing: 0.04em;
+  transition: background 0.15s,
+              box-shadow  0.18s,
+              transform   0.12s var(--ease-out-quart);
+}
+.predict-btn:hover {
+  transform:  translateY(-2px);
+  box-shadow: 0 12px 32px oklch(13.5% 0.006 255 / 0.18);
+}
+.predict-btn:active {
+  transform:           translateY(1px);
+  box-shadow:          0 2px 6px oklch(13.5% 0.006 255 / 0.08);
+  transition-duration: 0.06s;
+}
+
+/* ── Score number entrance ── */
+.score-num {
+  display:   inline-block;
+  animation: scale-in 360ms var(--ease-out-expo) both;
+}
+.score-num.b { animation-delay: 80ms; }
+
+/* ── Heatmap cell delight ── */
+.heat-cell {
+  transition: transform    0.16s var(--ease-out-quart),
+              box-shadow   0.16s var(--ease-out-quart),
+              border-color 0.16s;
+}
+.heat-cell:hover {
+  transform:   scale(1.22);
+  z-index:     10;
+  box-shadow:  0 6px 20px oklch(13.5% 0.006 255 / 0.15);
+  border-color: var(--border-hi) !important;
+}
+
+/* ── Bracket match hover ── */
+.bk-match {
+  transition: box-shadow 0.15s var(--ease-out-quart),
+              transform  0.15s var(--ease-out-quart);
+}
+.bk-match:hover {
+  box-shadow: 0 4px 16px oklch(13.5% 0.006 255 / 0.1);
+  transform:  scale(1.03);
+  z-index:    5;
+}
+
+/* ── Bracket champion center highlight ── */
+.bracket-center {
+  background:    oklch(72% 0.22 143 / 0.06);
+  border-radius: 12px;
+  border:        1px solid oklch(72% 0.22 143 / 0.2);
+  padding:       20px 8px;
+  gap:           6px;
+}
+.bracket-champion-team {
+  font-size:      15px;
+  font-weight:    800;
+  letter-spacing: -0.02em;
+}
+.bracket-champion-prob {
+  font-size:   13px;
+  font-weight: 700;
+  color:       var(--lime);
+}
+
+/* ── Fix #007aff intruder → design system blue ── */
+.vb-bar-fill.model    { background: var(--blue); }
+.vb-search:focus      { border-color: var(--lime); box-shadow: 0 0 0 3px var(--lime-dim); }
+.vb-sort-select:focus { border-color: var(--lime); }
+.vb-cat-badge.match   { background: var(--blue-dim); color: var(--blue); }
+
+/* ── Notification entrance polish ── */
+.notification {
+  transform:  translateX(110%);
+  opacity:    0;
+  transition: transform 0.38s var(--ease-out-expo),
+              opacity   0.32s var(--ease-out-quart);
+}
+.notification.show { transform: translateX(0); opacity: 1; }
+
+/* ── Empty state personality ── */
+.empty-state {
+  padding:        80px 40px 100px;
+  display:        flex;
+  flex-direction: column;
+  align-items:    center;
+  gap:            8px;
+  animation:      fade-in 400ms var(--ease-out-quart) both 200ms;
+}
+.empty-state-text {
+  font-size:      15px;
+  font-weight:    600;
+  color:          var(--txt-3);
+  letter-spacing: -0.01em;
+  opacity:        1;
+}
+.empty-state-sub {
+  font-size: 13px;
+  color:     var(--txt-3);
+  opacity:   0.5;
+}
+
+/* ── Spinner refinement ── */
+.spinner {
+  width:        18px;
+  height:       18px;
+  border-width: 2px;
+  animation:    spin 0.85s cubic-bezier(0.5, 0.15, 0.5, 0.85) infinite;
+}
+
+/* ── Loading fade-in ── */
+.loading { animation: fade-in 200ms var(--ease-out-quart) both; }
+
+/* ── Page heading rhythm ── */
+.page-heading h1 { font-size: 32px; letter-spacing: -0.025em; }
+.page-heading p  { font-size: 14px; font-weight: 400; }
+
+/* ── Champ bar: lime gradient ── */
+.champ-bar-fill { background: var(--lime); }
+
+/* ── Prob bar draw segment: subtle separator ── */
+.pb-draw {
+  border-left:  1px solid oklch(99.4% 0.003 255 / 0.2);
+  border-right: 1px solid oklch(99.4% 0.003 255 / 0.2);
+}
+
+/* ── Player card hover ── */
+.player-card {
+  transition: border-color 0.15s var(--ease-out-quart),
+              transform    0.15s var(--ease-out-quart),
+              box-shadow   0.15s var(--ease-out-quart);
+}
+.player-card:hover {
+  border-color: var(--border-hi);
+  transform:    translateY(-1px);
+  box-shadow:   0 4px 12px oklch(13.5% 0.006 255 / 0.06);
+}
+
+/* ── Bracket group card hover ── */
+.bk-group-card {
+  transition: box-shadow 0.15s var(--ease-out-quart),
+              transform  0.15s var(--ease-out-quart);
+}
+.bk-group-card:hover {
+  box-shadow: 0 4px 14px oklch(13.5% 0.006 255 / 0.08);
+  transform:  translateY(-1px);
+}
+
+/* ── Reduced motion ── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration:        0.01ms !important;
+    animation-iteration-count: 1      !important;
+    transition-duration:       0.01ms !important;
+  }
 }
 
 /* ── Bracket page ── */
@@ -901,7 +1168,7 @@ select option { background:var(--bg-surface); }
   font-weight: 600;
 }
 .bk-match {
-  background: #fff;
+  background: var(--bg-card);
   border-radius: 8px;
   box-shadow: 0 1px 3px rgba(0,0,0,.06);
   overflow: hidden;
@@ -952,7 +1219,7 @@ select option { background:var(--bg-surface); }
   margin-bottom: 28px;
 }
 .bk-group-card {
-  background: #fff;
+  background: var(--bg-card);
   border-radius: 10px;
   padding: 10px 12px;
   box-shadow: 0 1px 3px rgba(0,0,0,.06);
@@ -976,7 +1243,95 @@ select option { background:var(--bg-surface); }
 .bk-group-team-prob { font-size: 10px; color: var(--txt-3); }
 .bk-group-rank { font-size: 9px; font-weight: 700; margin-right: 4px; color: var(--txt-3); }
 .bk-group-rank.first  { color: var(--lime); }
-.bk-group-rank.second { color: #007aff; }
+.bk-group-rank.second { color: var(--blue); }
+/* ══════════════════════════════════════════════
+   SECOND PASS · Layout Rhythm · Hierarchy · Delight+
+══════════════════════════════════════════════ */
+
+/* ── Per-page section padding variation ── */
+#page-overview  .section { padding: 52px 40px 72px; }
+#page-predictor .section { padding: 44px 40px 56px; }
+#page-valuebets .section { padding: 36px 40px 60px; }
+#page-model     .section { padding: 52px 40px 72px; }
+#page-bracket   .section { padding: 44px 40px 80px; }
+
+/* ── Page heading: more authoritative ── */
+.page-heading       { margin-bottom: 40px; }
+.page-heading h1    { font-size: 36px; font-weight: 800; letter-spacing: -0.03em; line-height: 1; margin-bottom: 8px; }
+.page-heading p     { font-size: 14px; font-weight: 400; line-height: 1.5; margin-top: 2px; }
+
+/* ── Groups grid: more air between cards ── */
+.groups-grid { gap: 28px; }
+
+/* ── Group letter: lime on card hover (delight) ── */
+.group-letter { transition: color 0.2s var(--ease-out-quart); }
+.group-card:hover .group-letter { color: var(--lime); }
+
+/* ── Table header: structural tint ── */
+.data-table thead tr { background: var(--bg-raised); }
+.data-table thead th { font-size: 10.5px; letter-spacing: 0.05em; }
+
+/* ── Table row hover: use token ── */
+.data-table tbody tr:hover { background: var(--bg-raised); }
+
+/* ── Prob bar: slimmer profile ── */
+.prob-bar-wrap { height: 8px; }
+
+/* ── Championship bar: wider, slimmer ── */
+.champ-bar { width: 128px; height: 6px; }
+
+/* ── KPI values: tighter tracking ── */
+.kpi-val      { letter-spacing: -0.04em; }
+.vb-kpi-value { font-size: 24px; letter-spacing: -0.03em; }
+
+/* ── Card shadows: OKLCH equivalents ── */
+.card         { box-shadow: 0  4px 24px oklch(13.5% 0.006 255 / 0.04); }
+.card-featured { box-shadow: 0 12px 48px oklch(13.5% 0.006 255 / 0.08); }
+.group-card   { box-shadow: 0  4px 20px oklch(13.5% 0.006 255 / 0.03); }
+
+/* ── Standings bar: use raised token ── */
+.sr-bar { background: var(--bg-raised); }
+
+/* ── Score separator: lighter weight ── */
+.score-sep { font-weight: 300; color: var(--border-hi); }
+
+/* ── Bracket group cards: token instead of bare hex ── */
+.bk-group-card { background: var(--bg-card); box-shadow: 0 1px 4px oklch(13.5% 0.006 255 / 0.06); }
+
+/* ── Bracket medium probability: tokenized ── */
+.bk-prob.med { color: oklch(72% 0.155 84); }
+
+/* ── Active tab: slightly stronger contrast ── */
+.page-tab.active { background: var(--bg-card); }
+
+/* ── Header pill: 100K SIMS gets lime tint (live-data feel) ── */
+.hdr-pills .hdr-pill:last-child {
+  background:   var(--lime-dim);
+  color:        oklch(62% 0.22 143);
+  border-color: oklch(72% 0.22 143 / 0.22);
+}
+
+/* ── vb-bar-track: slightly refined height ── */
+.vb-bar-track { height: 4px; }
+
+/* ── Parlay card: use card token ── */
+.parlay-card { background: var(--bg-card); }
+
+/* ── Model breakdown sub-cards: use token ── */
+.card .occ-col { padding: 0 14px; }
+
+/* ── Bets KPI card: slightly more padding ── */
+.bets-kpi-card { padding: 20px 24px; }
+
+/* ── Responsive: maintain breathing room ── */
+@media (max-width: 768px) {
+  #page-overview .section, #page-predictor .section,
+  #page-valuebets .section, #page-model .section,
+  #page-bracket .section {
+    padding: 28px 16px 48px;
+  }
+  .page-heading h1 { font-size: 28px; }
+}
 </style>
 </head>
 <body>
@@ -1139,7 +1494,8 @@ select option { background:var(--bg-surface); }
  </div>
 
  <div class="empty-state" id="empty-state">
- <div class="empty-state-text">SELECT TEAMS TO BEGIN ANALYSIS</div>
+ <div class="empty-state-text">Select two teams to begin analysis</div>
+ <div class="empty-state-sub">Win probabilities, scorelines, and betting edges</div>
  </div>
  </div>
 </div>
@@ -1379,7 +1735,39 @@ function notify(msg, type='info') {
  d.textContent = msg;
  c.appendChild(d);
  setTimeout(() => d.classList.add('show'), 10);
- setTimeout(() => { d.classList.remove('show'); setTimeout(() => d.remove(), 400); }, 4000);
+ setTimeout(() => { d.classList.remove('show'); setTimeout(() => d.remove(), 420); }, 4000);
+}
+
+function revealContent(el, displayMode) {
+ if (!el) return;
+ el.style.display = displayMode || '';
+ el.classList.remove('content-reveal');
+ void el.offsetWidth; /* force reflow so animation replays */
+ el.classList.add('content-reveal');
+}
+
+/* Count up all .kpi-val and .vb-kpi-value elements inside a container */
+function animateKpisIn(container) {
+ if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+ (container || document).querySelectorAll('.kpi-val, .vb-kpi-value').forEach(el => {
+  const text = el.textContent.trim();
+  const m = text.match(/^([+\-]?\$?)(\d+(?:\.\d+)?)(.*)$/);
+  if (!m) return;
+  const prefix = m[1], end = parseFloat(m[2]), suffix = m[3];
+  if (isNaN(end) || end === 0) return;
+  const decimals = m[2].includes('.') ? m[2].split('.')[1].length : 0;
+  const duration = 680;
+  const t0 = performance.now();
+  function step(now) {
+   const t = Math.min((now - t0) / duration, 1);
+   const e = 1 - Math.pow(1 - t, 4); /* ease-out-quart */
+   const cur = end * e;
+   el.textContent = prefix + (decimals ? cur.toFixed(decimals) : Math.round(cur)) + suffix;
+   if (t < 1) requestAnimationFrame(step);
+   else el.textContent = prefix + m[2] + suffix; /* snap to exact value */
+  }
+  requestAnimationFrame(step);
+ });
 }
 
 function fmt(n, dec=1) { return (n*100).toFixed(dec) + '%'; }
@@ -1518,7 +1906,7 @@ async function loadBracket() {
   `;
 
   loading.style.display = 'none';
-  content.style.display = '';
+  revealContent(content);
  } catch(e) {
   loading.innerHTML = `<span style="color:var(--red)">Failed to load bracket: ${e.message}</span>`;
  }
@@ -1552,13 +1940,15 @@ function renderTournamentTable(data) {
  const max = t[0]?.['champion_%'] || 1;
 
  if (m) {
- document.getElementById('tournament-metrics-bar').innerHTML = [
+ const metricsBar = document.getElementById('tournament-metrics-bar');
+ metricsBar.innerHTML = [
  {label:'Avg Goals', val: m.avg_goals.toFixed(2), cls:'lime'},
  {label:'Over 2.5%', val: m.pct_over_2_5.toFixed(1)+'%', cls:'gold'},
  ].map(x => `
  <div class="bets-kpi-card" style="flex:0 0 auto;min-width:160px">
  <div class="kpi"><div class="kpi-val ${x.cls}">${x.val}</div><div class="panel-label">${x.label}</div></div>
  </div>`).join('');
+ animateKpisIn(metricsBar);
  }
 
  document.getElementById('tournament-body').innerHTML = t.slice(0,48).map((r, i) => `
@@ -1633,7 +2023,7 @@ function renderGroups(d) {
  </div>`;
  }).join('');
  document.getElementById('groups-loading').style.display = 'none';
- g.style.display = 'grid';
+ revealContent(g, 'grid');
 }
 
 function renderStandings(data) {
@@ -1697,7 +2087,8 @@ async function loadBets() {
  }).join('');
 
  document.getElementById('bets-loading').style.display = 'none';
- document.getElementById('bets-content').style.display = 'block';
+ revealContent(document.getElementById('bets-content'));
+ animateKpisIn(document.getElementById('bets-kpi-bar'));
  renderBetsTable();
 }
 
@@ -1734,14 +2125,15 @@ async function loadEdges() {
  const r = await fetch('/api/group_odds');
  edgesData = await r.json();
  document.getElementById('edges-loading').style.display = 'none';
- document.getElementById('edges-content').style.display = 'block';
+ revealContent(document.getElementById('edges-content'));
 
  const allMatches = edgesData.matches;
  const withOdds = allMatches.filter(m => m.market);
  const withEdge = allMatches.filter(m => m.ev && m.ev.max > 0);
 
  // Summary KPIs
- document.getElementById('edges-summary').innerHTML = [
+ const edgesSummaryEl = document.getElementById('edges-summary');
+ edgesSummaryEl.innerHTML = [
  {label:'MATCHES', val: allMatches.length, cls:''},
  {label:'WITH LIVE ODDS', val: withOdds.length, cls:'lime'},
  {label:'WITH +EV', val: withEdge.length, cls:'lime'},
@@ -1749,6 +2141,7 @@ async function loadEdges() {
  <div class="bets-kpi-card" style="flex:0 0 auto;min-width:160px">
  <div class="kpi"><div class="kpi-val ${x.cls}">${x.val}</div><div class="panel-label">${x.label}</div></div>
  </div>`).join('');
+ animateKpisIn(edgesSummaryEl);
 
  // Show no-odds message if no live data
  if (withOdds.length === 0) {
@@ -1835,7 +2228,8 @@ async function loadValidation() {
  const r = await fetch('/api/validate');
  const d = await r.json();
 
- document.getElementById('val-stats').innerHTML = [
+ const valStatsEl = document.getElementById('val-stats');
+ valStatsEl.innerHTML = [
  {label:'WC 2022 Matches', val: d.n_matches, cls:''},
  {label:'Model Accuracy', val: (d.current_accuracy*100).toFixed(1)+'%', cls:'lime'},
  {label:'Log-Loss', val: d.current_log_loss.toFixed(4), cls:'lime'},
@@ -1844,6 +2238,7 @@ async function loadValidation() {
  <div class="bets-kpi-card">
  <div class="kpi"><div class="kpi-val ${x.cls}">${x.val}</div><div class="panel-label">${x.label}</div></div>
  </div>`).join('');
+ animateKpisIn(valStatsEl);
 
  document.getElementById('val-match-body').innerHTML = d.matches.map(m => `
  <tr class="${m.correct ? '' : 'val-wrong-row'}">
@@ -1887,8 +2282,8 @@ async function runPredict() {
 
 function renderResults(d) {
  document.getElementById('loading').style.display = 'none';
- document.getElementById('results').style.display = 'block';
  document.getElementById('empty-state').style.display = 'none';
+ revealContent(document.getElementById('results'));
 
  const top = d.top_scorelines[0];
 
@@ -2264,7 +2659,7 @@ async function loadValueBets() {
  </div>
  <div class="vb-kpi">
  <div class="vb-kpi-label">Best Edge</div>
- <div class="vb-kpi-value" style="color:#007aff">+${(bestEdge*100).toFixed(1)}%</div>
+ <div class="vb-kpi-value" style="color:var(--blue)">+${(bestEdge*100).toFixed(1)}%</div>
  <div class="vb-kpi-sub">model vs implied</div>
  </div>
  <div class="vb-kpi">
@@ -2306,7 +2701,8 @@ async function loadValueBets() {
  document.getElementById('th-ev').classList.add('sorted','sort-arrow');
 
  loading.style.display = 'none';
- content.style.display = '';
+ revealContent(content);
+ animateKpisIn(document.getElementById('vb-kpis'));
  vbRender();
 
  } catch(e) {

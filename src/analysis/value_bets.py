@@ -206,6 +206,101 @@ def blended_match_prob(team_db: dict, team_a: str, team_b: str,
     return pred
 
 
+def elo_corrected_lambdas(team_db: dict, team_a: str, team_b: str,
+                          venue_name: str = None, home_team: str = None):
+    """
+    Return Poisson expected-goals lambdas (λ_a, λ_b) corrected for large ELO
+    mismatches where the raw stats are under-calibrated.
+
+    Problem: when GF_AVG / GA_AVG come from a weak competition pool (e.g.
+    CONMEBOL/CONCACAF qualifiers), the raw lambda *ratio* understates the true
+    quality gap.  We detect this by checking whether the ratio is unexpectedly
+    low given the ELO difference, then scale toward a target ratio derived from
+    the ELO win probability.
+
+    Condition to trigger:  ELO diff > 300  AND  raw_ratio < ELO-implied ratio.
+    Teams whose stats already reflect top-level competition (Spain, England, etc.)
+    will have a naturally high ratio and receive minimal or no correction.
+    """
+    import math
+    from src.models.stacked_predictor import expected_goals, HOST_NATIONS, DIXON_COLES_RHO
+
+    if home_team is None:
+        if team_a in HOST_NATIONS:
+            home_team = team_a
+        elif team_b in HOST_NATIONS:
+            home_team = team_b
+
+    lam_h, lam_a = expected_goals(team_db[team_a], team_db[team_b],
+                                   home_team=home_team, venue_name=venue_name)
+
+    elo_a = team_db[team_a].get("ELO", 1700)
+    elo_b = team_db[team_b].get("ELO", 1700)
+    elo_diff = elo_a - elo_b   # positive → team_a (listed first / "home") is stronger
+
+    if abs(elo_diff) <= 300:
+        return lam_h, lam_a
+
+    # Identify which lambda belongs to the stronger / weaker side
+    if elo_diff > 0:
+        lam_strong, lam_weak = lam_h, lam_a
+    else:
+        lam_strong, lam_weak = lam_a, lam_h
+
+    raw_ratio = lam_strong / max(lam_weak, 0.10)
+
+    # Compute raw Poisson outright win probability for the stronger side
+    def _poisson_win(ls, lw):
+        rho = DIXON_COLES_RHO
+        p_win = total = 0.0
+        for h in range(13):
+            ph = math.exp(-ls) * ls**h / math.factorial(h)
+            for a in range(13):
+                pa = math.exp(-lw) * lw**a / math.factorial(a)
+                p = ph * pa
+                if h == 0 and a == 0: tau = 1 - ls * lw * rho
+                elif h == 1 and a == 0: tau = 1 + lw * rho
+                elif h == 0 and a == 1: tau = 1 + ls * rho
+                elif h == 1 and a == 1: tau = 1 - rho
+                else: tau = 1.0
+                p *= max(0.01, tau)
+                total += p
+                if h > a: p_win += p
+        return p_win / total if total > 0 else 0.5
+
+    p_poisson_win = _poisson_win(lam_strong, lam_weak)
+
+    # ELO-implied win probability (the "true" win rate for this quality gap)
+    p_elo = 1.0 / (1.0 + 10.0 ** (-abs(elo_diff) / 400.0))
+    elo_win = p_elo * 0.85  # account for draws (≈85 % of ELO advantage converts to wins)
+
+    poisson_gap = elo_win - p_poisson_win   # positive = raw model underestimates favourite
+
+    # Trigger correction only when BOTH conditions hold:
+    #   1. The raw Poisson win% is meaningfully below the ELO-implied win% (gap > 10%)
+    #      → team stats come from a weaker competition pool (CONMEBOL/CONCACAF)
+    #   2. The raw lambda ratio is low (< 3.5)
+    #      → gives the correction room to improve handicap probabilities
+    # Teams like Spain/England already have high ratios from European-quality stats
+    # and are correctly left unchanged.
+    if poisson_gap < 0.10 or raw_ratio >= 3.5:
+        return lam_h, lam_a
+
+    # ELO-implied target ratio (log-odds scaled conservatively)
+    implied_ratio = (p_elo / (1.0 - p_elo)) ** 0.65
+
+    # Scale to bring raw_ratio up to the implied target.
+    # s² = target / raw  →  stronger *= s, weaker /= s
+    s = math.sqrt(implied_ratio / raw_ratio)
+    lam_strong_new = max(0.15, min(5.0, lam_strong * s))
+    lam_weak_new   = max(0.15, min(5.0, lam_weak   / s))
+
+    if elo_diff > 0:
+        return lam_strong_new, lam_weak_new
+    else:
+        return lam_weak_new, lam_strong_new
+
+
 def compute_match_probs(team_db: dict, groups: dict) -> dict:
     """
     Run stack_predict for every group-stage match.
@@ -503,13 +598,7 @@ def find_value_bets(odds_data: list[dict], mc: dict | None, team_db: dict) -> li
         if home_team not in team_db or away_team not in team_db:
             continue
 
-        try:
-            from src.models.stacked_predictor import expected_goals as eg
-            home_lam, away_lam = eg(team_db[home_team], team_db[away_team])
-        except Exception:
-            pred = sp(team_db[home_team], team_db[away_team])
-            home_lam = pred.get("exp_goals_a", 1.2)
-            away_lam = pred.get("exp_goals_b", 1.0)
+        home_lam, away_lam = elo_corrected_lambdas(team_db, home_team, away_team)
 
         for line in [0.5, 1.5, 2.5, 3.5, 4.5]:
             p_over, p_under = poisson_ou_probs(home_lam, away_lam, line)
@@ -670,11 +759,7 @@ def find_value_bets(odds_data: list[dict], mc: dict | None, team_db: dict) -> li
         if home_team not in team_db or away_team not in team_db:
             continue
 
-        try:
-            from src.models.stacked_predictor import expected_goals as eg
-            lam_h, lam_a = eg(team_db[home_team], team_db[away_team])
-        except Exception:
-            continue
+        lam_h, lam_a = elo_corrected_lambdas(team_db, home_team, away_team)
 
         # P(BTTS Yes) = P(home scores ≥ 1) × P(away scores ≥ 1)
         p_home_scores = 1.0 - math.exp(-lam_h)
@@ -838,11 +923,7 @@ def find_value_bets(odds_data: list[dict], mc: dict | None, team_db: dict) -> li
             continue
         if home_team not in team_db or away_team not in team_db:
             continue
-        try:
-            from src.models.stacked_predictor import expected_goals as eg
-            lam_h, lam_a = eg(team_db[home_team], team_db[away_team])
-        except Exception:
-            continue
+        lam_h, lam_a = elo_corrected_lambdas(team_db, home_team, away_team)
 
         for key, ld in lines_dict.items():
             h_cap, a_cap = ld["h_cap"], ld["a_cap"]
