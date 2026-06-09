@@ -49,6 +49,46 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+/* ── Background orbs ── */
+#bg-canvas {
+ position: fixed; inset: 0; z-index: -1;
+ overflow: hidden; pointer-events: none;
+}
+.bg-orb {
+ position: absolute; border-radius: 50%;
+}
+.bg-orb-a {
+ width: 800px; height: 800px;
+ background: var(--lime);
+ filter: blur(110px);
+ opacity: 0.10;
+ top: -280px; left: -180px;
+ will-change: transform;
+ animation: orb-a 32s ease-in-out infinite;
+}
+.bg-orb-b {
+ width: 720px; height: 720px;
+ background: var(--gold-bg);
+ filter: blur(130px);
+ opacity: 0.09;
+ bottom: -220px; right: -160px;
+ will-change: transform;
+ animation: orb-b 40s ease-in-out infinite;
+}
+@keyframes orb-a {
+ 0%   { transform: translate(0px, 0px); }
+ 25%  { transform: translate(160px, 90px); }
+ 50%  { transform: translate(110px, 210px); }
+ 75%  { transform: translate(-70px, 130px); }
+ 100% { transform: translate(0px, 0px); }
+}
+@keyframes orb-b {
+ 0%   { transform: translate(0px, 0px); }
+ 33%  { transform: translate(-130px, -90px); }
+ 66%  { transform: translate(-170px, 70px); }
+ 100% { transform: translate(0px, 0px); }
+}
+
 /* ── Layout ── */
 main { display:flex; flex-direction:column; min-height:100vh; }
 
@@ -1076,6 +1116,10 @@ select option { background:var(--bg-surface); }
 </style>
 </head>
 <body>
+<div id="bg-canvas" aria-hidden="true">
+ <div class="bg-orb bg-orb-a"></div>
+ <div class="bg-orb bg-orb-b"></div>
+</div>
 <div id="notification-container"></div>
 <div id="shortcuts-overlay" onclick="this.classList.remove('show')">
  <div class="shortcuts-card" onclick="event.stopPropagation()">
