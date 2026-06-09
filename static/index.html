@@ -19,8 +19,8 @@
  --txt-2: #48484a;
  --txt-3: #737373;
 
- --lime: #34c759;
- --lime-dim: rgba(52,199,89,0.1);
+ --lime: #0a84ff;
+ --lime-dim: rgba(10,132,255,0.1);
  --red: #ff3b30;
  --red-dim: rgba(255,59,48,0.1);
  --gold: #c79a00;
@@ -854,7 +854,7 @@ select option { background:var(--bg-surface); }
  white-space: nowrap;
 }
 .vb-cat-badge.match { background: var(--bg-raised); color: var(--txt-2); }
-.vb-cat-badge.qual { background: rgba(52,199,89,.12); color: #1a7a3e; }
+.vb-cat-badge.qual { background: rgba(10,132,255,.12); color: #0060df; }
 .vb-cat-badge.grpwin { background: rgba(255,204,0,.18); color: #8a6a00; }
 .vb-cat-badge.goals { background: rgba(255,59,48,.1); color: #c0392b; }
 
@@ -884,7 +884,7 @@ select option { background:var(--bg-surface); }
  font-weight: 700;
  font-variant-numeric: tabular-nums;
 }
-.vb-ev-high { background: rgba(52,199,89,.14); color: #1a7a3e; }
+.vb-ev-high { background: rgba(10,132,255,.14); color: #0060df; }
 .vb-ev-med { background: rgba(255,204,0,.18); color: #7a5c00; }
 .vb-ev-low { background: rgba(0,0,0,.06); color: var(--txt-2); }
 
@@ -1085,15 +1085,15 @@ select option { background:var(--bg-surface); }
 <div id="notification-container"></div>
 <div id="shortcuts-overlay" onclick="this.classList.remove('show')">
  <div class="shortcuts-card" onclick="event.stopPropagation()">
-  <div class="shortcuts-title">Keyboard Shortcuts</div>
-  <div class="shortcut-row"><span class="shortcut-desc">Overview</span><kbd class="shortcut-key">1</kbd></div>
-  <div class="shortcut-row"><span class="shortcut-desc">Match Predictor</span><kbd class="shortcut-key">2</kbd></div>
-  <div class="shortcut-row"><span class="shortcut-desc">Value Bets</span><kbd class="shortcut-key">3</kbd></div>
-  <div class="shortcut-row"><span class="shortcut-desc">Model</span><kbd class="shortcut-key">4</kbd></div>
-  <div class="shortcut-row"><span class="shortcut-desc">Bracket</span><kbd class="shortcut-key">5</kbd></div>
-  <div class="shortcut-row"><span class="shortcut-desc">Analyze match</span><kbd class="shortcut-key">Enter</kbd></div>
-  <div class="shortcut-row"><span class="shortcut-desc">This panel</span><kbd class="shortcut-key">?</kbd></div>
-  <div class="shortcut-row" style="padding-top:12px;margin-top:4px"><span class="shortcut-desc c-muted" style="font-size:12px">Click anywhere to close</span></div>
+  <div class="shortcuts-title">Atajos de teclado</div>
+  <div class="shortcut-row"><span class="shortcut-desc">Inicio</span><kbd class="shortcut-key">1</kbd></div>
+  <div class="shortcut-row"><span class="shortcut-desc">Predictor</span><kbd class="shortcut-key">2</kbd></div>
+  <div class="shortcut-row"><span class="shortcut-desc">Apuestas</span><kbd class="shortcut-key">3</kbd></div>
+  <div class="shortcut-row"><span class="shortcut-desc">Modelo</span><kbd class="shortcut-key">4</kbd></div>
+  <div class="shortcut-row"><span class="shortcut-desc">Cuadro</span><kbd class="shortcut-key">5</kbd></div>
+  <div class="shortcut-row"><span class="shortcut-desc">Analizar partido</span><kbd class="shortcut-key">Enter</kbd></div>
+  <div class="shortcut-row"><span class="shortcut-desc">Este panel</span><kbd class="shortcut-key">?</kbd></div>
+  <div class="shortcut-row" style="padding-top:12px;margin-top:4px"><span class="shortcut-desc c-muted" style="font-size:12px">Clic en cualquier lado para cerrar</span></div>
  </div>
 </div>
 <main>
@@ -1102,10 +1102,10 @@ select option { background:var(--bg-surface); }
 <header>
  <div style="display:flex;align-items:baseline;gap:0">
  <div class="logo">WC<em>2026</em></div>
- <span class="logo-sub">ANALYTICAL TERMINAL</span>
+ <span class="logo-sub">TERMINAL ANALÍTICA</span>
  </div>
  <div class="hdr-pills">
- <div class="hdr-pill">MODEL v3.2</div>
+ <div class="hdr-pill">MODELO v3.2</div>
  <div class="hdr-pill">100K SIMS</div>
  <div class="hdr-pill" style="cursor:pointer" onclick="document.getElementById('shortcuts-overlay').classList.add('show')" title="Keyboard shortcuts">?</div>
  </div>
@@ -1113,41 +1113,41 @@ select option { background:var(--bg-surface); }
 
 <!-- ── Nav ── -->
 <nav class="page-nav">
- <div class="page-tab active" onclick="showPage('overview')">Overview</div>
- <div class="page-tab" onclick="showPage('predictor')">Match Predictor</div>
- <div class="page-tab" onclick="showPage('valuebets')">Value Bets</div>
- <div class="page-tab" onclick="showPage('model')">Model</div>
- <div class="page-tab" onclick="showPage('bracket')">Bracket</div>
+ <div class="page-tab active" onclick="showPage('overview')">Inicio</div>
+ <div class="page-tab" onclick="showPage('predictor')">Predictor</div>
+ <div class="page-tab" onclick="showPage('valuebets')">Apuestas</div>
+ <div class="page-tab" onclick="showPage('model')">Modelo</div>
+ <div class="page-tab" onclick="showPage('bracket')">Cuadro</div>
 </nav>
 
 <!-- ══ OVERVIEW ══ -->
 <div class="page-section active" id="page-overview">
  <div class="section">
  <div class="page-heading">
- <h1>Championship Odds</h1>
- <p>Monte Carlo simulation probabilities across 100,000 tournaments</p>
+ <h1>Favoritos al título</h1>
+ <p>Simulaciones Monte Carlo sobre 100.000 torneos</p>
  </div>
  <div id="tournament-metrics-bar" style="display:flex;gap:16px;margin-bottom:36px"></div>
  <div class="card" style="padding:0;overflow:hidden;margin-bottom:72px">
  <table class="data-table">
  <thead><tr>
  <th style="width:40px">#</th>
- <th>TEAM</th>
- <th class="ta-r">CHAMPION</th>
- <th class="ta-r">FAIR ODDS</th>
+ <th>SELECCIÓN</th>
+ <th class="ta-r">CAMPEÓN</th>
+ <th class="ta-r">CUOTA JUSTA</th>
  <th class="ta-r">FINAL</th>
- <th class="ta-r">SEMI-FINAL</th>
- <th class="ta-r">QUARTER-FINAL</th>
+ <th class="ta-r">SEMIFINAL</th>
+ <th class="ta-r">CUARTOS</th>
  </tr></thead>
  <tbody id="tournament-body"></tbody>
  </table>
  </div>
 
  <div class="page-heading">
- <h1>Group Stage</h1>
- <p>12 groups, match probabilities, and qualification odds</p>
+ <h1>Fase de Grupos</h1>
+ <p>12 grupos · probabilidades por partido y clasificación</p>
  </div>
- <div id="groups-loading" class="loading"><div class="spinner"></div> INITIALIZING MODELS…</div>
+ <div id="groups-loading" class="loading"><div class="spinner"></div> CARGANDO MODELOS…</div>
  <div class="groups-grid" id="groups-grid" style="display:none"></div>
  </div>
 </div>
@@ -1159,52 +1159,52 @@ select option { background:var(--bg-surface); }
  <div class="section">
  <div class="pred-selector">
  <div class="team-panel">
- <div class="panel-label">Team A</div>
+ <div class="panel-label">Equipo A</div>
  <select id="team-a"></select>
  <div>
- <div class="panel-label" style="margin-bottom:8px">Bookie Odds — Team A Win</div>
- <input type="number" id="odd-a" step="0.01" placeholder="e.g. 2.10">
+ <div class="panel-label" style="margin-bottom:8px">Cuota victoria A</div>
+ <input type="number" id="odd-a" step="0.01" placeholder="ej. 2.10">
  </div>
  </div>
  <div class="vs-block">
  <div class="vs-text">VS</div>
- <button class="predict-btn" onclick="runPredict()">ANALYZE</button>
+ <button class="predict-btn" onclick="runPredict()">ANALIZAR</button>
  </div>
  <div class="team-panel">
- <div class="panel-label">Team B</div>
+ <div class="panel-label">Equipo B</div>
  <select id="team-b"></select>
  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
  <div>
- <div class="panel-label" style="margin-bottom:8px">Draw Odds</div>
- <input type="number" id="odd-draw" step="0.01" placeholder="e.g. 3.40">
+ <div class="panel-label" style="margin-bottom:8px">Cuota empate</div>
+ <input type="number" id="odd-draw" step="0.01" placeholder="ej. 3.40">
  </div>
  <div>
- <div class="panel-label" style="margin-bottom:8px">Bookie Odds — B Win</div>
- <input type="number" id="odd-b" step="0.01" placeholder="e.g. 3.80">
+ <div class="panel-label" style="margin-bottom:8px">Cuota victoria B</div>
+ <input type="number" id="odd-b" step="0.01" placeholder="ej. 3.80">
  </div>
  </div>
  </div>
  </div>
 
- <div id="loading" class="loading" style="display:none"><div class="spinner"></div> STACKING MODELS…</div>
+ <div id="loading" class="loading" style="display:none"><div class="spinner"></div> CALCULANDO…</div>
 
  <div style="display:flex;justify-content:flex-end;margin-bottom:24px">
-  <button class="reset-btn" id="reset-btn" onclick="resetPredict()">New prediction</button>
+  <button class="reset-btn" id="reset-btn" onclick="resetPredict()">Nueva predicción</button>
  </div>
 
  <div id="results" style="display:none">
  <div class="tabs">
- <div class="tab active" onclick="switchTab('match')">MATCH</div>
- <div class="tab" onclick="switchTab('scorelines')">SCORELINES</div>
- <div class="tab" onclick="switchTab('odds')">ODDS &amp; EDGES</div>
- <div class="tab" onclick="switchTab('threats')">THREATS</div>
+ <div class="tab active" onclick="switchTab('match')">PARTIDO</div>
+ <div class="tab" onclick="switchTab('scorelines')">MARCADORES</div>
+ <div class="tab" onclick="switchTab('odds')">CUOTAS</div>
+ <div class="tab" onclick="switchTab('threats')">JUGADORES</div>
  </div>
 
  <!-- MATCH tab -->
  <div class="tab-panel active" id="tab-match">
  <div style="display:grid;grid-template-columns:1fr 1fr;gap:28px">
  <div class="card">
- <div class="card-title">Most Likely Scoreline</div>
+ <div class="card-title">Marcador más probable</div>
  <div class="score-display">
  <span class="score-num a" id="score-a"></span>
  <span class="score-sep">:</span>
@@ -1214,7 +1214,7 @@ select option { background:var(--bg-surface); }
  <div id="scorelines-list"></div>
  </div>
  <div class="card">
- <div class="card-title">Win Probabilities</div>
+ <div class="card-title">Probabilidades</div>
  <div id="prob-display" class="prob-rows"></div>
  <div id="xg-display" class="xg-row"></div>
  </div>
@@ -1225,11 +1225,11 @@ select option { background:var(--bg-surface); }
  <div class="tab-panel" id="tab-scorelines">
  <div style="display:grid;grid-template-columns:1fr 1fr;gap:28px">
  <div class="card">
- <div class="card-title">Top Scoreline Probabilities</div>
+ <div class="card-title">Marcadores posibles</div>
  <div id="top-scorelines-full"></div>
  </div>
  <div class="card">
- <div class="card-title">Scoreline Heatmap <span style="font-size:10px;color:var(--txt-3);margin-left:8px;font-weight:400">← Team A Goals (rows) · Team B Goals (cols) →</span></div>
+ <div class="card-title">Mapa de calor <span style="font-size:10px;color:var(--txt-3);margin-left:8px;font-weight:400">← Goles A (filas) · Goles B (cols) →</span></div>
  <div class="heatmap-wrap"><div class="heatmap-grid" id="heatmap"></div></div>
  </div>
  </div>
@@ -1238,7 +1238,7 @@ select option { background:var(--bg-surface); }
  <!-- ODDS tab -->
  <div class="tab-panel" id="tab-odds">
  <div class="card">
- <div class="card-title">Model Odds vs Market Odds</div>
+ <div class="card-title">Cuotas modelo vs mercado</div>
  <div id="odds-content"></div>
  </div>
  </div>
@@ -1259,7 +1259,7 @@ select option { background:var(--bg-surface); }
  </div>
 
  <div class="empty-state" id="empty-state">
- <div class="empty-state-text">SELECT TEAMS TO BEGIN ANALYSIS</div>
+ <div class="empty-state-text">Elige dos equipos para empezar</div>
  </div>
  </div>
 </div>
@@ -1270,39 +1270,39 @@ select option { background:var(--bg-surface); }
 <div class="page-section" id="page-model">
  <div class="section">
  <div class="page-heading">
- <h1>Model</h1>
- <p>Methodology, calibration, and WC 2022 backtest results</p>
+ <h1>El modelo</h1>
+ <p>Metodología, calibración y retroanálisis del Mundial 2022</p>
  </div>
 
  <div class="card" style="margin-bottom:24px">
- <div class="card-title">How it works</div>
+ <div class="card-title">Cómo funciona</div>
  <div style="font-size:14px;line-height:1.7;color:var(--txt-2);max-width:65ch">
- <p style="margin-bottom:12px">Predictions combine four independent models via weighted stacking:</p>
- <p style="margin-bottom:6px"><strong style="color:var(--txt)">ELO (40%)</strong> — Rating-based win probability with climate, altitude, and squad availability adjustments.</p>
- <p style="margin-bottom:6px"><strong style="color:var(--txt)">Dixon-Coles Poisson (35%)</strong> — Expected goals from attack/defense strength with low-score correlation correction.</p>
- <p style="margin-bottom:6px"><strong style="color:var(--txt)">ML Ensemble (25%)</strong> — Random Forest + Gradient Boosting trained on 110 WC/Euro matches, temperature-scaled.</p>
- <p style="margin-bottom:12px"><strong style="color:var(--txt)">H2H (8% when available)</strong> — Historical head-to-head records between specific teams.</p>
- <p>Tournament simulation runs 100,000 Monte Carlo iterations with live ELO updates, extra-time modeling, and fatigue tracking.</p>
+ <p style="margin-bottom:12px">Las predicciones combinan cuatro modelos independientes con pesos distintos:</p>
+ <p style="margin-bottom:6px"><strong style="color:var(--txt)">ELO (40%)</strong> — Probabilidades de victoria basadas en rating ELO, con ajustes por clima, altitud y disponibilidad de jugadores.</p>
+ <p style="margin-bottom:6px"><strong style="color:var(--txt)">Dixon-Coles Poisson (35%)</strong> — Goles esperados según fortaleza ofensiva y defensiva, con corrección de correlación en marcadores bajos.</p>
+ <p style="margin-bottom:6px"><strong style="color:var(--txt)">ML Ensemble (25%)</strong> — Random Forest y Gradient Boosting entrenados con 110 partidos de Mundiales y Eurocopas.</p>
+ <p style="margin-bottom:12px"><strong style="color:var(--txt)">H2H (8% si disponible)</strong> — Historial de enfrentamientos directos entre los dos equipos.</p>
+ <p>La simulación del torneo corre 100.000 iteraciones Monte Carlo con ELO actualizado, modelado de prórroga y seguimiento de fatiga.</p>
  </div>
  </div>
 
  <div class="page-heading sub">
- <h1>WC 2022 Backtest</h1>
- <p>Model accuracy against known outcomes</p>
+ <h1>Retroanálisis Qatar 2022</h1>
+ <p>Precisión del modelo con los resultados reales</p>
  </div>
  <div id="val-stats" style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:32px"></div>
  <div class="card" style="padding:0;overflow:hidden">
  <table class="data-table">
  <thead><tr>
- <th>MATCH</th>
+ <th>PARTIDO</th>
  <th class="ta-r">ELO A</th>
  <th class="ta-r">ELO B</th>
- <th class="ta-r">P(A WIN)</th>
- <th class="ta-r">P(DRAW)</th>
- <th class="ta-r">P(B WIN)</th>
- <th>PREDICTED</th>
- <th>ACTUAL</th>
- <th class="ta-c">RESULT</th>
+ <th class="ta-r">P(GANA A)</th>
+ <th class="ta-r">P(EMPATE)</th>
+ <th class="ta-r">P(GANA B)</th>
+ <th>PRED.</th>
+ <th>REAL</th>
+ <th class="ta-c">RESULTADO</th>
  </tr></thead>
  <tbody id="val-match-body"></tbody>
  </table>
@@ -1314,41 +1314,41 @@ select option { background:var(--bg-surface); }
 <div class="page-section" id="page-valuebets">
  <div class="section">
  <div class="page-heading">
- <h1>Value Bets</h1>
- <p>Model edges across all markets, odds sources, and bet types</p>
+ <h1>Apuestas de Valor</h1>
+ <p>Ventajas del modelo en todos los mercados disponibles</p>
  </div>
 
  <!-- Inner tabs for the three merged views -->
  <div class="tabs" id="vb-view-tabs">
- <div class="tab active" onclick="switchVBView('live')">Live Odds</div>
- <div class="tab" onclick="switchVBView('sheet')">Betting Sheet</div>
- <div class="tab" onclick="switchVBView('edges')">All Edges</div>
+ <div class="tab active" onclick="switchVBView('live')">Cuotas en vivo</div>
+ <div class="tab" onclick="switchVBView('sheet')">Hoja de apuestas</div>
+ <div class="tab" onclick="switchVBView('edges')">Todas las ventajas</div>
  </div>
 
  <!-- ── LIVE ODDS (was standalone Value Bets) ── -->
  <div class="vb-view active" id="vbview-live">
- <div id="vb-loading" class="loading"><div class="spinner"></div> LOADING VALUE BETS…</div>
+ <div id="vb-loading" class="loading"><div class="spinner"></div> CARGANDO APUESTAS…</div>
  <div id="vb-content" style="display:none">
  <div class="vb-kpis" id="vb-kpis"></div>
  <div class="vb-controls">
  <div class="vb-cat-tabs" id="vb-cat-tabs">
- <div class="vb-cat-tab active" data-cat="All">All</div>
- <div class="vb-cat-tab" data-cat="Match 1X2">Match 1X2</div>
- <div class="vb-cat-tab" data-cat="Group Qualification">Qualification</div>
- <div class="vb-cat-tab" data-cat="Group Winner">Group Winner</div>
- <div class="vb-cat-tab" data-cat="Total Goals">Total Goals</div>
+ <div class="vb-cat-tab active" data-cat="All">Todo</div>
+ <div class="vb-cat-tab" data-cat="Match 1X2">1X2</div>
+ <div class="vb-cat-tab" data-cat="Group Qualification">Clasificación</div>
+ <div class="vb-cat-tab" data-cat="Group Winner">Ganador grupo</div>
+ <div class="vb-cat-tab" data-cat="Total Goals">Total goles</div>
  </div>
- <input class="vb-search" id="vb-search" placeholder="Search team, market…" type="text" autocomplete="off">
- <span class="vb-sort-label">Sort by</span>
+ <input class="vb-search" id="vb-search" placeholder="Buscar equipo, mercado…" type="text" autocomplete="off">
+ <span class="vb-sort-label">Ordenar</span>
  <select class="vb-sort-select" id="vb-sort">
- <option value="ev">Expected Value</option>
- <option value="edge">Edge %</option>
- <option value="odds">Odds (high→low)</option>
- <option value="model">Model Prob</option>
+ <option value="ev">Valor esperado</option>
+ <option value="edge">Ventaja %</option>
+ <option value="odds">Cuota (mayor→menor)</option>
+ <option value="model">Prob. modelo</option>
  </select>
- <span class="vb-sort-label" style="margin-left:12px">Min Prob</span>
+ <span class="vb-sort-label" style="margin-left:12px">Prob. mín.</span>
  <select class="vb-sort-select" id="vb-min-prob" onchange="renderVB()">
- <option value="0">Any</option>
+ <option value="0">Cualquiera</option>
  <option value="0.10">10%+</option>
  <option value="0.20">20%+</option>
  <option value="0.30">30%+</option>
@@ -1360,57 +1360,57 @@ select option { background:var(--bg-surface); }
  <div class="vb-table-wrap">
  <table class="vb-table">
  <thead><tr>
- <th>TYPE</th>
- <th>MATCH / MARKET</th>
- <th>SELECTION</th>
- <th class="ta-r" id="th-odds" onclick="vbSetSort('odds')">ODDS</th>
- <th title="Model probability vs bookmaker implied probability">MODEL vs IMPLIED</th>
- <th class="ta-r" id="th-edge" onclick="vbSetSort('edge')" title="Edge: model probability minus bookmaker implied probability">EDGE</th>
- <th class="ta-r" id="th-ev" onclick="vbSetSort('ev')" title="Expected Value: average profit per unit staked — positive means value bet">EV</th>
- <th class="ta-r" id="th-kelly" title="Kelly Criterion: suggested stake size as % of bankroll">KELLY</th>
+ <th>TIPO</th>
+ <th>PARTIDO / MERCADO</th>
+ <th>SELECCIÓN</th>
+ <th class="ta-r" id="th-odds" onclick="vbSetSort('odds')">CUOTA</th>
+ <th title="Probabilidad del modelo vs probabilidad implícita del mercado">MODELO vs IMPLÍCITA</th>
+ <th class="ta-r" id="th-edge" onclick="vbSetSort('edge')" title="Ventaja: probabilidad del modelo menos implícita del mercado">VENTAJA</th>
+ <th class="ta-r" id="th-ev" onclick="vbSetSort('ev')" title="Valor esperado: ganancia media por unidad apostada">VE</th>
+ <th class="ta-r" id="th-kelly" title="Criterio Kelly: stake sugerido como % del bankroll">KELLY</th>
  </tr></thead>
  <tbody id="vb-tbody"></tbody>
  </table>
- <div class="vb-empty" id="vb-empty" style="display:none">No bets match the current filter.</div>
+ <div class="vb-empty" id="vb-empty" style="display:none">Ninguna apuesta coincide con el filtro.</div>
  </div>
  </div>
  </div>
 
  <!-- ── BETTING SHEET (was standalone page) ── -->
  <div class="vb-view" id="vbview-sheet">
- <div id="bets-loading" class="loading"><div class="spinner"></div> ANALYZING MARKETS…</div>
+ <div id="bets-loading" class="loading"><div class="spinner"></div> ANALIZANDO MERCADOS…</div>
  <div id="bets-content" style="display:none">
  <div class="bets-kpi-bar" id="bets-kpi-bar"></div>
  <div class="card card-featured">
- <div class="card-title" style="color:var(--gold)">TOP VALUE PARLAYS</div>
+ <div class="card-title" style="color:var(--gold)">MEJORES PARLAYS</div>
  <div id="parlay-cards" style="display:grid;grid-template-columns:repeat(3,1fr);gap:18px"></div>
  </div>
  <div class="filter-bar">
  <select id="bets-group-filter" onchange="renderBetsTable()">
- <option value="all">ALL GROUPS</option>
+ <option value="all">TODOS LOS GRUPOS</option>
  <option>A</option><option>B</option><option>C</option><option>D</option>
  <option>E</option><option>F</option><option>G</option><option>H</option>
  <option>I</option><option>J</option><option>K</option><option>L</option>
  </select>
  <select id="bets-sort" onchange="renderBetsTable()">
- <option value="ev">HIGHEST EV %</option>
- <option value="edge">BIGGEST EDGE</option>
+ <option value="ev">MAYOR EV %</option>
+ <option value="edge">MAYOR VENTAJA</option>
  </select>
  <select id="bets-min-prob" onchange="renderBetsTable()" style="margin-left:8px">
- <option value="0">MIN PROB: ANY</option>
- <option value="0.10">MIN PROB: 10%+</option>
- <option value="0.20">MIN PROB: 20%+</option>
- <option value="0.30">MIN PROB: 30%+</option>
- <option value="0.40">MIN PROB: 40%+</option>
- <option value="0.50">MIN PROB: 50%+</option>
+ <option value="0">PROB. MÍN.: CUALQUIERA</option>
+ <option value="0.10">PROB. MÍN.: 10%+</option>
+ <option value="0.20">PROB. MÍN.: 20%+</option>
+ <option value="0.30">PROB. MÍN.: 30%+</option>
+ <option value="0.40">PROB. MÍN.: 40%+</option>
+ <option value="0.50">PROB. MÍN.: 50%+</option>
  </select>
  </div>
  <div class="card" style="padding:0;overflow:hidden">
  <table class="data-table">
  <thead><tr>
- <th>GRP</th><th>MATCH</th><th>MARKET</th>
- <th class="ta-r">MODEL</th><th class="ta-r">MKT IMPLIED</th>
- <th class="ta-r">EDGE</th><th class="ta-r">EV %</th><th class="ta-r">KELLY</th><th class="ta-r">STAKE</th>
+ <th>GRP</th><th>PARTIDO</th><th>MERCADO</th>
+ <th class="ta-r">MODELO</th><th class="ta-r">IMPLÍCITA</th>
+ <th class="ta-r">VENTAJA</th><th class="ta-r">VE %</th><th class="ta-r">KELLY</th><th class="ta-r">STAKE</th>
  </tr></thead>
  <tbody id="bets-tbody"></tbody>
  </table>
@@ -1420,22 +1420,22 @@ select option { background:var(--bg-surface); }
 
  <!-- ── ALL EDGES (was Revenue Strategy) ── -->
  <div class="vb-view" id="vbview-edges">
- <div id="edges-loading" class="loading"><div class="spinner"></div> SCANNING EDGES…</div>
+ <div id="edges-loading" class="loading"><div class="spinner"></div> BUSCANDO VENTAJAS…</div>
  <div id="edges-content" style="display:none">
  <div id="edges-summary" style="display:flex;gap:16px;margin-bottom:24px;flex-wrap:wrap"></div>
  <div class="card" style="padding:0;overflow:hidden">
  <table class="data-table" id="edges-table">
  <thead><tr>
- <th>GRP</th><th>RND</th><th>MATCHUP</th>
- <th class="ta-c">MODEL PROBS</th><th class="ta-c">FAIR ODDS</th>
- <th class="ta-c">MARKET ODDS</th><th class="ta-c">EDGE</th><th class="ta-r">BEST BET</th>
+ <th>GRP</th><th>RONDA</th><th>PARTIDO</th>
+ <th class="ta-c">PROB. MODELO</th><th class="ta-c">CUOTA JUSTA</th>
+ <th class="ta-c">CUOTAS MERCADO</th><th class="ta-c">VENTAJA</th><th class="ta-r">MEJOR APUESTA</th>
  </tr></thead>
  <tbody id="edges-body"></tbody>
  </table>
  </div>
  <div id="no-odds-msg" style="display:none" class="card">
  <div style="color:var(--txt-2);font-size:14px;text-align:center;padding:20px">
- No live market odds available right now. Showing model fair values only.
+ Sin cuotas de mercado disponibles. Mostrando valores justos del modelo.
  </div>
  </div>
  </div>
@@ -1447,39 +1447,39 @@ select option { background:var(--bg-surface); }
 <div class="page-section" id="page-bracket">
  <div class="section">
   <div class="page-heading">
-   <h1>Bracket</h1>
-   <p>Most likely tournament paths · 1,500 simulations · probabilities per slot</p>
+   <h1>El cuadro</h1>
+   <p>Camino más probable · 1.500 simulaciones · probabilidad por posición</p>
   </div>
 
-  <div id="bk-loading" class="loading"><div class="spinner"></div> SIMULATING BRACKET…</div>
+  <div id="bk-loading" class="loading"><div class="spinner"></div> SIMULANDO EL CUADRO…</div>
 
   <div id="bk-content" style="display:none">
    <!-- Group consensus -->
    <div class="page-heading" style="margin-top:0;margin-bottom:16px">
-    <h2 style="font-size:14px;font-weight:700;letter-spacing:.06em;color:var(--txt-3);text-transform:uppercase">Group Stage Consensus</h2>
+    <h2 style="font-size:14px;font-weight:700;letter-spacing:.06em;color:var(--txt-3);text-transform:uppercase">Consenso fase de grupos</h2>
    </div>
    <div class="bk-groups-grid" id="bk-groups"></div>
 
    <!-- Knockout bracket -->
    <div class="page-heading" style="margin-bottom:16px">
-    <h2 style="font-size:14px;font-weight:700;letter-spacing:.06em;color:var(--txt-3);text-transform:uppercase">Knockout Bracket</h2>
-    <p style="font-size:11px;color:var(--txt-3)">Most likely team at each slot. % = probability of appearing there.</p>
+    <h2 style="font-size:14px;font-weight:700;letter-spacing:.06em;color:var(--txt-3);text-transform:uppercase">Cuadro de eliminación</h2>
+    <p style="font-size:11px;color:var(--txt-3)">El equipo más probable en cada puesto. % = probabilidad de llegar.</p>
    </div>
 
-   <p class="bracket-rotate-hint">Rotate device for best view</p>
+   <p class="bracket-rotate-hint">Gira el dispositivo para mejor vista</p>
   <div class="bracket-wrap">
     <div class="bracket-stage-header" id="bk-stage-header">
-     <div class="bracket-stage-label">Round of 32</div>
-     <div class="bracket-stage-label">Round of 16</div>
-     <div class="bracket-stage-label">Quarter-finals</div>
-     <div class="bracket-stage-label">Semi-finals</div>
+     <div class="bracket-stage-label">Ronda de 32</div>
+     <div class="bracket-stage-label">Octavos</div>
+     <div class="bracket-stage-label">Cuartos de final</div>
+     <div class="bracket-stage-label">Semifinales</div>
      <div class="bracket-stage-label">Final</div>
-     <div class="bracket-stage-label" style="color:var(--gold)">Champion</div>
+     <div class="bracket-stage-label" style="color:var(--gold)">Campeón</div>
      <div class="bracket-stage-label">Final</div>
-     <div class="bracket-stage-label">Semi-finals</div>
-     <div class="bracket-stage-label">Quarter-finals</div>
-     <div class="bracket-stage-label">Round of 16</div>
-     <div class="bracket-stage-label">Round of 32</div>
+     <div class="bracket-stage-label">Semifinales</div>
+     <div class="bracket-stage-label">Cuartos de final</div>
+     <div class="bracket-stage-label">Octavos</div>
+     <div class="bracket-stage-label">Ronda de 32</div>
     </div>
     <div class="bracket-layout" id="bk-bracket"></div>
    </div>
@@ -1788,15 +1788,15 @@ async function loadBets() {
  betsLoaded = true;
  let d;
  try { const r = await fetch('/api/bets'); d = await r.json(); }
- catch(e) { document.getElementById('bets-loading').innerHTML = `<span style="color:var(--red)">Failed to load — <button onclick="betsLoaded=false;loadBets()" style="background:none;border:none;color:var(--lime);cursor:pointer;font-weight:700">Retry</button></span>`; return; }
+ catch(e) { document.getElementById('bets-loading').innerHTML = `<span style="color:var(--red)">Error al cargar — <button onclick="betsLoaded=false;loadBets()" style="background:none;border:none;color:var(--lime);cursor:pointer;font-weight:700">Reintentar</button></span>`; return; }
  allBetsData = d.bets;
  const s = d.summary;
 
  document.getElementById('bets-kpi-bar').innerHTML = [
- {label:'VALUE BETS', val: s.total_bets, cls:'lime'},
- {label:'TOTAL STAKE', val: '$' + s.total_stake, cls:''},
- {label:'EXPECTED PROFIT', val: '$' + s.expected_profit, cls:'lime'},
- {label:'PORTFOLIO ROI', val: s.roi + '%', cls:'gold'},
+ {label:'APUESTAS DE VALOR', val: s.total_bets, cls:'lime'},
+ {label:'STAKE TOTAL', val: '$' + s.total_stake, cls:''},
+ {label:'PROFIT ESPERADO', val: '$' + s.expected_profit, cls:'lime'},
+ {label:'ROI TOTAL', val: s.roi + '%', cls:'gold'},
  ].map(x => `
  <div class="bets-kpi-card">
  <div class="kpi">
@@ -1806,7 +1806,7 @@ async function loadBets() {
  </div>`).join('');
 
  document.getElementById('parlay-cards').innerHTML = Object.entries(d.parlays).map(([key, p]) => {
- const title = key === 'over_25' ? 'OVER 2.5 PARLAY' : key === 'under_35' ? 'UNDER 3.5 PARLAY' : 'BTTS PARLAY';
+ const title = key === 'over_25' ? 'PARLAY MÁS DE 2.5' : key === 'under_35' ? 'PARLAY MENOS DE 3.5' : 'PARLAY AMBOS MARCAN';
  return `
  <div class="parlay-card">
  <div class="parlay-title">${title}</div>
@@ -1858,7 +1858,7 @@ function renderBetsTable() {
 async function loadEdges() {
  edgesLoaded = true;
  try { const r = await fetch('/api/group_odds'); edgesData = await r.json(); }
- catch(e) { document.getElementById('edges-loading').innerHTML = `<span style="color:var(--red)">Failed to load — <button onclick="edgesLoaded=false;loadEdges()" style="background:none;border:none;color:var(--lime);cursor:pointer;font-weight:700">Retry</button></span>`; return; }
+ catch(e) { document.getElementById('edges-loading').innerHTML = `<span style="color:var(--red)">Error al cargar — <button onclick="edgesLoaded=false;loadEdges()" style="background:none;border:none;color:var(--lime);cursor:pointer;font-weight:700">Reintentar</button></span>`; return; }
  document.getElementById('edges-loading').style.display = 'none';
  document.getElementById('edges-content').style.display = 'block';
 
@@ -1868,9 +1868,9 @@ async function loadEdges() {
 
  // Summary KPIs
  document.getElementById('edges-summary').innerHTML = [
- {label:'MATCHES', val: allMatches.length, cls:''},
- {label:'WITH LIVE ODDS', val: withOdds.length, cls:'lime'},
- {label:'WITH +EV', val: withEdge.length, cls:'lime'},
+ {label:'PARTIDOS', val: allMatches.length, cls:''},
+ {label:'CON CUOTAS EN VIVO', val: withOdds.length, cls:'lime'},
+ {label:'CON +VE', val: withEdge.length, cls:'lime'},
  ].map(x => `
  <div class="bets-kpi-card" style="flex:0 0 auto;min-width:160px">
  <div class="kpi"><div class="kpi-val ${x.cls}">${x.val}</div><div class="panel-label">${x.label}</div></div>
@@ -1960,14 +1960,14 @@ async function loadValidation() {
  validationLoaded = true;
  let d;
  try { const r = await fetch('/api/validate'); d = await r.json(); }
- catch(e) { document.getElementById('val-stats').innerHTML = `<div style="color:var(--red);padding:16px">Failed to load — <button onclick="validationLoaded=false;loadValidation()" style="background:none;border:none;color:var(--lime);cursor:pointer;font-weight:700">Retry</button></div>`; return; }
+ catch(e) { document.getElementById('val-stats').innerHTML = `<div style="color:var(--red);padding:16px">Error al cargar — <button onclick="validationLoaded=false;loadValidation()" style="background:none;border:none;color:var(--lime);cursor:pointer;font-weight:700">Reintentar</button></div>`; return; }
 
 
  document.getElementById('val-stats').innerHTML = [
- {label:'WC 2022 Matches', val: d.n_matches, cls:''},
- {label:'Model Accuracy', val: (d.current_accuracy*100).toFixed(1)+'%', cls:'lime'},
+ {label:'Partidos Qatar 2022', val: d.n_matches, cls:''},
+ {label:'Precisión del modelo', val: (d.current_accuracy*100).toFixed(1)+'%', cls:'lime'},
  {label:'Log-Loss', val: d.current_log_loss.toFixed(4), cls:'lime'},
- {label:'Optimal Acc', val: (d.optimal_accuracy*100).toFixed(1)+'%', cls:'gold'},
+ {label:'Acc. óptima', val: (d.optimal_accuracy*100).toFixed(1)+'%', cls:'gold'},
  ].map(x => `
  <div class="bets-kpi-card">
  <div class="kpi"><div class="kpi-val ${x.cls}">${x.val}</div><div class="panel-label">${x.label}</div></div>
@@ -1993,7 +1993,7 @@ async function loadValidation() {
 async function runPredict() {
  const ta = document.getElementById('team-a').value;
  const tb = document.getElementById('team-b').value;
- if (!ta || !tb || ta === tb) { notify('Select two different teams', 'error'); return; }
+ if (!ta || !tb || ta === tb) { notify('Elige dos equipos distintos', 'error'); return; }
 
  const oa = parseFloat(document.getElementById('odd-a').value) || null;
  const od = parseFloat(document.getElementById('odd-draw').value) || null;
@@ -2305,7 +2305,7 @@ function vbRender() {
  return _vbSortDir * (bv - av);
  });
 
- document.getElementById('vb-count').textContent = `${rows.length} bet${rows.length !== 1 ? 's' : ''}`;
+ document.getElementById('vb-count').textContent = `${rows.length} apuesta${rows.length !== 1 ? 's' : ''}`;
 
  const tbody = document.getElementById('vb-tbody');
  const empty = document.getElementById('vb-empty');
@@ -2340,12 +2340,12 @@ function vbRender() {
  <td class="vb-prob-bar-cell">
  <div class="vb-prob-bars">
  <div class="vb-prob-row">
- <span class="vb-prob-row-label">Model</span>
+ <span class="vb-prob-row-label">Modelo</span>
  <div class="vb-bar-track"><div class="vb-bar-fill model" style="width:${modelBar}%"></div></div>
  <span class="vb-prob-row-val">${modelPct}</span>
  </div>
  <div class="vb-prob-row">
- <span class="vb-prob-row-label">Implied</span>
+ <span class="vb-prob-row-label">Implícita</span>
  <div class="vb-bar-track"><div class="vb-bar-fill implied" style="width:${implBar}%"></div></div>
  <span class="vb-prob-row-val">${implPct}</span>
  </div>
@@ -2398,24 +2398,24 @@ async function loadValueBets() {
 
  document.getElementById('vb-kpis').innerHTML = `
  <div class="vb-kpi">
- <div class="vb-kpi-label">Total Value Bets</div>
+ <div class="vb-kpi-label">Total apuestas de valor</div>
  <div class="vb-kpi-value">${totalBets}</div>
- <div class="vb-kpi-sub">across ${Object.keys(catCounts).length} categories</div>
+ <div class="vb-kpi-sub">en ${Object.keys(catCounts).length} categorías</div>
  </div>
  <div class="vb-kpi">
- <div class="vb-kpi-label">Avg Expected Value</div>
+ <div class="vb-kpi-label">Valor esperado medio</div>
  <div class="vb-kpi-value" style="color:var(--lime)">+${avgEV.toFixed(2)}</div>
- <div class="vb-kpi-sub">per unit staked</div>
+ <div class="vb-kpi-sub">por unidad apostada</div>
  </div>
  <div class="vb-kpi">
- <div class="vb-kpi-label">Best Edge</div>
+ <div class="vb-kpi-label">Mejor ventaja</div>
  <div class="vb-kpi-value" style="color:var(--lime)">+${(bestEdge*100).toFixed(1)}%</div>
- <div class="vb-kpi-sub">model vs implied</div>
+ <div class="vb-kpi-sub">modelo vs implícita</div>
  </div>
  <div class="vb-kpi">
- <div class="vb-kpi-label">Top Category</div>
+ <div class="vb-kpi-label">Categoría top</div>
  <div class="vb-kpi-value" style="font-size:18px">${topCat[0]}</div>
- <div class="vb-kpi-sub">${topCat[1]} bets</div>
+ <div class="vb-kpi-sub">${topCat[1]} apuestas</div>
  </div>
  `;
 
@@ -2482,7 +2482,7 @@ if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches && window.VAN
   minWidth: 200,
   scale: 1.0,
   scaleMobile: 1.0,
-  color: 0x34c759,
+  color: 0x0a84ff,
   color2: 0x1d1d1f,
   backgroundColor: 0xf5f5f7,
   size: 3.0,
