@@ -4,6 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>WC 2026 — Analytical Terminal</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/vanta@0.5.24/dist/vanta.dots.min.js"></script>
 <style>
 :root {
  --bg: #f5f5f7;
@@ -49,45 +51,8 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* ── Background orbs ── */
-#bg-canvas {
- position: fixed; inset: 0; z-index: -1;
- overflow: hidden; pointer-events: none;
-}
-.bg-orb {
- position: absolute; border-radius: 50%;
-}
-.bg-orb-a {
- width: 800px; height: 800px;
- background: var(--lime);
- filter: blur(110px);
- opacity: 0.10;
- top: -280px; left: -180px;
- will-change: transform;
- animation: orb-a 32s ease-in-out infinite;
-}
-.bg-orb-b {
- width: 720px; height: 720px;
- background: var(--gold-bg);
- filter: blur(130px);
- opacity: 0.09;
- bottom: -220px; right: -160px;
- will-change: transform;
- animation: orb-b 40s ease-in-out infinite;
-}
-@keyframes orb-a {
- 0%   { transform: translate(0px, 0px); }
- 25%  { transform: translate(160px, 90px); }
- 50%  { transform: translate(110px, 210px); }
- 75%  { transform: translate(-70px, 130px); }
- 100% { transform: translate(0px, 0px); }
-}
-@keyframes orb-b {
- 0%   { transform: translate(0px, 0px); }
- 33%  { transform: translate(-130px, -90px); }
- 66%  { transform: translate(-170px, 70px); }
- 100% { transform: translate(0px, 0px); }
-}
+/* ── Vanta background ── */
+#vanta-bg { position:fixed; inset:0; z-index:-1; pointer-events:none; }
 
 /* ── Layout ── */
 main { display:flex; flex-direction:column; min-height:100vh; }
@@ -1116,10 +1081,7 @@ select option { background:var(--bg-surface); }
 </style>
 </head>
 <body>
-<div id="bg-canvas" aria-hidden="true">
- <div class="bg-orb bg-orb-a"></div>
- <div class="bg-orb bg-orb-b"></div>
-</div>
+<div id="vanta-bg" aria-hidden="true"></div>
 <div id="notification-container"></div>
 <div id="shortcuts-overlay" onclick="this.classList.remove('show')">
  <div class="shortcuts-card" onclick="event.stopPropagation()">
@@ -2510,6 +2472,24 @@ async function analyzeMatch(a, b) {
 /* ─────────────────────────────────────────────
  BOOT
 ───────────────────────────────────────────── */
+if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches && window.VANTA) {
+ VANTA.DOTS({
+  el: '#vanta-bg',
+  mouseControls: true,
+  touchControls: true,
+  gyroControls: false,
+  minHeight: 200,
+  minWidth: 200,
+  scale: 1.0,
+  scaleMobile: 1.0,
+  color: 0x34c759,
+  color2: 0x1d1d1f,
+  backgroundColor: 0xf5f5f7,
+  size: 3.0,
+  spacing: 30.0,
+  showLines: false
+ });
+}
 init();
 </script>
 </body>
