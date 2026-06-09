@@ -163,8 +163,15 @@ def run_monte_carlo(n: int) -> dict:
 def blended_match_prob(team_db: dict, team_a: str, team_b: str,
                        venue_name: str = None, home_team: str = None) -> dict:
     """
-    Run stack_predict but down-weight ML for large ELO mismatches (>300 pts).
-    The ML component can be noisy on extreme matchups.
+    Run stack_predict but down-weight ML for large ELO mismatches or inverted predictions.
+
+    The ML component (80% weight) can be badly miscalibrated when team stats come from
+    competitions of very different strength (e.g. Morocco's GA from weak African qualifiers
+    vs Brazil's GA from strong CONMEBOL). Two correction cases:
+
+    1. ELO diff > 300 — existing correction, blend heavily toward ELO+Poisson.
+    2. ELO diff 100–300 AND model predicts weaker team to win more — the ML has
+       inverted who the favourite is; apply a proportional correction.
     """
     from src.models.stacked_predictor import stack_predict, HOST_NATIONS
     import math
@@ -181,23 +188,52 @@ def blended_match_prob(team_db: dict, team_a: str, team_b: str,
 
     elo_a = team_db[team_a].get("ELO", 1700)
     elo_b = team_db[team_b].get("ELO", 1700)
+    # Apply the same host ELO boost used internally by stack_predict so the
+    # inversion check sees the same effective ratings.
+    from src.models.stacked_predictor import HOME_ELO_BOOST
+    if home_team == team_a:
+        elo_a += HOME_ELO_BOOST
+    elif home_team == team_b:
+        elo_b += HOME_ELO_BOOST
     elo_diff = abs(elo_a - elo_b)
 
-    # When ELO diff > 300, blend toward pure ELO+Poisson (skip ML noise)
+    def lerp(a, b, t): return a * (1 - t) + b * t
+
+    mb  = pred.get("model_breakdown", {})
+    elo = mb.get("ELO", {})
+    poi = mb.get("Poisson", {})
+    if not elo or not poi:
+        return pred
+
+    elo_w    = 0.8   # ELO weight in the ELO-dominant target blend
+    target_h = elo_w * elo["win_a"] + (1 - elo_w) * poi["win_a"]
+    target_a = elo_w * elo["win_b"] + (1 - elo_w) * poi["win_b"]
+
+    # Case 2 (checked first): inverted prediction — weaker ELO team wins more
+    # The ML (80% weight) routinely overclaims teams whose stats come from weak
+    # competitions (Asia, Africa, CONCACAF) vs. teams from stronger leagues.
+    # When the ML says the *weaker* ELO team wins more often, that is a bias signal.
+    # We apply a strong blend toward the ELO+Poisson target.
+    # Threshold: ELO diff ≥ 3 (ignore exact ties to avoid over-correcting truly
+    # equal teams, but catch the host-nation boost case where diff after adjustment
+    # is just a few points).
+    # Blend: 50% floor + grows with gap size and inversion magnitude (caps at 85%).
+    if elo_diff > 3:
+        a_is_stronger = elo_a > elo_b
+        p_stronger = pred["p_win_a"] if a_is_stronger else pred["p_win_b"]
+        p_weaker   = pred["p_win_b"] if a_is_stronger else pred["p_win_a"]
+        if p_weaker > p_stronger:
+            inversion = p_weaker - p_stronger
+            blend = min(0.85, 0.50 + (elo_diff - 3) / 300 + inversion)
+            p_h = lerp(pred["p_win_a"], target_h, blend)
+            p_a = lerp(pred["p_win_b"], target_a, blend)
+            p_d = 1.0 - p_h - p_a
+            return {"p_win_a": p_h, "p_draw": max(0.05, p_d), "p_win_b": p_a}
+
+    # Case 1: large ELO gap (non-inverted) — blend toward ELO+Poisson
     if elo_diff > 300:
-        mb   = pred["model_breakdown"]
-        elo  = mb["ELO"]
-        poi  = mb["Poisson"]
-        w    = min(1.0, (elo_diff - 300) / 400)   # 0→1 as diff goes 300→700
-        def lerp(a, b, t): return a * (1 - t) + b * t
-        # For extreme mismatches the ML model is poorly calibrated (trained on
-        # balanced datasets, rarely sees 400+ ELO gaps).  Use an ELO-dominant
-        # target (80 % ELO / 20 % Poisson) and a stronger correction weight so
-        # that at w=0.5 (ELO diff ~500) we are already 75 % of the way there.
-        elo_w = 0.8   # ELO weight in the target blend
-        target_h = elo_w * elo["win_a"] + (1 - elo_w) * poi["win_a"]
-        target_a = elo_w * elo["win_b"] + (1 - elo_w) * poi["win_b"]
-        blend = min(1.0, w * 1.5)    # 0→1 as w goes 0→0.67 (ELO diff ~567)
+        w     = min(1.0, (elo_diff - 300) / 400)   # 0→1 as diff goes 300→700
+        blend = min(1.0, w * 1.5)
         p_h = lerp(pred["p_win_a"], target_h, blend)
         p_a = lerp(pred["p_win_b"], target_a, blend)
         p_d = 1.0 - p_h - p_a
@@ -238,16 +274,21 @@ def elo_corrected_lambdas(team_db: dict, team_a: str, team_b: str,
     elo_b = team_db[team_b].get("ELO", 1700)
     elo_diff = elo_a - elo_b   # positive → team_a (listed first / "home") is stronger
 
-    if abs(elo_diff) <= 300:
-        return lam_h, lam_a
-
     # Identify which lambda belongs to the stronger / weaker side
-    if elo_diff > 0:
+    if elo_diff >= 0:
         lam_strong, lam_weak = lam_h, lam_a
     else:
         lam_strong, lam_weak = lam_a, lam_h
 
     raw_ratio = lam_strong / max(lam_weak, 0.10)
+
+    # Skip correction when ELO diff is small AND lambdas already favour the stronger side.
+    # If raw_ratio < 1.0 the stronger team has a lower expected-goals lambda — the stats
+    # are inverted (e.g. Brazil's GA is inflated from CONMEBOL while Morocco's GA is
+    # deflated from weak African opposition). In that case apply the correction even for
+    # small ELO gaps so that handicap probabilities don't get wildly distorted.
+    if abs(elo_diff) <= 300 and raw_ratio >= 1.0:
+        return lam_h, lam_a
 
     # Compute raw Poisson outright win probability for the stronger side
     def _poisson_win(ls, lw):
@@ -965,6 +1006,9 @@ def find_value_bets(odds_data: list[dict], mc: dict | None, team_db: dict) -> li
         }
         for row in odds_data:
             mkt = row.get("market", "")
+            # Skip combo markets — handled by section 14 with joint probability
+            if "Both to Reach the" in mkt:
+                continue
             stage_key = None
             for kw, (prob_dict, lbl) in _reach_map.items():
                 if f"to Reach the {kw}" in mkt or (kw == "Semi" and "Semi-final" in mkt):
@@ -1211,11 +1255,22 @@ def find_value_bets(odds_data: list[dict], mc: dict | None, team_db: dict) -> li
         mp = blended_match_prob(team_db, t_a, t_b)
         p_direct_a = mp["p_win_a"] + 0.5 * mp["p_draw"]
 
-        # Blend with relative qualification strength from MC if available
+        # Blend with relative group-finishing strength from MC if available.
+        # Use top-2 finish prob (grp_win + grp_2nd) instead of full qual prob:
+        # in the 2026 format ~8/12 third-place teams also advance, which inflates
+        # the qual probability of weak teams and overstates their "group H2H strength".
         if mc:
-            qa = _qual.get(t_a, 0.5) if mc else 0.5
-            qb = _qual.get(t_b, 0.5) if mc else 0.5
-            p_strength_a = qa / (qa + qb) if (qa + qb) > 0 else 0.5
+            _grp_win = mc.get("grp_win", {})
+            _grp_2nd = mc.get("grp_2nd", {})
+            top2_a = _grp_win.get(t_a, 0) + _grp_2nd.get(t_a, 0)
+            top2_b = _grp_win.get(t_b, 0) + _grp_2nd.get(t_b, 0)
+            if top2_a + top2_b > 0:
+                p_strength_a = top2_a / (top2_a + top2_b)
+            else:
+                # Fall back to qual if grp_win/grp_2nd not populated (e.g. loaded from file)
+                qa = _qual.get(t_a, 0.5)
+                qb = _qual.get(t_b, 0.5)
+                p_strength_a = qa / (qa + qb) if (qa + qb) > 0 else 0.5
             p_a = 0.6 * p_direct_a + 0.4 * p_strength_a
         else:
             p_a = p_direct_a
@@ -1388,9 +1443,18 @@ def main():
                         "semi":     {r["team"]: r["semi_%"]/100 for r in mc_raw["table"]},
                         "quarter":  {r["team"]: r["quarter_%"]/100 for r in mc_raw["table"]},
                         "qual":     {r["team"]: r.get("qual_%", 0)/100 for r in mc_raw["table"]},
-                        "grp_win":  {}, 
+                        "grp_win":  {},
+                        "grp_2nd":  {},
                     }
-                    print("  Loaded successfully.")
+                    print("  Loaded tournament results successfully.")
+                    # The stored file lacks grp_win / grp_2nd, which Group H2H bets
+                    # need to avoid falling back to the inflated qual% values.
+                    # Run a supplemental MC specifically for group-stage finish data.
+                    print("  Running supplemental MC for group-stage probabilities...")
+                    mc_supp = run_monte_carlo(N_SIMS)
+                    mc["grp_win"] = mc_supp.get("grp_win", {})
+                    mc["grp_2nd"] = mc_supp.get("grp_2nd", {})
+                    print("  Group-stage MC done.")
             except Exception as e:
                 print(f"  Error loading MC file: {e}. Running fresh simulation...")
                 mc = run_monte_carlo(N_SIMS)

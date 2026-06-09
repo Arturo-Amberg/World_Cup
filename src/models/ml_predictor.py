@@ -134,9 +134,19 @@ def _make_features(row) -> list:
     return [elo_diff, gf_diff, ga_diff, frm_diff, is_host_a, elo_ratio, goal_ratio, elo_a, elo_b]
 
 
+_ML_HOST_ELO_BOOST = 55  # mirrors stacked_predictor.HOME_ELO_BOOST
+
+
 def _make_team_features(team_a: dict, team_b: dict, home_team: str = None) -> list:
     elo_a   = team_a.get("ELO", 1700)
     elo_b   = team_b.get("ELO", 1700)
+    # Apply the same host-nation ELO boost used by the ELO model so the ML
+    # sees the correct relative strength when a host nation is involved.
+    if home_team:
+        if team_a.get("name") == home_team:
+            elo_a += _ML_HOST_ELO_BOOST
+        elif team_b.get("name") == home_team:
+            elo_b += _ML_HOST_ELO_BOOST
     gf_a    = team_a.get("GF_AVG", 1.25)
     ga_a    = team_a.get("GA_AVG", 1.25)
     gf_b    = team_b.get("GF_AVG", 1.25)
