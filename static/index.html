@@ -961,12 +961,10 @@ select option { background:var(--bg-surface); }
   transition-duration: 0.06s;
 }
 
-/* ── Score number entrance ── */
-.score-num {
-  display:   inline-block;
-  animation: scale-in 360ms var(--ease-out-expo) both;
-}
-.score-num.b { animation-delay: 80ms; }
+/* ── Score number entrance: triggered by class, not unconditionally ── */
+.score-num { display: inline-block; }
+.score-num.animate-in   { animation: scale-in 360ms var(--ease-out-expo) both; }
+.score-num.animate-in.b { animation-delay: 80ms; }
 
 /* ── Heatmap cell delight ── */
 .heat-cell {
@@ -2283,13 +2281,23 @@ async function runPredict() {
 function renderResults(d) {
  document.getElementById('loading').style.display = 'none';
  document.getElementById('empty-state').style.display = 'none';
- revealContent(document.getElementById('results'));
+ const resultsEl = document.getElementById('results');
+ resultsEl.style.display = 'block';
+ resultsEl.classList.remove('content-reveal');
+ void resultsEl.offsetWidth;
+ resultsEl.classList.add('content-reveal');
 
  const top = d.top_scorelines[0];
 
  /* ── MATCH TAB ── */
- document.getElementById('score-a').textContent = top.gf_a;
- document.getElementById('score-b').textContent = top.gf_b;
+ const sa = document.getElementById('score-a'), sb = document.getElementById('score-b');
+ sa.textContent = top.gf_a; sb.textContent = top.gf_b;
+ [sa, sb].forEach((el, i) => {
+  el.classList.remove('animate-in');
+  void el.offsetWidth;
+  el.classList.add('animate-in');
+  if (i === 1) el.classList.add('b');
+ });
  document.getElementById('top-score-prob').textContent = (top.prob*100).toFixed(1) + '% probability';
 
  // Scorelines list
