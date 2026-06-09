@@ -1740,7 +1740,7 @@ function notify(msg, type='info') {
 
 function revealContent(el, displayMode) {
  if (!el) return;
- el.style.display = displayMode || '';
+ el.style.display = displayMode || 'block';
  el.classList.remove('content-reveal');
  void el.offsetWidth; /* force reflow so animation replays */
  el.classList.add('content-reveal');
