@@ -372,6 +372,13 @@ def sim_match(
         pred = {"p_win_a": _pa, "p_draw": _pd, "p_win_b": _pb}
     else:
         pred = stack_predict(team_a, team_b, home_team=home_team, round_number=round_number, venue_name=venue_name)
+        from src.models.stacked_predictor import apply_elo_correction
+        pred = apply_elo_correction(
+            pred, elo_a, elo_b,
+            home_team=home_team,
+            team_a_name=team_a.get("name", ""),
+            team_b_name=team_b.get("name", ""),
+        )
 
     lam_a, lam_b = expected_goals(team_a, team_b, home_team=home_team, round_number=round_number, venue_name=venue_name)
 

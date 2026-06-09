@@ -640,6 +640,84 @@ def stack_predict(
 
 
 # ─────────────────────────────────────────────
+#  ELO correction utility (shared by tournament.py and value_bets.py)
+# ─────────────────────────────────────────────
+def apply_elo_correction(
+    pred: dict,
+    elo_a: float,
+    elo_b: float,
+    home_team: str = None,
+    team_a_name: str = "",
+    team_b_name: str = "",
+) -> dict:
+    """
+    Correct stack_predict output for ELO-based biases.
+
+    The ML component (80% weight) overclaims teams whose stats come from weak
+    competitions (Asia, Africa, CONCACAF minnows).  Two correction cases:
+
+    Case 2 (checked first): if the ML says the ELO-weaker team wins *more often*
+    than the ELO-stronger team (inverted prediction), blend heavily toward the
+    ELO+Poisson target.
+
+    Case 1: if the ELO gap is large (> 150) but the prediction is not inverted,
+    still apply a partial blend proportional to gap size.
+
+    Applies the same host-nation ELO boost as elo_model() so the inversion
+    check sees the same effective ratings as the rest of the predictor.
+    """
+    # Pull ELO and Poisson sub-models from the breakdown stack_predict returns
+    mb  = pred.get("model_breakdown", {})
+    elo = mb.get("ELO", {})
+    poi = mb.get("Poisson", {})
+    if not elo or not poi:
+        return pred
+
+    # Mirror the host-nation boost applied inside elo_model()
+    adj_elo_a = elo_a
+    adj_elo_b = elo_b
+    if home_team is not None and home_team in HOST_NATIONS:
+        if team_a_name == home_team:
+            adj_elo_a += HOME_ELO_BOOST
+        elif team_b_name == home_team:
+            adj_elo_b += HOME_ELO_BOOST
+    elo_diff = abs(adj_elo_a - adj_elo_b)
+
+    def lerp(a, b, t):
+        return a * (1 - t) + b * t
+
+    elo_w    = 0.8
+    target_h = elo_w * elo["win_a"] + (1 - elo_w) * poi["win_a"]
+    target_a = elo_w * elo["win_b"] + (1 - elo_w) * poi["win_b"]
+
+    # Case 2: inverted prediction (diff > 3 to avoid over-correcting near-equal teams)
+    if elo_diff > 3:
+        a_is_stronger = adj_elo_a > adj_elo_b
+        p_stronger = pred["p_win_a"] if a_is_stronger else pred["p_win_b"]
+        p_weaker   = pred["p_win_b"] if a_is_stronger else pred["p_win_a"]
+        if p_weaker > p_stronger:
+            inversion = p_weaker - p_stronger
+            blend = min(0.85, 0.50 + (elo_diff - 3) / 300 + inversion)
+            # When the ML inverts who the favourite is, the Poisson is also likely
+            # miscalibrated. Use pure ELO as the correction target.
+            p_h = lerp(pred["p_win_a"], elo["win_a"], blend)
+            p_a = lerp(pred["p_win_b"], elo["win_b"], blend)
+            p_d = 1.0 - p_h - p_a
+            return {"p_win_a": p_h, "p_draw": max(0.05, p_d), "p_win_b": p_a}
+
+    # Case 1: ELO gap correction (non-inverted) — blend toward ELO+Poisson.
+    # Threshold 80: even medium gaps (diff=120) get a meaningful correction.
+    if elo_diff > 80:
+        blend = min(0.85, (elo_diff - 80) / 60)
+        p_h = lerp(pred["p_win_a"], target_h, blend)
+        p_a = lerp(pred["p_win_b"], target_a, blend)
+        p_d = 1.0 - p_h - p_a
+        return {"p_win_a": p_h, "p_draw": max(0.05, p_d), "p_win_b": p_a}
+
+    return pred
+
+
+# ─────────────────────────────────────────────
 #  Test rápido
 # ─────────────────────────────────────────────
 if __name__ == "__main__":

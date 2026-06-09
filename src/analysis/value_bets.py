@@ -225,15 +225,20 @@ def blended_match_prob(team_db: dict, team_a: str, team_b: str,
         if p_weaker > p_stronger:
             inversion = p_weaker - p_stronger
             blend = min(0.85, 0.50 + (elo_diff - 3) / 300 + inversion)
-            p_h = lerp(pred["p_win_a"], target_h, blend)
-            p_a = lerp(pred["p_win_b"], target_a, blend)
+            # When the ML inverts who the favourite is, the Poisson is also likely
+            # miscalibrated (both are skewed by weak-opponent stats). Use pure ELO
+            # as the correction target for inverted predictions.
+            p_h = lerp(pred["p_win_a"], elo["win_a"], blend)
+            p_a = lerp(pred["p_win_b"], elo["win_b"], blend)
             p_d = 1.0 - p_h - p_a
             return {"p_win_a": p_h, "p_draw": max(0.05, p_d), "p_win_b": p_a}
 
-    # Case 1: large ELO gap (non-inverted) — blend toward ELO+Poisson
-    if elo_diff > 300:
-        w     = min(1.0, (elo_diff - 300) / 400)   # 0→1 as diff goes 300→700
-        blend = min(1.0, w * 1.5)
+    # Case 1: ELO gap correction (non-inverted) — blend toward ELO+Poisson.
+    # The ML (80% weight) overclaims teams whose stats come from weak competitions.
+    # Threshold lowered to 80 so medium gaps (Belgium-Iran at 121, Austria-Jordan at 150)
+    # get corrected. Blend formula is aggressive so even a 120-diff gap gets ~68% correction.
+    if elo_diff > 80:
+        blend = min(0.85, (elo_diff - 80) / 60)
         p_h = lerp(pred["p_win_a"], target_h, blend)
         p_a = lerp(pred["p_win_b"], target_a, blend)
         p_d = 1.0 - p_h - p_a
@@ -1174,7 +1179,9 @@ def find_value_bets(odds_data: list[dict], mc: dict | None, team_db: dict) -> li
                   f"{t_a} or {t_b} wins WC", row["odds"], p_either, "Double Chance Winner")
 
     # ── 16. TOTAL GOALS IN GROUP ──────────────────────────────────────────────
-    from src.models.stacked_predictor import expected_goals as eg
+    # Use ELO-corrected lambdas to account for stats from weak competitions
+    def _eg(ta, tb):
+        return elo_corrected_lambdas(team_db, ta, tb)
 
     grp_goals_lines: dict[str, dict] = {}
     for row in odds_data:
@@ -1209,7 +1216,7 @@ def find_value_bets(odds_data: list[dict], mc: dict | None, team_db: dict) -> li
         lam_goals = 0.0
         for ta, tb in _itools.combinations(valid, 2):
             try:
-                lh, la = eg(team_db[ta], team_db[tb])
+                lh, la = _eg(ta, tb)
                 lam_goals += lh + la
             except Exception:
                 lam_goals += 2.5
