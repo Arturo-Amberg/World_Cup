@@ -4,13 +4,219 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>WC 2026 — Analytical Terminal</title>
-<link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#2d9e4e">
-<meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="apple-mobile-web-app-title" content="WC2026">
-<link rel="apple-touch-icon" href="icon-192.png">
+<script src="static_data.js"></script>
+<script>
+/* ── Static-site API shim ──────────────────────────────────────────────────
+   Intercepts all fetch('/api/...') calls and serves data from STATIC_DATA.
+   For /api/predict (POST) runs a client-side Poisson + ELO predictor.
+─────────────────────────────────────────────────────────────────────────── */
+(function() {
+  const _nativeFetch = window.fetch.bind(window);
+
+  /* ── Collect all team ELOs + xG stats from groups data ── */
+  const _SD = window.STATIC_DATA || {};
+  const TEAM_ELO  = {};   // name -> ELO
+  const TEAM_GF   = {};   // name -> avg goals for (xg_a from group matches)
+  const TEAM_GA   = {};   // name -> avg goals against
+  const TEAM_POSS = {};   // name -> possession % (from team_stats)
+  const WC_MU     = 1.30;
+  const DC_RHO    = -0.12;
+  const HOST_NATIONS = new Set(['USA','Mexico','Canada']);
+
+  // Gather ELOs from groups
+  const _groups = _SD['/api/groups'] || {};
+  for (const g of Object.values(_groups)) {
+    Object.assign(TEAM_ELO, g.team_elos || {});
+    // Accumulate xG sums to compute averages
+    for (const m of (g.matches || [])) {
+      for (const [name, xg] of [[m.team_a, m.xg_a],[m.team_b, m.xg_b]]) {
+        if (!TEAM_GF[name]) { TEAM_GF[name] = []; TEAM_GA[name] = []; }
+        TEAM_GF[name].push(xg);
+      }
+      // GA is opponent's xG
+      TEAM_GA[m.team_a] = TEAM_GA[m.team_a] || [];
+      TEAM_GA[m.team_b] = TEAM_GA[m.team_b] || [];
+      TEAM_GA[m.team_a].push(m.xg_b);
+      TEAM_GA[m.team_b].push(m.xg_a);
+    }
+  }
+  function avg(arr) { return arr && arr.length ? arr.reduce((a,b)=>a+b,0)/arr.length : WC_MU; }
+  const GF_AVG = {}, GA_AVG = {};
+  for (const t of Object.keys(TEAM_GF)) {
+    GF_AVG[t] = avg(TEAM_GF[t]);
+    GA_AVG[t] = avg(TEAM_GA[t]);
+  }
+
+  // Gather possession from team_stats (array indexed by position, has .team field)
+  const _ts = _SD['/api/team_stats'] || {};
+  for (const v of Object.values(_ts)) {
+    if (v && v.team) TEAM_POSS[v.team] = v.possession || 50;
+  }
+
+  /* ── Poisson PMF ── */
+  function poissonPMF(lam, k) {
+    if (lam <= 0) return k === 0 ? 1 : 0;
+    let log = -lam + k * Math.log(lam);
+    for (let i = 2; i <= k; i++) log -= Math.log(i);
+    return Math.exp(log);
+  }
+
+  /* ── Compute expected goals ── */
+  function computeLambdas(ta, tb, homeTeam) {
+    const mu    = WC_MU;
+    const gfA   = Math.max(0.3, GF_AVG[ta] || mu);
+    const gaA   = Math.max(0.3, GA_AVG[ta] || mu);
+    const gfB   = Math.max(0.3, GF_AVG[tb] || mu);
+    const gaB   = Math.max(0.3, GA_AVG[tb] || mu);
+    let lamA = (gfA / mu) * (gaB / mu) * mu;
+    let lamB = (gfB / mu) * (gaA / mu) * mu;
+    // possession tweak
+    const pA = (TEAM_POSS[ta] || 50) / 100;
+    const pB = (TEAM_POSS[tb] || 50) / 100;
+    lamA *= 1 + (pA - 0.5) * 0.10;
+    lamB *= 1 + (pB - 0.5) * 0.10;
+    // host advantage
+    if (homeTeam && HOST_NATIONS.has(homeTeam)) {
+      if (ta === homeTeam) lamA *= 1.08;
+      else if (tb === homeTeam) lamB *= 1.08;
+    }
+    lamA = Math.max(0.15, Math.min(5, lamA));
+    lamB = Math.max(0.15, Math.min(5, lamB));
+    return [lamA, lamB];
+  }
+
+  /* ── Dixon-Coles 3-way from lambdas ── */
+  function poissonPredict(lamA, lamB) {
+    const MAX = 9;
+    let pWinA = 0, pDraw = 0, pWinB = 0;
+    const matrix = [];
+    for (let i = 0; i <= MAX; i++) {
+      const pA = poissonPMF(lamA, i);
+      for (let j = 0; j <= MAX; j++) {
+        let p = pA * poissonPMF(lamB, j);
+        let tau = 1;
+        if      (i===0 && j===0) tau = 1 - lamA*lamB*DC_RHO;
+        else if (i===1 && j===0) tau = 1 + lamB*DC_RHO;
+        else if (i===0 && j===1) tau = 1 + lamA*DC_RHO;
+        else if (i===1 && j===1) tau = 1 - DC_RHO;
+        tau = Math.max(0.01, tau);
+        p *= tau;
+        if      (i > j) pWinA += p;
+        else if (i < j) pWinB += p;
+        else            pDraw += p;
+        matrix.push({gf_a: i, gf_b: j, prob: p});
+      }
+    }
+    const tot = pWinA + pDraw + pWinB || 1;
+    matrix.sort((a,b) => b.prob - a.prob);
+    // re-normalise matrix probs
+    matrix.forEach(m => m.prob = parseFloat((m.prob / tot).toFixed(5)));
+    return {
+      p_win_a: pWinA / tot,
+      p_draw:  pDraw / tot,
+      p_win_b: pWinB / tot,
+      matrix
+    };
+  }
+
+  /* ── ELO model ── */
+  function eloPredict(ta, tb, homeTeam) {
+    let eloA = TEAM_ELO[ta] || 1700;
+    let eloB = TEAM_ELO[tb] || 1700;
+    if (homeTeam && HOST_NATIONS.has(homeTeam)) {
+      if (ta === homeTeam) eloA += 50;
+      else if (tb === homeTeam) eloB += 50;
+    }
+    const diff = eloA - eloB;
+    const pA   = 1 / (1 + Math.pow(10, -diff / 400));
+    const draw = Math.max(0.15, 0.25 - 0.12 * Math.min(1, Math.abs(diff) / 400));
+    return { p_win_a: pA*(1-draw), p_draw: draw, p_win_b: (1-pA)*(1-draw) };
+  }
+
+  /* ── Client-side /api/predict ── */
+  function clientPredict(ta, tb, manualOdds) {
+    const homeTeam = HOST_NATIONS.has(ta) ? ta : HOST_NATIONS.has(tb) ? tb : null;
+    const [lamA, lamB] = computeLambdas(ta, tb, homeTeam);
+    const poisson      = poissonPredict(lamA, lamB);
+    const elo          = eloPredict(ta, tb, homeTeam);
+
+    // Blend: 60% Poisson, 40% ELO (mirrors default weights in backend)
+    const blend = (pk, ek) => poisson[pk] * 0.60 + elo[ek] * 0.40;
+    let pWinA = blend('p_win_a','p_win_a');
+    let pDraw = blend('p_draw','p_draw');
+    let pWinB = blend('p_win_b','p_win_b');
+    const tot = pWinA + pDraw + pWinB || 1;
+    pWinA /= tot; pDraw /= tot; pWinB /= tot;
+
+    const fairOdds = {
+      a:    parseFloat((1/pWinA).toFixed(2)),
+      draw: parseFloat((1/pDraw).toFixed(2)),
+      b:    parseFloat((1/pWinB).toFixed(2)),
+    };
+
+    let ev = null;
+    if (manualOdds && ['a','draw','b'].every(k => (manualOdds[k]||0) > 0)) {
+      ev = {
+        a:    parseFloat((pWinA * manualOdds.a    - 1).toFixed(4)),
+        draw: parseFloat((pDraw  * manualOdds.draw - 1).toFixed(4)),
+        b:    parseFloat((pWinB * manualOdds.b    - 1).toFixed(4)),
+      };
+    }
+
+    return {
+      team_a:   ta,
+      team_b:   tb,
+      probs:    { win_a: parseFloat(pWinA.toFixed(4)), draw: parseFloat(pDraw.toFixed(4)), win_b: parseFloat(pWinB.toFixed(4)) },
+      xg:       { a: parseFloat(lamA.toFixed(2)), b: parseFloat(lamB.toFixed(2)) },
+      fair_odds: fairOdds,
+      bookie_odds: manualOdds || null,
+      ev,
+      scoreline_matrix: poisson.matrix,
+      top_scorelines:   poisson.matrix.slice(0, 12),
+      model_breakdown:  { poisson: 0.60, elo: 0.40 },
+      penalty_prob_a:   parseFloat(pWinA.toFixed(3)),
+      injuries_a: [],
+      injuries_b: [],
+      players_a:  [],
+      players_b:  [],
+      elo_a: TEAM_ELO[ta] || 0,
+      elo_b: TEAM_ELO[tb] || 0,
+    };
+  }
+
+  /* ── Fake Response helper ── */
+  function fakeResponse(data) {
+    return Promise.resolve(new Response(JSON.stringify(data), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' }
+    }));
+  }
+
+  /* ── Fetch override ── */
+  window.fetch = function(input, init) {
+    const url  = typeof input === 'string' ? input : (input.url || '');
+    const path = url.replace(/^https?:\/\/[^\/]+/, '').split('?')[0];
+
+    // POST /api/predict — run client-side predictor
+    if (path === '/api/predict' && (init?.method || 'GET').toUpperCase() === 'POST') {
+      try {
+        const body = JSON.parse(init.body || '{}');
+        return fakeResponse(clientPredict(body.team_a, body.team_b, body.odds || null));
+      } catch(e) {
+        return fakeResponse({ error: e.message });
+      }
+    }
+
+    // GET /api/* — serve from STATIC_DATA
+    if (path.startsWith('/api/') && _SD[path] !== undefined) {
+      return fakeResponse(_SD[path]);
+    }
+
+    // Everything else — pass through
+    return _nativeFetch(input, init);
+  };
+})();
+</script>
 <style>
 :root {
   /* ── Color system (OKLCH — perceptually uniform, tinted neutrals) ── */
@@ -2739,14 +2945,6 @@ async function analyzeMatch(a, b) {
  BOOT
 ───────────────────────────────────────────── */
 init();
-</script>
-<script>
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/World_Cup/sw.js', { scope: '/World_Cup/' })
-      .catch(() => {});
-  });
-}
 </script>
 </body>
 </html>
