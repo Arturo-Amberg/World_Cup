@@ -788,28 +788,33 @@ def sim_full_tournament(
         for slot_id, _ in _THIRDS_SLOTS:
             thirds[slot_id] = remaining.pop(0)[0] if remaining else "TBD"
 
-    # Official R32 pairings (M73–M88 in bracket order)
+    # Official R32 pairings — ordered so consecutive pairs produce correct R16/QF/SF paths
+    # Left half → SF1 (Spain + France bracket):  M73,M75 | M74,M77 | M83,M84 | M81,M82
+    # Right half → SF2 (England + Argentina):    M76,M78 | M79,M80 | M86,M88 | M85,M87
     r32_pairs = [
+        # ── Left half (indices 0-7) ──────────────────────────────────────────
         (runners["A"],  runners["B"]),     # M73: 2A vs 2B
-        (winners["E"],  thirds["M74"]),    # M74: 1E vs best-3rd(A|B|C|D|F)
         (winners["F"],  runners["C"]),     # M75: 1F vs 2C
-        (winners["C"],  runners["F"]),     # M76: 1C vs 2F
+        (winners["E"],  thirds["M74"]),    # M74: 1E vs best-3rd(A|B|C|D|F)
         (winners["I"],  thirds["M77"]),    # M77: 1I vs best-3rd(C|D|F|G|H)
+        (runners["K"],  runners["L"]),     # M83: 2K vs 2L
+        (winners["H"],  runners["J"]),     # M84: 1H vs 2J
+        (winners["D"],  thirds["M81"]),    # M81: 1D vs best-3rd(B|E|F|I|J)
+        (winners["G"],  thirds["M82"]),    # M82: 1G vs best-3rd(A|E|H|I|J)
+        # ── Right half (indices 8-15) ─────────────────────────────────────────
+        (winners["C"],  runners["F"]),     # M76: 1C vs 2F
         (runners["E"],  runners["I"]),     # M78: 2E vs 2I
         (winners["A"],  thirds["M79"]),    # M79: 1A vs best-3rd(C|E|F|H|I)
         (winners["L"],  thirds["M80"]),    # M80: 1L vs best-3rd(E|H|I|J|K)
-        (winners["D"],  thirds["M81"]),    # M81: 1D vs best-3rd(B|E|F|I|J)
-        (winners["G"],  thirds["M82"]),    # M82: 1G vs best-3rd(A|E|H|I|J)
-        (runners["K"],  runners["L"]),     # M83: 2K vs 2L
-        (winners["H"],  runners["J"]),     # M84: 1H vs 2J
-        (winners["B"],  thirds["M85"]),    # M85: 1B vs best-3rd(E|F|G|I|J)
         (winners["J"],  runners["H"]),     # M86: 1J vs 2H
-        (winners["K"],  thirds["M87"]),    # M87: 1K vs best-3rd(D|E|I|J|L)
         (runners["D"],  runners["G"]),     # M88: 2D vs 2G
+        (winners["B"],  thirds["M85"]),    # M85: 1B vs best-3rd(E|F|G|I|J)
+        (winners["K"],  thirds["M87"]),    # M87: 1K vs best-3rd(D|E|I|J|L)
     ]
-    # R16: W(M73,M74) → M89, W(M75,M76) → M90, ... sequential pairs
-    # QF:  W(M89,M90) → QF1, W(M91,M92) → QF2, W(M93,M94) → QF3, W(M95,M96) → QF4
-    # SF:  W(QF1,QF2) → SF1, W(QF3,QF4) → SF2
+    # R16: W(M73,M75)→R89  W(M74,M77)→R90  W(M83,M84)→R91  W(M81,M82)→R92
+    #      W(M76,M78)→R93  W(M79,M80)→R94  W(M86,M88)→R95  W(M85,M87)→R96
+    # QF:  W(R89,R90)→QF1  W(R91,R92)→QF2  W(R93,R94)→QF3  W(R95,R96)→QF4
+    # SF:  W(QF1,QF2)→SF1 [Spain/France side]   W(QF3,QF4)→SF2 [England/Argentina side]
 
     # 16 partidos = 32 equipos únicos ✓
     rounds = [
