@@ -1,6 +1,6 @@
 """
 FIFA World Cup 2026 — Web Predictor
-Run: python app.py  →  http://localhost:5000
+Run: python app.py  →  http://localhost:5007
 """
 import json
 import math
@@ -1073,4 +1073,4 @@ def api_strategies():
 
 if __name__ == "__main__":
     print("🌍 WC 2026 Predictor → http://localhost:5007")
-    app.run(debug=True, port=5007)
+    app.run(debug=True, port=5007, host="0.0.0.0")

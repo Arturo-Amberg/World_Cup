@@ -1,11 +1,81 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>WC 2026 — Analytical Terminal</title>
+<title>Mundial 2026 — Análisis & Pronósticos</title>
+<meta name="description" content="Pronósticos, cuotas de valor y análisis profundo del Mundial 2026. Modelos ELO, Poisson y ML combinados.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/vanta@0.5.24/dist/vanta.dots.min.js"></script>
+<script src="static_data.js"></script>
+<script>
+(function() {
+  const _nativeFetch = window.fetch.bind(window);
+  const _SD = window.STATIC_DATA || {};
+  const TEAM_ELO = {}, TEAM_GF = {}, TEAM_GA = {}, TEAM_POSS = {};
+  const WC_MU = 1.30, DC_RHO = -0.12;
+  const HOST_NATIONS = new Set(['USA','Mexico','Canada']);
+  const _groups = _SD['/api/groups'] || {};
+  for (const g of Object.values(_groups)) {
+    Object.assign(TEAM_ELO, g.team_elos || {});
+    for (const m of (g.matches || [])) {
+      for (const [name, xg] of [[m.team_a, m.xg_a],[m.team_b, m.xg_b]]) {
+        if (!TEAM_GF[name]) { TEAM_GF[name] = []; TEAM_GA[name] = []; }
+        TEAM_GF[name].push(xg);
+      }
+      (TEAM_GA[m.team_a] = TEAM_GA[m.team_a] || []).push(m.xg_b);
+      (TEAM_GA[m.team_b] = TEAM_GA[m.team_b] || []).push(m.xg_a);
+    }
+  }
+  function avg(arr) { return arr && arr.length ? arr.reduce((a,b)=>a+b,0)/arr.length : WC_MU; }
+  const GF_AVG = {}, GA_AVG = {};
+  for (const t of Object.keys(TEAM_GF)) { GF_AVG[t] = avg(TEAM_GF[t]); GA_AVG[t] = avg(TEAM_GA[t]); }
+  const _ts = _SD['/api/team_stats'] || {};
+  for (const v of Object.values(_ts)) { if (v && v.team) TEAM_POSS[v.team] = v.possession || 50; }
+  function poissonPMF(lam, k) {
+    if (lam <= 0) return k === 0 ? 1 : 0;
+    let log = -lam + k * Math.log(lam);
+    for (let i = 2; i <= k; i++) log -= Math.log(i);
+    return Math.exp(log);
+  }
+  function computeLambdas(ta, tb, homeTeam) {
+    let lamA = (Math.max(0.3,GF_AVG[ta]||WC_MU)/WC_MU)*(Math.max(0.3,GA_AVG[tb]||WC_MU)/WC_MU)*WC_MU;
+    let lamB = (Math.max(0.3,GF_AVG[tb]||WC_MU)/WC_MU)*(Math.max(0.3,GA_AVG[ta]||WC_MU)/WC_MU)*WC_MU;
+    lamA *= 1+(((TEAM_POSS[ta]||50)/100)-0.5)*0.10;
+    lamB *= 1+(((TEAM_POSS[tb]||50)/100)-0.5)*0.10;
+    if (homeTeam && HOST_NATIONS.has(homeTeam)) { if(ta===homeTeam) lamA*=1.08; else if(tb===homeTeam) lamB*=1.08; }
+    return [Math.max(0.15,Math.min(5,lamA)), Math.max(0.15,Math.min(5,lamB))];
+  }
+  function poissonPredict(lamA, lamB) {
+    let pA=0,pD=0,pB=0; const mx=[];
+    for(let i=0;i<=9;i++){const pa=poissonPMF(lamA,i);for(let j=0;j<=9;j++){let p=pa*poissonPMF(lamB,j),t=1;if(i===0&&j===0)t=1-lamA*lamB*DC_RHO;else if(i===1&&j===0)t=1+lamB*DC_RHO;else if(i===0&&j===1)t=1+lamA*DC_RHO;else if(i===1&&j===1)t=1-DC_RHO;t=Math.max(0.01,t);p*=t;if(i>j)pA+=p;else if(i<j)pB+=p;else pD+=p;mx.push({gf_a:i,gf_b:j,prob:p});}}
+    const tot=pA+pD+pB||1;mx.sort((a,b)=>b.prob-a.prob);mx.forEach(m=>m.prob=parseFloat((m.prob/tot).toFixed(5)));
+    return {p_win_a:pA/tot,p_draw:pD/tot,p_win_b:pB/tot,matrix:mx};
+  }
+  function eloPredict(ta,tb,homeTeam){let eA=TEAM_ELO[ta]||1700,eB=TEAM_ELO[tb]||1700;if(homeTeam&&HOST_NATIONS.has(homeTeam)){if(ta===homeTeam)eA+=50;else if(tb===homeTeam)eB+=50;}const d=eA-eB,pA=1/(1+Math.pow(10,-d/400)),draw=Math.max(0.15,0.25-0.12*Math.min(1,Math.abs(d)/400));return{p_win_a:pA*(1-draw),p_draw:draw,p_win_b:(1-pA)*(1-draw)};}
+  function clientPredict(ta,tb,odds){
+    const home=HOST_NATIONS.has(ta)?ta:HOST_NATIONS.has(tb)?tb:null;
+    const [lA,lB]=computeLambdas(ta,tb,home);
+    const po=poissonPredict(lA,lB),el=eloPredict(ta,tb,home);
+    let pA=po.p_win_a*0.6+el.p_win_a*0.4,pD=po.p_draw*0.6+el.p_draw*0.4,pB=po.p_win_b*0.6+el.p_win_b*0.4;
+    const tot=pA+pD+pB||1;pA/=tot;pD/=tot;pB/=tot;
+    const fair={a:+(1/pA).toFixed(2),draw:+(1/pD).toFixed(2),b:+(1/pB).toFixed(2)};
+    const ev=odds&&['a','draw','b'].every(k=>(odds[k]||0)>0)?{a:+(pA*odds.a-1).toFixed(4),draw:+(pD*odds.draw-1).toFixed(4),b:+(pB*odds.b-1).toFixed(4)}:null;
+    return{team_a:ta,team_b:tb,probs:{win_a:+pA.toFixed(4),draw:+pD.toFixed(4),win_b:+pB.toFixed(4)},xg:{a:+lA.toFixed(2),b:+lB.toFixed(2)},fair_odds:fair,bookie_odds:odds||null,ev,scoreline_matrix:po.matrix,top_scorelines:po.matrix.slice(0,12),model_breakdown:{poisson:0.6,elo:0.4},penalty_prob_a:+pA.toFixed(3),injuries_a:[],injuries_b:[],players_a:[],players_b:[],elo_a:TEAM_ELO[ta]||0,elo_b:TEAM_ELO[tb]||0};
+  }
+  function fakeRes(data){return Promise.resolve(new Response(JSON.stringify(data),{status:200,headers:{'Content-Type':'application/json'}}));}
+  window.fetch=function(input,init){
+    const url=typeof input==='string'?input:(input.url||'');
+    const path=url.replace(/^https?:\/\/[^\/]+/,'').split('?')[0];
+    if(path==='/api/predict'&&(init?.method||'GET').toUpperCase()==='POST'){try{const b=JSON.parse(init.body||'{}');return fakeRes(clientPredict(b.team_a,b.team_b,b.odds||null));}catch(e){return fakeRes({error:e.message});}}
+    if(path.startsWith('/api/')&&_SD[path]!==undefined)return fakeRes(_SD[path]);
+    return _nativeFetch(input,init);
+  };
+})();
+</script>
 <style>
 :root {
  --bg: #f5f5f7;
@@ -19,21 +89,35 @@
  --txt-2: #48484a;
  --txt-3: #737373;
 
+ /* Renamed: --lime was actually blue all along */
+ --accent: #0a84ff;
+ --accent-dim: rgba(10,132,255,0.1);
+ /* Keep --lime as an alias so JS-generated classes still work */
  --lime: #0a84ff;
  --lime-dim: rgba(10,132,255,0.1);
+
  --red: #ff3b30;
  --red-dim: rgba(255,59,48,0.1);
  --gold: #c79a00;
  --gold-bg: #ffcc00;
  --gold-dim: rgba(255,204,0,0.12);
 
- --r-sm: 4px;
+ --r-sm: 3px;
  --r-md: 8px;
  --r-lg: 12px;
  --r-xl: 16px;
+ --r-2xl: 20px;
 
- --font-ui: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+ /* Plus Jakarta Sans for personality; mono stays as-is */
+ --font-ui: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+
+ /* Varied shadow scale — not every card the same depth */
+ --shadow-xs: 0 1px 3px rgba(0,0,0,0.05);
+ --shadow-sm: 0 2px 8px rgba(0,0,0,0.06);
+ --shadow-md: 0 4px 20px rgba(0,0,0,0.07);
+ --shadow-lg: 0 8px 32px rgba(0,0,0,0.10);
+ --shadow-xl: 0 16px 56px rgba(0,0,0,0.13);
 
  --ease-out: cubic-bezier(.2, 0, 0, 1);
  --ease-out-quart: cubic-bezier(0.25, 1, 0.5, 1);
@@ -49,6 +133,7 @@ body {
   line-height: 1.5;
   min-height: 100vh;
   -webkit-font-smoothing: antialiased;
+  font-size: 15px;
 }
 
 /* ── Vanta background ── */
@@ -66,16 +151,18 @@ header {
  position:sticky; top:0; z-index:100;
 }
 .logo {
- font-size:22px; font-weight:700; letter-spacing:-0.02em;
+ font-size:22px; font-weight:800; letter-spacing:-0.03em;
  color: var(--txt);
 }
-.logo em { color: var(--lime); font-style:normal; }
-.logo-sub { color:var(--txt-3); font-size:12px; font-weight:600; margin-left:12px; letter-spacing:-0.01em; text-transform:uppercase; }
-.hdr-pills { display:flex; gap:8px; }
+.logo em { color: var(--accent); font-style:normal; }
+/* Subtitle: lowercase, no tracking – reads like a subtitle, not a military badge */
+.logo-sub { color:var(--txt-3); font-size:12px; font-weight:500; margin-left:10px; letter-spacing:0; }
+.hdr-pills { display:flex; gap:8px; align-items:center; }
 .hdr-pill {
- font-size:10px; font-weight:700; font-family:var(--font-mono);
+ font-size:11px; font-weight:600; font-family:var(--font-mono);
  color:var(--txt-2); background:var(--bg-raised);
- padding:4px 10px; border-radius:999px; border:1px solid var(--border);
+ /* Not every pill is 999px – these short labels get r-md */
+ padding:4px 10px; border-radius:var(--r-md); border:1px solid var(--border);
 }
 
 /* ── Nav ── */
@@ -113,37 +200,38 @@ header {
 }
 .section { max-width:1280px; margin:0 auto; padding:48px 40px; }
 
-/* ── Cards ── */
+/* ── Cards — shadow hierarchy, not uniform ── */
 .card {
  background:var(--bg-card);
  border:1px solid var(--border);
  border-radius:var(--r-xl);
  padding:24px;
  margin-bottom:24px;
- box-shadow: 0 4px 24px rgba(0,0,0,0.04);
+ box-shadow: var(--shadow-sm);
 }
 .card-featured {
- box-shadow: 0 12px 48px rgba(0,0,0,0.08);
+ box-shadow: var(--shadow-lg);
  border-color: var(--border-hi);
 }
+/* Card titles: smaller font, less tracking, not all-caps */
 .card-title {
- font-size:13px; font-weight:700;
- letter-spacing:0.02em; text-transform:uppercase;
- color:var(--txt-2);
- margin-bottom:24px;
+ font-size:12px; font-weight:700;
+ letter-spacing:0.01em; text-transform:uppercase;
+ color:var(--txt-3);
+ margin-bottom:20px;
  display:flex; align-items:center; gap:12px;
 }
 .card-title::after { content:none; }
 
-/* ── Labels / Badges ── */
+/* ── Labels / Badges — used sparingly now ── */
 .label {
  font-size:11px; font-weight:600;
- letter-spacing:0.04em; text-transform:uppercase; color:var(--txt-3);
+ letter-spacing:0.02em; text-transform:uppercase; color:var(--txt-3);
 }
 .badge {
- display:inline-block; padding:3px 10px;
- border-radius:999px; font-size:11px; font-weight:700;
- letter-spacing:0.02em;
+ display:inline-block; padding:3px 9px;
+ border-radius:var(--r-md); font-size:11px; font-weight:600;
+ letter-spacing:0.01em;
 }
 .badge-lime { background:var(--lime-dim); color:var(--lime); }
 .badge-red { background:var(--red-dim); color:var(--red); }
@@ -157,6 +245,7 @@ header {
  font-variant-numeric: tabular-nums;
 }
 .kpi-val.lime { color:var(--lime); }
+.kpi-val.accent { color:var(--accent); }
 .kpi-val.gold { color:var(--gold); }
 
 /* ── Prob bar ── */
@@ -182,25 +271,25 @@ header {
  border:1px solid var(--border);
  border-radius:var(--r-xl);
  overflow:hidden;
- box-shadow: 0 4px 20px rgba(0,0,0,0.03);
+ box-shadow: var(--shadow-xs);
  transition:border-color 0.2s, box-shadow 0.2s;
 }
-.group-card:hover { border-color:var(--border-hi); box-shadow: 0 8px 30px rgba(0,0,0,0.06); }
+.group-card:hover { border-color:var(--border-hi); box-shadow: var(--shadow-md); }
 
 .group-card-header {
- padding:20px 24px;
+ padding:18px 22px;
  background:var(--bg-surface);
  border-bottom:1px solid var(--border);
  display:flex; align-items:center; justify-content:space-between;
 }
 .group-letter {
- font-size:28px; font-weight:800;
- color:var(--txt); line-height:1; letter-spacing:-0.02em;
+ font-size:26px; font-weight:800;
+ color:var(--txt); line-height:1; letter-spacing:-0.03em;
 }
 .group-teams-chips { display:flex; flex-wrap:wrap; gap:6px; }
 .team-chip {
- font-size:11px; font-weight:600; color:var(--txt-2);
- background:var(--bg-raised); padding:4px 10px; border-radius:999px;
+ font-size:11px; font-weight:500; color:var(--txt-2);
+ background:var(--bg-raised); padding:3px 9px; border-radius:var(--r-sm);
 }
 
 .group-matches { padding:20px; display:flex; flex-direction:column; gap:12px; }
@@ -310,6 +399,7 @@ header {
 .fw7 { font-weight:700; }
 .fw8 { font-weight:800; }
 .c-lime { color:var(--lime); }
+.c-accent { color:var(--accent); }
 .c-red { color:var(--red); }
 .c-gold { color:var(--gold); }
 .c-muted { color:var(--txt-3); }
@@ -524,11 +614,11 @@ select option { background:var(--bg-surface); }
 /* ══════════════════════════════════════════════
  BETTING SHEET
 ══════════════════════════════════════════════ */
-.bets-kpi-bar { display:flex; gap:20px; margin-bottom:40px; }
+.bets-kpi-bar { display:flex; gap:16px; margin-bottom:36px; }
 .bets-kpi-card {
  flex:1; background:var(--bg-card); border:1px solid var(--border);
- border-radius:var(--r-xl); padding:24px;
- box-shadow: 0 4px 20px rgba(0,0,0,0.03);
+ border-radius:var(--r-xl); padding:20px;
+ box-shadow: var(--shadow-xs);
 }
 .bets-kpi-card .kpi-val { font-size:26px; }
 
@@ -595,23 +685,23 @@ select option { background:var(--bg-surface); }
  LOADING / EMPTY
 ══════════════════════════════════════════════ */
 .loading {
- display:flex; align-items:center; justify-content:center; gap:16px;
+ display:flex; align-items:center; justify-content:center; gap:12px;
  padding:80px; color:var(--txt-3);
- font-size:13px; font-weight:700;
- text-transform:uppercase;
+ font-size:13px; font-weight:500;
+ /* Not uppercase — loading states aren't declarations */
 }
 .spinner {
- width:20px; height:20px; border:2.5px solid var(--border);
- border-top-color:var(--txt); border-radius:50%;
- animation:spin 0.7s linear infinite;
+ width:18px; height:18px; border:2px solid var(--border);
+ border-top-color:var(--accent); border-radius:50%;
+ animation:spin 0.8s linear infinite;
 }
 @keyframes spin { to { transform:rotate(360deg); } }
 
 .empty-state {
- text-align:center; padding:120px 40px;
+ text-align:center; padding:100px 40px;
 }
 .empty-state-text {
- font-size:24px; font-weight:600;
+ font-size:22px; font-weight:600;
  color:var(--txt-3); letter-spacing:-0.02em;
 }
 
@@ -626,7 +716,7 @@ select option { background:var(--bg-surface); }
 }
 #shortcuts-overlay {
  display:none; position:fixed; inset:0; z-index:1000;
- background:rgba(0,0,0,0.3); backdrop-filter:blur(4px);
+ background:rgba(0,0,0,0.28); backdrop-filter:blur(6px);
  align-items:center; justify-content:center;
 }
 #shortcuts-overlay.show {
@@ -638,12 +728,12 @@ select option { background:var(--bg-surface); }
 }
 .shortcuts-card {
  background:var(--bg-card); border:1px solid var(--border-hi);
- border-radius:var(--r-xl); padding:28px 32px;
- box-shadow:0 20px 60px rgba(0,0,0,0.15);
+ border-radius:var(--r-2xl); padding:28px 32px;
+ box-shadow: var(--shadow-xl);
  min-width:300px;
 }
 .shortcuts-title {
- font-size:13px; font-weight:700; text-transform:uppercase;
+ font-size:12px; font-weight:700; text-transform:uppercase;
  letter-spacing:0.04em; color:var(--txt-3); margin-bottom:20px;
 }
 .shortcut-row {
@@ -653,11 +743,11 @@ select option { background:var(--bg-surface); }
 }
 .shortcut-row:last-child { border-bottom:none; }
 .shortcut-key {
- font-family:var(--font-mono); font-size:11px; font-weight:700;
+ font-family:var(--font-mono); font-size:11px; font-weight:600;
  background:var(--bg-raised); border:1px solid var(--border-hi);
- border-radius:4px; padding:2px 7px; color:var(--txt-2);
+ border-radius:var(--r-sm); padding:2px 7px; color:var(--txt-2);
 }
-.shortcut-desc { color:var(--txt-2); }
+.shortcut-desc { color:var(--txt-2); font-size:13px; }
 
 /* ── Notifications ── */
 #notification-container {
@@ -678,17 +768,17 @@ select option { background:var(--bg-surface); }
 .notification.show { transform:translateX(0); }
 .notification.error { border-color: var(--red); }
 
-/* ── Page heading ── */
+/* ── Page heading — slightly bolder weight, looser line-height ── */
 .page-heading { margin-bottom:40px; }
 .page-heading h1 {
- font-size:34px; font-weight:700;
- letter-spacing:-0.02em; line-height:1.1; margin-bottom:8px; color:var(--txt);
+ font-size:32px; font-weight:800;
+ letter-spacing:-0.03em; line-height:1.15; margin-bottom:6px; color:var(--txt);
 }
-.page-heading.sub { margin-top:56px; margin-bottom:32px; }
-.page-heading.sub h1 { font-size:26px; }
+.page-heading.sub { margin-top:52px; margin-bottom:28px; }
+.page-heading.sub h1 { font-size:24px; font-weight:700; }
 .page-heading p {
- font-size:15px; font-weight:500;
- color:var(--txt-3); line-height:1.4;
+ font-size:14px; font-weight:400;
+ color:var(--txt-3); line-height:1.5;
 }
 
 /* ── Divider ── */
@@ -1091,9 +1181,9 @@ select option { background:var(--bg-surface); }
   <div class="shortcut-row"><span class="shortcut-desc">Apuestas</span><kbd class="shortcut-key">3</kbd></div>
   <div class="shortcut-row"><span class="shortcut-desc">Modelo</span><kbd class="shortcut-key">4</kbd></div>
   <div class="shortcut-row"><span class="shortcut-desc">Cuadro</span><kbd class="shortcut-key">5</kbd></div>
-  <div class="shortcut-row"><span class="shortcut-desc">Analizar partido</span><kbd class="shortcut-key">Enter</kbd></div>
-  <div class="shortcut-row"><span class="shortcut-desc">Este panel</span><kbd class="shortcut-key">?</kbd></div>
-  <div class="shortcut-row" style="padding-top:12px;margin-top:4px"><span class="shortcut-desc c-muted" style="font-size:12px">Clic en cualquier lado para cerrar</span></div>
+  <div class="shortcut-row"><span class="shortcut-desc">Analizar partido seleccionado</span><kbd class="shortcut-key">Enter</kbd></div>
+  <div class="shortcut-row"><span class="shortcut-desc">Abrir este panel</span><kbd class="shortcut-key">?</kbd></div>
+  <div class="shortcut-row" style="padding-top:10px;margin-top:4px"><span class="shortcut-desc c-muted" style="font-size:11px;color:var(--txt-3)">Clic fuera para cerrar</span></div>
  </div>
 </div>
 <main>
@@ -1101,13 +1191,13 @@ select option { background:var(--bg-surface); }
 <!-- ── Header ── -->
 <header>
  <div style="display:flex;align-items:baseline;gap:0">
- <div class="logo">WC<em>2026</em></div>
- <span class="logo-sub">TERMINAL ANALÍTICA</span>
+  <div class="logo">WC<em>2026</em></div>
+  <span class="logo-sub">análisis & pronósticos</span>
  </div>
  <div class="hdr-pills">
- <div class="hdr-pill">MODELO v3.2</div>
- <div class="hdr-pill">100K SIMS</div>
- <div class="hdr-pill" style="cursor:pointer" onclick="document.getElementById('shortcuts-overlay').classList.add('show')" title="Keyboard shortcuts">?</div>
+  <div class="hdr-pill" title="ELO + Poisson + ML, ponderados">modelo v3.2</div>
+  <div class="hdr-pill" title="Monte Carlo sobre 100.000 torneos simulados">100k sims</div>
+  <div class="hdr-pill" style="cursor:pointer;font-size:13px;padding:2px 8px" onclick="document.getElementById('shortcuts-overlay').classList.add('show')" title="Atajos de teclado">?</div>
  </div>
 </header>
 
@@ -1116,7 +1206,7 @@ select option { background:var(--bg-surface); }
  <div class="page-tab active" onclick="showPage('overview')">Inicio</div>
  <div class="page-tab" onclick="showPage('predictor')">Predictor</div>
  <div class="page-tab" onclick="showPage('valuebets')">Apuestas</div>
- <div class="page-tab" onclick="showPage('model')">Modelo</div>
+ <div class="page-tab" onclick="showPage('model')">El modelo</div>
  <div class="page-tab" onclick="showPage('bracket')">Cuadro</div>
 </nav>
 
@@ -1124,30 +1214,30 @@ select option { background:var(--bg-surface); }
 <div class="page-section active" id="page-overview">
  <div class="section">
  <div class="page-heading">
- <h1>Favoritos al título</h1>
- <p>Simulaciones Monte Carlo sobre 100.000 torneos</p>
+  <h1>¿Quién gana el Mundial?</h1>
+  <p>Basado en 100.000 simulaciones Monte Carlo — actualizado con los planteles confirmados.</p>
  </div>
  <div id="tournament-metrics-bar" style="display:flex;gap:16px;margin-bottom:36px"></div>
- <div class="card" style="padding:0;overflow:hidden;margin-bottom:72px">
+ <div class="card" style="padding:0;overflow:hidden;margin-bottom:64px">
  <table class="data-table">
  <thead><tr>
  <th style="width:40px">#</th>
- <th>SELECCIÓN</th>
- <th class="ta-r">CAMPEÓN</th>
- <th class="ta-r">CUOTA JUSTA</th>
- <th class="ta-r">FINAL</th>
- <th class="ta-r">SEMIFINAL</th>
- <th class="ta-r">CUARTOS</th>
+ <th>Selección</th>
+ <th class="ta-r">Campeón</th>
+ <th class="ta-r">Cuota justa</th>
+ <th class="ta-r">Final</th>
+ <th class="ta-r">Semifinal</th>
+ <th class="ta-r">Cuartos</th>
  </tr></thead>
  <tbody id="tournament-body"></tbody>
  </table>
  </div>
 
  <div class="page-heading">
- <h1>Fase de Grupos</h1>
- <p>12 grupos · probabilidades por partido y clasificación</p>
+  <h1>Fase de grupos</h1>
+  <p>12 grupos · probabilidades por partido y cuotas de clasificación</p>
  </div>
- <div id="groups-loading" class="loading"><div class="spinner"></div> CARGANDO MODELOS…</div>
+ <div id="groups-loading" class="loading"><div class="spinner"></div> Cargando partidos…</div>
  <div class="groups-grid" id="groups-grid" style="display:none"></div>
  </div>
 </div>
@@ -1162,13 +1252,13 @@ select option { background:var(--bg-surface); }
  <div class="panel-label">Equipo A</div>
  <select id="team-a"></select>
  <div>
- <div class="panel-label" style="margin-bottom:8px">Cuota victoria A</div>
+ <div class="panel-label" style="margin-bottom:8px">Cuota victoria A <span style="color:var(--txt-3);font-weight:400">(opcional)</span></div>
  <input type="number" id="odd-a" step="0.01" placeholder="ej. 2.10">
  </div>
  </div>
  <div class="vs-block">
- <div class="vs-text">VS</div>
- <button class="predict-btn" onclick="runPredict()">ANALIZAR</button>
+ <div class="vs-text">vs</div>
+ <button class="predict-btn" onclick="runPredict()">Analizar partido</button>
  </div>
  <div class="team-panel">
  <div class="panel-label">Equipo B</div>
@@ -1186,18 +1276,18 @@ select option { background:var(--bg-surface); }
  </div>
  </div>
 
- <div id="loading" class="loading" style="display:none"><div class="spinner"></div> CALCULANDO…</div>
+ <div id="loading" class="loading" style="display:none"><div class="spinner"></div> Calculando…</div>
 
  <div style="display:flex;justify-content:flex-end;margin-bottom:24px">
-  <button class="reset-btn" id="reset-btn" onclick="resetPredict()">Nueva predicción</button>
+  <button class="reset-btn" id="reset-btn" onclick="resetPredict()">← Nuevo partido</button>
  </div>
 
  <div id="results" style="display:none">
  <div class="tabs">
- <div class="tab active" onclick="switchTab('match')">PARTIDO</div>
- <div class="tab" onclick="switchTab('scorelines')">MARCADORES</div>
- <div class="tab" onclick="switchTab('odds')">CUOTAS</div>
- <div class="tab" onclick="switchTab('threats')">JUGADORES</div>
+ <div class="tab active" onclick="switchTab('match')">Resultado</div>
+ <div class="tab" onclick="switchTab('scorelines')">Marcadores</div>
+ <div class="tab" onclick="switchTab('odds')">Cuotas</div>
+ <div class="tab" onclick="switchTab('threats')">Jugadores</div>
  </div>
 
  <!-- MATCH tab -->
@@ -1259,7 +1349,8 @@ select option { background:var(--bg-surface); }
  </div>
 
  <div class="empty-state" id="empty-state">
- <div class="empty-state-text">Elige dos equipos para empezar</div>
+ <div class="empty-state-text">Elige los dos equipos para ver el análisis</div>
+ <p style="margin-top:8px;font-size:13px;color:var(--txt-3)">Puedes introducir las cuotas del mercado para ver la ventaja del modelo.</p>
  </div>
  </div>
 </div>
@@ -1270,39 +1361,39 @@ select option { background:var(--bg-surface); }
 <div class="page-section" id="page-model">
  <div class="section">
  <div class="page-heading">
- <h1>El modelo</h1>
- <p>Metodología, calibración y retroanálisis del Mundial 2022</p>
+ <h1>Cómo funciona el modelo</h1>
+ <p>Cuatro modelos independientes, combinados con pesos distintos y validados contra Qatar 2022.</p>
  </div>
 
  <div class="card" style="margin-bottom:24px">
- <div class="card-title">Cómo funciona</div>
- <div style="font-size:14px;line-height:1.7;color:var(--txt-2);max-width:65ch">
- <p style="margin-bottom:12px">Las predicciones combinan cuatro modelos independientes con pesos distintos:</p>
- <p style="margin-bottom:6px"><strong style="color:var(--txt)">ELO (40%)</strong> — Probabilidades de victoria basadas en rating ELO, con ajustes por clima, altitud y disponibilidad de jugadores.</p>
- <p style="margin-bottom:6px"><strong style="color:var(--txt)">Dixon-Coles Poisson (35%)</strong> — Goles esperados según fortaleza ofensiva y defensiva, con corrección de correlación en marcadores bajos.</p>
- <p style="margin-bottom:6px"><strong style="color:var(--txt)">ML Ensemble (25%)</strong> — Random Forest y Gradient Boosting entrenados con 110 partidos de Mundiales y Eurocopas.</p>
- <p style="margin-bottom:12px"><strong style="color:var(--txt)">H2H (8% si disponible)</strong> — Historial de enfrentamientos directos entre los dos equipos.</p>
- <p>La simulación del torneo corre 100.000 iteraciones Monte Carlo con ELO actualizado, modelado de prórroga y seguimiento de fatiga.</p>
+ <div class="card-title">Metodología</div>
+ <div style="font-size:14px;line-height:1.75;color:var(--txt-2);max-width:65ch">
+ <p style="margin-bottom:14px">No hay un único modelo — hay cuatro, y cada uno aporta algo diferente:</p>
+ <p style="margin-bottom:8px"><strong style="color:var(--txt)">ELO (40%)</strong> — El clásico. Ratings actualizados con cada resultado internacional, con penalizaciones por altitud, viaje y bajas. Simple pero con décadas de datos detrás.</p>
+ <p style="margin-bottom:8px"><strong style="color:var(--txt)">Dixon-Coles Poisson (35%)</strong> — Modela los goles esperados de cada equipo, teniendo en cuenta la fortaleza ofensiva rival. Corrige la infravaloración estadística de los marcadores bajos (el 0-0 es más probable de lo que parece).</p>
+ <p style="margin-bottom:8px"><strong style="color:var(--txt)">ML Ensemble (25%)</strong> — Random Forest y Gradient Boosting entrenados con 110 partidos de Mundiales y Eurocopas. Captura patrones que los modelos matemáticos pierden.</p>
+ <p style="margin-bottom:14px"><strong style="color:var(--txt)">H2H — historial directo (8% si hay datos)</strong> — Porque a veces la historia entre dos selecciones sí importa.</p>
+ <p>Todo esto se ejecuta en 100.000 iteraciones Monte Carlo, con ELO dinámico, prórroga y fatiga acumulada entre rondas.</p>
  </div>
  </div>
 
  <div class="page-heading sub">
- <h1>Retroanálisis Qatar 2022</h1>
- <p>Precisión del modelo con los resultados reales</p>
+ <h1>Validación — Qatar 2022</h1>
+ <p>Cómo le fue al modelo con los resultados reales del último Mundial.</p>
  </div>
  <div id="val-stats" style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:32px"></div>
  <div class="card" style="padding:0;overflow:hidden">
  <table class="data-table">
  <thead><tr>
- <th>PARTIDO</th>
+ <th>Partido</th>
  <th class="ta-r">ELO A</th>
  <th class="ta-r">ELO B</th>
- <th class="ta-r">P(GANA A)</th>
- <th class="ta-r">P(EMPATE)</th>
- <th class="ta-r">P(GANA B)</th>
- <th>PRED.</th>
- <th>REAL</th>
- <th class="ta-c">RESULTADO</th>
+ <th class="ta-r">P(gana A)</th>
+ <th class="ta-r">P(empate)</th>
+ <th class="ta-r">P(gana B)</th>
+ <th>Pred.</th>
+ <th>Real</th>
+ <th class="ta-c">✓/✗</th>
  </tr></thead>
  <tbody id="val-match-body"></tbody>
  </table>
@@ -1314,8 +1405,8 @@ select option { background:var(--bg-surface); }
 <div class="page-section" id="page-valuebets">
  <div class="section">
  <div class="page-heading">
- <h1>Apuestas de Valor</h1>
- <p>Ventajas del modelo en todos los mercados disponibles</p>
+ <h1>Dónde está el valor</h1>
+ <p>Mercados donde el modelo ve ventaja respecto a las cuotas de mercado.</p>
  </div>
 
  <!-- Inner tabs for the three merged views -->
@@ -1327,7 +1418,7 @@ select option { background:var(--bg-surface); }
 
  <!-- ── LIVE ODDS (was standalone Value Bets) ── -->
  <div class="vb-view active" id="vbview-live">
- <div id="vb-loading" class="loading"><div class="spinner"></div> CARGANDO APUESTAS…</div>
+ <div id="vb-loading" class="loading"><div class="spinner"></div> Buscando valor en el mercado…</div>
  <div id="vb-content" style="display:none">
  <div class="vb-kpis" id="vb-kpis"></div>
  <div class="vb-controls">
@@ -1360,14 +1451,14 @@ select option { background:var(--bg-surface); }
  <div class="vb-table-wrap">
  <table class="vb-table">
  <thead><tr>
- <th>TIPO</th>
- <th>PARTIDO / MERCADO</th>
- <th>SELECCIÓN</th>
- <th class="ta-r" id="th-odds" onclick="vbSetSort('odds')">CUOTA</th>
- <th title="Probabilidad del modelo vs probabilidad implícita del mercado">MODELO vs IMPLÍCITA</th>
- <th class="ta-r" id="th-edge" onclick="vbSetSort('edge')" title="Ventaja: probabilidad del modelo menos implícita del mercado">VENTAJA</th>
+ <th>Tipo</th>
+ <th>Partido / mercado</th>
+ <th>Selección</th>
+ <th class="ta-r" id="th-odds" onclick="vbSetSort('odds')">Cuota</th>
+ <th title="Probabilidad del modelo vs probabilidad implícita del mercado">Modelo vs implícita</th>
+ <th class="ta-r" id="th-edge" onclick="vbSetSort('edge')" title="Ventaja: probabilidad del modelo menos implícita del mercado">Ventaja</th>
  <th class="ta-r" id="th-ev" onclick="vbSetSort('ev')" title="Valor esperado: ganancia media por unidad apostada">VE</th>
- <th class="ta-r" id="th-kelly" title="Criterio Kelly: stake sugerido como % del bankroll">KELLY</th>
+ <th class="ta-r" id="th-kelly" title="Criterio Kelly: stake sugerido como % del bankroll">Kelly</th>
  </tr></thead>
  <tbody id="vb-tbody"></tbody>
  </table>
@@ -1378,11 +1469,11 @@ select option { background:var(--bg-surface); }
 
  <!-- ── BETTING SHEET (was standalone page) ── -->
  <div class="vb-view" id="vbview-sheet">
- <div id="bets-loading" class="loading"><div class="spinner"></div> ANALIZANDO MERCADOS…</div>
+ <div id="bets-loading" class="loading"><div class="spinner"></div> Analizando mercados…</div>
  <div id="bets-content" style="display:none">
  <div class="bets-kpi-bar" id="bets-kpi-bar"></div>
  <div class="card card-featured">
- <div class="card-title" style="color:var(--gold)">MEJORES PARLAYS</div>
+ <div class="card-title" style="color:var(--gold)">Mejores parlays</div>
  <div id="parlay-cards" style="display:grid;grid-template-columns:repeat(3,1fr);gap:18px"></div>
  </div>
  <div class="filter-bar">
@@ -1408,9 +1499,9 @@ select option { background:var(--bg-surface); }
  <div class="card" style="padding:0;overflow:hidden">
  <table class="data-table">
  <thead><tr>
- <th>GRP</th><th>PARTIDO</th><th>MERCADO</th>
- <th class="ta-r">MODELO</th><th class="ta-r">IMPLÍCITA</th>
- <th class="ta-r">VENTAJA</th><th class="ta-r">VE %</th><th class="ta-r">KELLY</th><th class="ta-r">STAKE</th>
+ <th>Grp</th><th>Partido</th><th>Mercado</th>
+ <th class="ta-r">Modelo</th><th class="ta-r">Implícita</th>
+ <th class="ta-r">Ventaja</th><th class="ta-r">VE %</th><th class="ta-r">Kelly</th><th class="ta-r">Stake</th>
  </tr></thead>
  <tbody id="bets-tbody"></tbody>
  </table>
@@ -1420,15 +1511,15 @@ select option { background:var(--bg-surface); }
 
  <!-- ── ALL EDGES (was Revenue Strategy) ── -->
  <div class="vb-view" id="vbview-edges">
- <div id="edges-loading" class="loading"><div class="spinner"></div> BUSCANDO VENTAJAS…</div>
+ <div id="edges-loading" class="loading"><div class="spinner"></div> Buscando ventajas en el mercado…</div>
  <div id="edges-content" style="display:none">
  <div id="edges-summary" style="display:flex;gap:16px;margin-bottom:24px;flex-wrap:wrap"></div>
  <div class="card" style="padding:0;overflow:hidden">
  <table class="data-table" id="edges-table">
  <thead><tr>
- <th>GRP</th><th>RONDA</th><th>PARTIDO</th>
- <th class="ta-c">PROB. MODELO</th><th class="ta-c">CUOTA JUSTA</th>
- <th class="ta-c">CUOTAS MERCADO</th><th class="ta-c">VENTAJA</th><th class="ta-r">MEJOR APUESTA</th>
+ <th>Grp</th><th>Ronda</th><th>Partido</th>
+ <th class="ta-c">Prob. modelo</th><th class="ta-c">Cuota justa</th>
+ <th class="ta-c">Cuotas mercado</th><th class="ta-c">Ventaja</th><th class="ta-r">Mejor apuesta</th>
  </tr></thead>
  <tbody id="edges-body"></tbody>
  </table>
@@ -1447,11 +1538,11 @@ select option { background:var(--bg-surface); }
 <div class="page-section" id="page-bracket">
  <div class="section">
   <div class="page-heading">
-   <h1>El cuadro</h1>
-   <p>Camino más probable · 1.500 simulaciones · probabilidad por posición</p>
+   <h1>El camino al título</h1>
+   <p>El equipo más probable en cada puesto, basado en 1.500 simulaciones del torneo completo.</p>
   </div>
 
-  <div id="bk-loading" class="loading"><div class="spinner"></div> SIMULANDO EL CUADRO…</div>
+  <div id="bk-loading" class="loading"><div class="spinner"></div> Simulando el cuadro…</div>
 
   <div id="bk-content" style="display:none">
    <!-- Group consensus -->
@@ -1752,8 +1843,8 @@ function renderGroups(d) {
  </div>
  <div class="group-matches">${matches}</div>
  <div class="standings-strip" id="standings-${id}">
- <div class="label" style="margin-bottom:8px;display:block">QUALIFICATION ODDS</div>
- <div class="loading" style="padding:16px"><div class="spinner"></div></div>
+  <div class="label" style="margin-bottom:8px;display:block">Clasif.</div>
+  <div class="loading" style="padding:16px"><div class="spinner"></div></div>
  </div>
  </div>`;
  }).join('');
@@ -1766,10 +1857,10 @@ function renderStandings(data) {
  const c = document.getElementById('standings-' + id);
  if (!c) return;
  const maxAdv = Math.max(...rows.map(r => r.p_advance));
- c.innerHTML = `<div class="label" style="margin-bottom:10px;display:block">QUALIFICATION ODDS</div>` +
+  c.innerHTML = `<div class="label" style="margin-bottom:10px;display:block">Clasif.</div>` +
  rows.map((s, i) => {
  const barW = maxAdv > 0 ? (s.p_advance / maxAdv * 100) : 0;
- const col = i < 2 ? 'var(--lime)' : i === 2 ? 'var(--gold)' : 'var(--txt-3)';
+ const col = i < 2 ? 'var(--accent)' : i === 2 ? 'var(--gold)' : 'var(--txt-3)';
  return `
  <div class="standing-row">
  <span class="sr-rank">${i+1}</span>
@@ -1788,15 +1879,15 @@ async function loadBets() {
  betsLoaded = true;
  let d;
  try { const r = await fetch('/api/bets'); d = await r.json(); }
- catch(e) { document.getElementById('bets-loading').innerHTML = `<span style="color:var(--red)">Error al cargar — <button onclick="betsLoaded=false;loadBets()" style="background:none;border:none;color:var(--lime);cursor:pointer;font-weight:700">Reintentar</button></span>`; return; }
+ catch(e) { document.getElementById('bets-loading').innerHTML = `<span style="color:var(--red)">Error al cargar — <button onclick="betsLoaded=false;loadBets()" style="background:none;border:none;color:var(--accent);cursor:pointer;font-weight:700">Reintentar</button></span>`; return; }
  allBetsData = d.bets;
  const s = d.summary;
 
  document.getElementById('bets-kpi-bar').innerHTML = [
- {label:'APUESTAS DE VALOR', val: s.total_bets, cls:'lime'},
- {label:'STAKE TOTAL', val: '$' + s.total_stake, cls:''},
- {label:'PROFIT ESPERADO', val: '$' + s.expected_profit, cls:'lime'},
- {label:'ROI TOTAL', val: s.roi + '%', cls:'gold'},
+ {label:'Apuestas de valor', val: s.total_bets, cls:'accent'},
+ {label:'Stake total', val: '$' + s.total_stake, cls:''},
+ {label:'Profit esperado', val: '$' + s.expected_profit, cls:'accent'},
+ {label:'ROI total', val: s.roi + '%', cls:'gold'},
  ].map(x => `
  <div class="bets-kpi-card">
  <div class="kpi">
@@ -1817,7 +1908,7 @@ async function loadBets() {
  </div>`).join('')}
  <div class="parlay-footer">
  <span class="c-muted">${p.combined_odds}x</span>
- <span class="c-lime">${p.combined_p}% PROB</span>
+ <span class="c-accent">${p.combined_p}% PROB</span>
  </div>
  </div>`;
  }).join('');
@@ -1840,13 +1931,13 @@ function renderBetsTable() {
 
  document.getElementById('bets-tbody').innerHTML = b.map(x => `
  <tr>
- <td class="mono fw7 c-lime">${x.group}</td>
+ <td class="mono fw7 c-accent">${x.group}</td>
  <td class="fw7">${x.match}</td>
  <td><span class="badge badge-gold">${x.market}</span></td>
  <td class="ta-r mono fw7">${(x.p_model*100).toFixed(1)}%</td>
  <td class="ta-r mono c-2">${(x.p_mkt*100).toFixed(1)}%</td>
  <td class="ta-r">${edgePill(x.edge/100)}</td>
- <td class="ta-r mono fw7 c-lime">${x.ev_pct.toFixed(1)}%</td>
+ <td class="ta-r mono fw7 c-accent">${x.ev_pct.toFixed(1)}%</td>
  <td class="ta-r mono">${x.stake_pct.toFixed(1)}%</td>
  <td class="ta-r mono">\$${x.stake_usd}</td>
  </tr>`).join('');
@@ -1858,7 +1949,7 @@ function renderBetsTable() {
 async function loadEdges() {
  edgesLoaded = true;
  try { const r = await fetch('/api/group_odds'); edgesData = await r.json(); }
- catch(e) { document.getElementById('edges-loading').innerHTML = `<span style="color:var(--red)">Error al cargar — <button onclick="edgesLoaded=false;loadEdges()" style="background:none;border:none;color:var(--lime);cursor:pointer;font-weight:700">Reintentar</button></span>`; return; }
+ catch(e) { document.getElementById('edges-loading').innerHTML = `<span style="color:var(--red)">Error al cargar — <button onclick="edgesLoaded=false;loadEdges()" style="background:none;border:none;color:var(--accent);cursor:pointer;font-weight:700">Reintentar</button></span>`; return; }
  document.getElementById('edges-loading').style.display = 'none';
  document.getElementById('edges-content').style.display = 'block';
 
@@ -1868,9 +1959,9 @@ async function loadEdges() {
 
  // Summary KPIs
  document.getElementById('edges-summary').innerHTML = [
- {label:'PARTIDOS', val: allMatches.length, cls:''},
- {label:'CON CUOTAS EN VIVO', val: withOdds.length, cls:'lime'},
- {label:'CON +VE', val: withEdge.length, cls:'lime'},
+ {label:'Partidos', val: allMatches.length, cls:''},
+ {label:'Con cuotas en vivo', val: withOdds.length, cls:'accent'},
+ {label:'Con ventaja positiva', val: withEdge.length, cls:'accent'},
  ].map(x => `
  <div class="bets-kpi-card" style="flex:0 0 auto;min-width:160px">
  <div class="kpi"><div class="kpi-val ${x.cls}">${x.val}</div><div class="panel-label">${x.label}</div></div>
@@ -1888,7 +1979,7 @@ async function loadEdges() {
  // Model probs block
  const probsHtml = `
  <div class="odds-mini">
- <div class="odds-mini-row"><span class="odds-mini-label c-lime">A</span><span class="mono fw7 c-lime">${(m.p_win_a*100).toFixed(1)}%</span></div>
+ <div class="odds-mini-row"><span class="odds-mini-label c-accent">A</span><span class="mono fw7 c-accent">${(m.p_win_a*100).toFixed(1)}%</span></div>
  <div class="odds-mini-row"><span class="odds-mini-label c-gold">D</span><span class="mono fw7 c-gold">${(m.p_draw*100).toFixed(1)}%</span></div>
  <div class="odds-mini-row"><span class="odds-mini-label c-red">B</span><span class="mono fw7 c-red">${(m.p_win_b*100).toFixed(1)}%</span></div>
  </div>`;
@@ -1896,7 +1987,7 @@ async function loadEdges() {
  // Model fair odds
  const fairHtml = `
  <div class="odds-mini">
- <div class="odds-mini-row"><span class="odds-mini-label c-lime">A</span><span class="mono c-lime">${fmtOdds(m.fair.a)}</span></div>
+ <div class="odds-mini-row"><span class="odds-mini-label c-accent">A</span><span class="mono c-accent">${fmtOdds(m.fair.a)}</span></div>
  <div class="odds-mini-row"><span class="odds-mini-label c-gold">D</span><span class="mono c-gold">${fmtOdds(m.fair.draw)}</span></div>
  <div class="odds-mini-row"><span class="odds-mini-label c-red">B</span><span class="mono c-red">${fmtOdds(m.fair.b)}</span></div>
  </div>`;
@@ -1905,7 +1996,7 @@ async function loadEdges() {
  const mktHtml = hasMkt ? `
  <div class="odds-mini">
  <div class="odds-mini-row">
- <span class="odds-mini-label c-lime">A</span>
+ <span class="odds-mini-label c-accent">A</span>
  <span class="mono" style="width:36px">${fmtOdds(m.market.a)}</span>
  ${m.ev ? edgePill(m.ev.a) : ''}
  </div>
@@ -1936,7 +2027,7 @@ async function loadEdges() {
 
  return `
  <tr>
- <td class="mono fw7 c-lime">${m.group}</td>
+ <td class="mono fw7 c-accent">${m.group}</td>
  <td class="mono c-2">${m.round}</td>
  <td>
  <div class="fw7" style="font-size:14px">${m.team_a} <span class="c-muted">vs</span> ${m.team_b}</div>
@@ -1960,14 +2051,14 @@ async function loadValidation() {
  validationLoaded = true;
  let d;
  try { const r = await fetch('/api/validate'); d = await r.json(); }
- catch(e) { document.getElementById('val-stats').innerHTML = `<div style="color:var(--red);padding:16px">Error al cargar — <button onclick="validationLoaded=false;loadValidation()" style="background:none;border:none;color:var(--lime);cursor:pointer;font-weight:700">Reintentar</button></div>`; return; }
+ catch(e) { document.getElementById('val-stats').innerHTML = `<div style="color:var(--red);padding:16px">Error al cargar — <button onclick="validationLoaded=false;loadValidation()" style="background:none;border:none;color:var(--accent);cursor:pointer;font-weight:700">Reintentar</button></div>`; return; }
 
 
  document.getElementById('val-stats').innerHTML = [
  {label:'Partidos Qatar 2022', val: d.n_matches, cls:''},
- {label:'Precisión del modelo', val: (d.current_accuracy*100).toFixed(1)+'%', cls:'lime'},
- {label:'Log-Loss', val: d.current_log_loss.toFixed(4), cls:'lime'},
- {label:'Acc. óptima', val: (d.optimal_accuracy*100).toFixed(1)+'%', cls:'gold'},
+ {label:'Precisión del modelo', val: (d.current_accuracy*100).toFixed(1)+'%', cls:'accent'},
+ {label:'Log-loss', val: d.current_log_loss.toFixed(4), cls:'accent'},
+ {label:'Precisión óptima teórica', val: (d.optimal_accuracy*100).toFixed(1)+'%', cls:'gold'},
  ].map(x => `
  <div class="bets-kpi-card">
  <div class="kpi"><div class="kpi-val ${x.cls}">${x.val}</div><div class="panel-label">${x.label}</div></div>
@@ -1978,7 +2069,7 @@ async function loadValidation() {
  <td class="fw7">${m.team_a} <span class="c-muted">vs</span> ${m.team_b}</td>
  <td class="ta-r mono">${m.elo_a}</td>
  <td class="ta-r mono">${m.elo_b}</td>
- <td class="ta-r mono c-lime">${(m.p_win_a*100).toFixed(1)}%</td>
+ <td class="ta-r mono c-accent">${(m.p_win_a*100).toFixed(1)}%</td>
  <td class="ta-r mono c-gold">${(m.p_draw*100).toFixed(1)}%</td>
  <td class="ta-r mono c-red">${(m.p_win_b*100).toFixed(1)}%</td>
  <td class="mono">${m.predicted}</td>
@@ -2046,14 +2137,14 @@ function renderResults(d) {
  const maxProb = d.top_scorelines[0].prob;
  document.getElementById('scorelines-list').innerHTML = d.top_scorelines.slice(0,6).map(s => `
  <div class="score-row">
- <span class="score-tag ${s.gf_a > s.gf_b ? 'c-lime' : s.gf_a < s.gf_b ? 'c-red' : 'c-gold'}">${s.gf_a}–${s.gf_b}</span>
- <div class="score-bar-wrap"><div class="score-bar-fill" style="width:${(s.prob/maxProb*100).toFixed(0)}%;background:${s.gf_a>s.gf_b?'var(--lime)':s.gf_a<s.gf_b?'var(--red)':'var(--gold)'}"></div></div>
+ <span class="score-tag ${s.gf_a > s.gf_b ? 'c-accent' : s.gf_a < s.gf_b ? 'c-red' : 'c-gold'}">${s.gf_a}–${s.gf_b}</span>
+ <div class="score-bar-wrap"><div class="score-bar-fill" style="width:${(s.prob/maxProb*100).toFixed(0)}%;background:${s.gf_a>s.gf_b?'var(--accent)':s.gf_a<s.gf_b?'var(--red)':'var(--gold)'}"></div></div>
  <span class="score-pct">${(s.prob*100).toFixed(1)}%</span>
  </div>`).join('');
 
  // Win probs
  document.getElementById('prob-display').innerHTML = [
- {label: d.team_a, val: d.probs.win_a, col: 'var(--lime)'},
+ {label: d.team_a, val: d.probs.win_a, col: 'var(--accent)'},
  {label: 'Draw', val: d.probs.draw, col: 'var(--gold)'},
  {label: d.team_b, val: d.probs.win_b, col: 'var(--red)'},
  ].map(row => `
@@ -2071,7 +2162,7 @@ function renderResults(d) {
  document.getElementById('xg-display').innerHTML = `
  <div class="xg-block" title="Expected Goals: statistical estimate of how many goals this team is likely to score">
  <div>
- <div class="xg-val c-lime">${d.xg.a}</div>
+ <div class="xg-val c-accent">${d.xg.a}</div>
  <div class="xg-label">${d.team_a} xG</div>
  </div>
  </div>
@@ -2085,8 +2176,8 @@ function renderResults(d) {
  /* ── SCORELINES TAB ── */
  document.getElementById('top-scorelines-full').innerHTML = d.top_scorelines.slice(0,12).map(s => `
  <div class="score-row">
- <span class="score-tag ${s.gf_a > s.gf_b ? 'c-lime' : s.gf_a < s.gf_b ? 'c-red' : 'c-gold'}">${s.gf_a}–${s.gf_b}</span>
- <div class="score-bar-wrap"><div class="score-bar-fill" style="width:${(s.prob/maxProb*100).toFixed(0)}%;background:${s.gf_a>s.gf_b?'var(--lime)':s.gf_a<s.gf_b?'var(--red)':'var(--gold)'}"></div></div>
+ <span class="score-tag ${s.gf_a > s.gf_b ? 'c-accent' : s.gf_a < s.gf_b ? 'c-red' : 'c-gold'}">${s.gf_a}–${s.gf_b}</span>
+ <div class="score-bar-wrap"><div class="score-bar-fill" style="width:${(s.prob/maxProb*100).toFixed(0)}%;background:${s.gf_a>s.gf_b?'var(--accent)':s.gf_a<s.gf_b?'var(--red)':'var(--gold)'}"></div></div>
  <span class="score-pct">${(s.prob*100).toFixed(1)}%</span>
  </div>`).join('');
 
@@ -2113,15 +2204,15 @@ function renderResults(d) {
  renderOddsTab(d);
 
  /* ── THREATS TAB ── */
- document.getElementById('threat-a-title').textContent = d.team_a + ' Key Threats';
- document.getElementById('threat-b-title').textContent = d.team_b + ' Key Threats';
+ document.getElementById('threat-a-title').textContent = 'Amenazas — ' + d.team_a;
+ document.getElementById('threat-b-title').textContent = 'Amenazas — ' + d.team_b;
  document.getElementById('players-a').innerHTML = d.players_a.map(p => `
  <div class="player-card">
  <div>
  <div class="player-name">${p.name}</div>
  <div class="player-role">${p.role}</div>
  </div>
- <div class="player-xg c-lime">${p.xg}</div>
+ <div class="player-xg c-accent">${p.xg}</div>
  </div>`).join('');
  document.getElementById('players-b').innerHTML = d.players_b.map(p => `
  <div class="player-card">
@@ -2135,7 +2226,7 @@ function renderResults(d) {
 
 function renderOddsTab(d) {
  const outcomes = [
- {key:'a', label: d.team_a + ' Win', col:'var(--lime)', prob: d.probs.win_a, fair: d.fair_odds?.a },
+ {key:'a', label: d.team_a + ' Win', col:'var(--accent)', prob: d.probs.win_a, fair: d.fair_odds?.a },
  {key:'draw', label: 'Draw', col:'var(--gold)', prob: d.probs.draw, fair: d.fair_odds?.draw },
  {key:'b', label: d.team_b + ' Win', col:'var(--red)', prob: d.probs.win_b, fair: d.fair_odds?.b },
  ];
@@ -2143,7 +2234,7 @@ function renderOddsTab(d) {
  const hasBookie = d.bookie_odds && d.bookie_odds.a;
 
  // Header
- const headerCols = ['OUTCOME','MODEL PROB','FAIR ODDS (MODEL)','MARKET ODDS','EDGE / EV'];
+ const headerCols = ['Resultado','Prob. modelo','Cuota justa','Cuotas mercado','Ventaja / VE'];
 
  let html = `
  <div style="overflow-x:auto">
@@ -2188,7 +2279,7 @@ function renderOddsTab(d) {
  <span class="occ-sub">${(impliedProb*100).toFixed(1)}% implied</span>
  ${impliedBarW !== null ? `
  <div style="height:6px;background:var(--bg-raised);border-radius:3px;margin-top:6px;width:100%;overflow:hidden">
- <div style="height:100%;background:var(--txt-3);width:${impliedBarW}%;border-radius:3px"></div>
+ <div style="height:100%;background:${o.col};width:${impliedBarW}%;border-radius:3px"></div>
  </div>` : ''}
  ` : '<span class="occ-sub c-muted">No live odds</span>'}
  </div>
@@ -2206,13 +2297,13 @@ function renderOddsTab(d) {
  const vigPct = ((overround - 1) * 100).toFixed(2);
  html += `
  <div style="padding:14px 16px;background:var(--bg-surface);border:1px solid var(--border);border-top:none;border-radius:0 0 var(--r-md) var(--r-md);display:flex;justify-content:space-between;align-items:center">
- <span class="label">Bookmaker Margin (Vig / Overround)</span>
- <span class="mono fw7 c-gold">${overround.toFixed(4)} &nbsp;(+${vigPct}% over fair)</span>
+ <span class="label">Margen de la casa (vig / overround)</span>
+ <span class="mono fw7 c-gold">${overround.toFixed(4)} &nbsp;(+${vigPct}% sobre cuota justa)</span>
  </div>`;
  } else {
  html += `
  <div style="padding:14px 16px;background:var(--bg-surface);border:1px solid var(--border);border-top:none;border-radius:0 0 var(--r-md) var(--r-md)">
- <span class="label c-muted">Enter bookmaker odds in the selectors above to see edge analysis</span>
+ <span class="label c-muted">Introduce las cuotas del mercado en los campos de arriba para ver la ventaja del modelo</span>
  </div>`;
  }
 
@@ -2223,13 +2314,13 @@ function renderOddsTab(d) {
  const mb = d.model_breakdown;
  html += `
  <div style="margin-top:24px">
- <div class="card-title" style="margin-bottom:16px">Model Breakdown</div>
+ <div class="card-title" style="margin-bottom:16px">Desglose por modelo</div>
  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px">
  ${Object.entries(mb).map(([name, probs]) => `
  <div style="background:var(--bg-surface);border:1px solid var(--border);border-radius:var(--r-md);padding:14px 16px">
- <div class="label" style="margin-bottom:10px">${name.toUpperCase()}</div>
+ <div class="label" style="margin-bottom:10px">${name}</div>
  <div class="odds-mini">
- <div class="odds-mini-row"><span class="odds-mini-label c-lime">A</span><span class="mono fw7 c-lime">${((probs.win_a||probs[0]||0)*100).toFixed(1)}%</span></div>
+ <div class="odds-mini-row"><span class="odds-mini-label c-accent">A</span><span class="mono fw7 c-accent">${((probs.win_a||probs[0]||0)*100).toFixed(1)}%</span></div>
  <div class="odds-mini-row"><span class="odds-mini-label c-gold">D</span><span class="mono fw7 c-gold">${((probs.draw||probs[1]||0)*100).toFixed(1)}%</span></div>
  <div class="odds-mini-row"><span class="odds-mini-label c-red">B</span><span class="mono fw7 c-red">${((probs.win_b||probs[2]||0)*100).toFixed(1)}%</span></div>
  </div>
@@ -2267,7 +2358,7 @@ function vbCatBadge(cat) {
  'Group Winner': ['grpwin', 'GRP WIN'],
  'Total Goals': ['goals', 'GOALS'],
  };
- const [cls, label] = map[cat] || ['match', cat.toUpperCase()];
+ const [cls, label] = map[cat] || ['match', cat];
  return `<span class="vb-cat-badge ${cls}">${label}</span>`;
 }
 
