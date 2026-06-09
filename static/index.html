@@ -377,7 +377,7 @@ select option { background:var(--bg-surface); }
  gap:24px; margin-bottom:12px;
 }
 .score-num {
- font-size:84px; font-weight:800;
+ font-size:clamp(52px, 8vw, 84px); font-weight:800;
  line-height:1; letter-spacing:-0.05em;
 }
 .score-num.a { color:var(--txt); }
@@ -589,6 +589,36 @@ select option { background:var(--bg-surface); }
  font-size:24px; font-weight:600;
  color:var(--txt-3); letter-spacing:-0.02em;
 }
+
+/* ── Keyboard shortcuts overlay ── */
+#shortcuts-overlay {
+ display:none; position:fixed; inset:0; z-index:1000;
+ background:rgba(0,0,0,0.3); backdrop-filter:blur(4px);
+ align-items:center; justify-content:center;
+}
+#shortcuts-overlay.show { display:flex; }
+.shortcuts-card {
+ background:var(--bg-card); border:1px solid var(--border-hi);
+ border-radius:var(--r-xl); padding:28px 32px;
+ box-shadow:0 20px 60px rgba(0,0,0,0.15);
+ min-width:300px;
+}
+.shortcuts-title {
+ font-size:13px; font-weight:700; text-transform:uppercase;
+ letter-spacing:0.04em; color:var(--txt-3); margin-bottom:20px;
+}
+.shortcut-row {
+ display:flex; justify-content:space-between; align-items:center;
+ padding:8px 0; border-bottom:1px solid var(--border);
+ font-size:13px;
+}
+.shortcut-row:last-child { border-bottom:none; }
+.shortcut-key {
+ font-family:var(--font-mono); font-size:11px; font-weight:700;
+ background:var(--bg-raised); border:1px solid var(--border-hi);
+ border-radius:4px; padding:2px 7px; color:var(--txt-2);
+}
+.shortcut-desc { color:var(--txt-2); }
 
 /* ── Notifications ── */
 #notification-container {
@@ -843,6 +873,9 @@ select option { background:var(--bg-surface); }
  .pred-selector { grid-template-columns:1fr; }
  .vs-block { flex-direction:row; }
  .odds-comp-header, .odds-comp-row { grid-template-columns:120px 1fr 1fr 1fr 1fr; font-size:11px; }
+ .vb-controls { display:grid; grid-template-columns:1fr 1fr; row-gap:8px; }
+ .vb-search { grid-column:1 / -1; max-width:none; }
+ .vb-count { grid-column:1 / -1; }
 }
 
 /* ── Bracket page ── */
@@ -955,7 +988,7 @@ select option { background:var(--bg-surface); }
   flex-shrink: 0;
 }
 .bk-prob.hi  { color: var(--lime); }
-.bk-prob.med { color: #f59e0b; }
+.bk-prob.med { color: var(--gold); }
 .bk-match-connector {
   position: absolute;
   right: -4px;
@@ -965,7 +998,7 @@ select option { background:var(--bg-surface); }
 /* Group consensus strip above bracket */
 .bk-groups-grid {
   display: grid;
-  grid-template-columns: repeat(6, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
   gap: 8px;
   margin-bottom: 28px;
 }
@@ -999,6 +1032,19 @@ select option { background:var(--bg-surface); }
 </head>
 <body>
 <div id="notification-container"></div>
+<div id="shortcuts-overlay" onclick="this.classList.remove('show')">
+ <div class="shortcuts-card" onclick="event.stopPropagation()">
+  <div class="shortcuts-title">Keyboard Shortcuts</div>
+  <div class="shortcut-row"><span class="shortcut-desc">Overview</span><kbd class="shortcut-key">1</kbd></div>
+  <div class="shortcut-row"><span class="shortcut-desc">Match Predictor</span><kbd class="shortcut-key">2</kbd></div>
+  <div class="shortcut-row"><span class="shortcut-desc">Value Bets</span><kbd class="shortcut-key">3</kbd></div>
+  <div class="shortcut-row"><span class="shortcut-desc">Model</span><kbd class="shortcut-key">4</kbd></div>
+  <div class="shortcut-row"><span class="shortcut-desc">Bracket</span><kbd class="shortcut-key">5</kbd></div>
+  <div class="shortcut-row"><span class="shortcut-desc">Analyze match</span><kbd class="shortcut-key">Enter</kbd></div>
+  <div class="shortcut-row"><span class="shortcut-desc">This panel</span><kbd class="shortcut-key">?</kbd></div>
+  <div class="shortcut-row" style="padding-top:12px;margin-top:4px"><span class="shortcut-desc c-muted" style="font-size:12px">Click anywhere to close</span></div>
+ </div>
+</div>
 <main>
 
 <!-- ── Header ── -->
@@ -1010,6 +1056,7 @@ select option { background:var(--bg-surface); }
  <div class="hdr-pills">
  <div class="hdr-pill">MODEL v3.2</div>
  <div class="hdr-pill">100K SIMS</div>
+ <div class="hdr-pill" style="cursor:pointer" onclick="document.getElementById('shortcuts-overlay').classList.add('show')" title="Keyboard shortcuts">?</div>
  </div>
 </header>
 
@@ -1030,7 +1077,7 @@ select option { background:var(--bg-surface); }
  <p>Monte Carlo simulation probabilities across 100,000 tournaments</p>
  </div>
  <div id="tournament-metrics-bar" style="display:flex;gap:16px;margin-bottom:24px"></div>
- <div class="card" style="padding:0;overflow:hidden;margin-bottom:48px">
+ <div class="card" style="padding:0;overflow:hidden;margin-bottom:72px">
  <table class="data-table">
  <thead><tr>
  <th style="width:40px">#</th>
@@ -1445,6 +1492,8 @@ function switchVBView(view) {
 
 window.addEventListener('keydown', e => {
  if (['INPUT','SELECT','TEXTAREA'].includes(e.target.tagName)) return;
+ if (e.key === 'Escape') { document.getElementById('shortcuts-overlay').classList.remove('show'); return; }
+ if (e.key === '?') { document.getElementById('shortcuts-overlay').classList.toggle('show'); return; }
  const map = {'1':'overview','2':'predictor','3':'valuebets','4':'model','5':'bracket'};
  if (map[e.key]) showPage(map[e.key]);
  if (e.key === 'Enter' && document.getElementById('page-predictor').classList.contains('active')) runPredict();
@@ -1551,20 +1600,22 @@ async function loadBracket() {
  INIT
 ───────────────────────────────────────────── */
 async function init() {
- const [tr, to] = await Promise.all([fetch('/api/teams'), fetch('/api/tournament')]);
- const teams = await tr.json();
- const tournament = await to.json();
-
- const sa = document.getElementById('team-a'), sb = document.getElementById('team-b');
- teams.forEach(t => { sa.appendChild(new Option(t, t)); sb.appendChild(new Option(t, t)); });
- sa.value = 'Argentina'; sb.value = 'France';
-
- renderTournamentTable(tournament);
- fetch('/api/groups').then(r => r.json()).then(d => {
- groupsData = d;
- renderGroups(d);
- fetch('/api/group_standings').then(r => r.json()).then(renderStandings);
- });
+ try {
+  const [tr, to] = await Promise.all([fetch('/api/teams'), fetch('/api/tournament')]);
+  const teams = await tr.json();
+  const tournament = await to.json();
+  const sa = document.getElementById('team-a'), sb = document.getElementById('team-b');
+  teams.forEach(t => { sa.appendChild(new Option(t, t)); sb.appendChild(new Option(t, t)); });
+  sa.value = 'Argentina'; sb.value = 'France';
+  renderTournamentTable(tournament);
+  fetch('/api/groups').then(r => r.json()).then(d => {
+   groupsData = d;
+   renderGroups(d);
+   fetch('/api/group_standings').then(r => r.json()).then(renderStandings).catch(() => {});
+  }).catch(() => { document.getElementById('groups-loading').innerHTML = `<span style="color:var(--red)">Failed to load groups — <button onclick="location.reload()" style="background:none;border:none;color:var(--lime);cursor:pointer;font-weight:700">Reload</button></span>`; });
+ } catch(e) {
+  document.getElementById('groups-loading').innerHTML = `<span style="color:var(--red)">Failed to load — <button onclick="location.reload()" style="background:none;border:none;color:var(--lime);cursor:pointer;font-weight:700">Reload</button></span>`;
+ }
 }
 
 /* ─────────────────────────────────────────────
@@ -1684,8 +1735,9 @@ function renderStandings(data) {
 ───────────────────────────────────────────── */
 async function loadBets() {
  betsLoaded = true;
- const r = await fetch('/api/bets');
- const d = await r.json();
+ let d;
+ try { const r = await fetch('/api/bets'); d = await r.json(); }
+ catch(e) { document.getElementById('bets-loading').innerHTML = `<span style="color:var(--red)">Failed to load — <button onclick="betsLoaded=false;loadBets()" style="background:none;border:none;color:var(--lime);cursor:pointer;font-weight:700">Retry</button></span>`; return; }
  allBetsData = d.bets;
  const s = d.summary;
 
@@ -1754,8 +1806,8 @@ function renderBetsTable() {
 ───────────────────────────────────────────── */
 async function loadEdges() {
  edgesLoaded = true;
- const r = await fetch('/api/group_odds');
- edgesData = await r.json();
+ try { const r = await fetch('/api/group_odds'); edgesData = await r.json(); }
+ catch(e) { document.getElementById('edges-loading').innerHTML = `<span style="color:var(--red)">Failed to load — <button onclick="edgesLoaded=false;loadEdges()" style="background:none;border:none;color:var(--lime);cursor:pointer;font-weight:700">Retry</button></span>`; return; }
  document.getElementById('edges-loading').style.display = 'none';
  document.getElementById('edges-content').style.display = 'block';
 
@@ -1855,8 +1907,10 @@ async function loadEdges() {
 ───────────────────────────────────────────── */
 async function loadValidation() {
  validationLoaded = true;
- const r = await fetch('/api/validate');
- const d = await r.json();
+ let d;
+ try { const r = await fetch('/api/validate'); d = await r.json(); }
+ catch(e) { document.getElementById('val-stats').innerHTML = `<div style="color:var(--red);padding:16px">Failed to load — <button onclick="validationLoaded=false;loadValidation()" style="background:none;border:none;color:var(--lime);cursor:pointer;font-weight:700">Retry</button></div>`; return; }
+
 
  document.getElementById('val-stats').innerHTML = [
  {label:'WC 2022 Matches', val: d.n_matches, cls:''},
