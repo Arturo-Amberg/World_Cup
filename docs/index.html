@@ -236,7 +236,7 @@ header {
 .groups-grid {
  display:grid;
  grid-template-columns:repeat(3,1fr);
- gap:24px;
+ gap:28px;
 }
 .group-card {
  background:var(--bg-card);
@@ -745,6 +745,8 @@ select option { background:var(--bg-surface); }
  font-size:34px; font-weight:700;
  letter-spacing:-0.02em; line-height:1.1; margin-bottom:8px; color:var(--txt);
 }
+.page-heading.sub { margin-top:56px; margin-bottom:32px; }
+.page-heading.sub h1 { font-size:26px; }
 .page-heading p {
  font-size:15px; font-weight:500;
  color:var(--txt-3); line-height:1.4;
@@ -766,8 +768,8 @@ select option { background:var(--bg-surface); }
 .vb-kpis {
  display: grid;
  grid-template-columns: repeat(4, 1fr);
- gap: 12px;
- margin-bottom: 28px;
+ gap: 16px;
+ margin-bottom: 32px;
 }
 .vb-kpi {
  background: var(--bg-card);
@@ -798,8 +800,8 @@ select option { background:var(--bg-surface); }
 .vb-controls {
  display: flex;
  align-items: center;
- gap: 12px;
- margin-bottom: 20px;
+ gap: 16px;
+ margin-bottom: 28px;
  flex-wrap: wrap;
 }
 .vb-cat-tabs {
@@ -1185,7 +1187,7 @@ select option { background:var(--bg-surface); }
  <h1>Championship Odds</h1>
  <p>Monte Carlo simulation probabilities across 100,000 tournaments</p>
  </div>
- <div id="tournament-metrics-bar" style="display:flex;gap:16px;margin-bottom:24px"></div>
+ <div id="tournament-metrics-bar" style="display:flex;gap:16px;margin-bottom:36px"></div>
  <div class="card" style="padding:0;overflow:hidden;margin-bottom:72px">
  <table class="data-table">
  <thead><tr>
@@ -1246,7 +1248,7 @@ select option { background:var(--bg-surface); }
 
  <div id="loading" class="loading" style="display:none"><div class="spinner"></div> STACKING MODELS…</div>
 
- <div style="display:flex;justify-content:flex-end;margin-bottom:16px">
+ <div style="display:flex;justify-content:flex-end;margin-bottom:24px">
   <button class="reset-btn" id="reset-btn" onclick="resetPredict()">New prediction</button>
  </div>
 
@@ -1260,7 +1262,7 @@ select option { background:var(--bg-surface); }
 
  <!-- MATCH tab -->
  <div class="tab-panel active" id="tab-match">
- <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px">
+ <div style="display:grid;grid-template-columns:1fr 1fr;gap:28px">
  <div class="card">
  <div class="card-title">Most Likely Scoreline</div>
  <div class="score-display">
@@ -1281,7 +1283,7 @@ select option { background:var(--bg-surface); }
 
  <!-- SCORELINES tab -->
  <div class="tab-panel" id="tab-scorelines">
- <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px">
+ <div style="display:grid;grid-template-columns:1fr 1fr;gap:28px">
  <div class="card">
  <div class="card-title">Top Scoreline Probabilities</div>
  <div id="top-scorelines-full"></div>
@@ -1303,7 +1305,7 @@ select option { background:var(--bg-surface); }
 
  <!-- THREATS tab -->
  <div class="tab-panel" id="tab-threats">
- <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px">
+ <div style="display:grid;grid-template-columns:1fr 1fr;gap:28px">
  <div class="card">
  <div class="card-title" id="threat-a-title"></div>
  <div class="players-grid" id="players-a"></div>
@@ -1344,8 +1346,8 @@ select option { background:var(--bg-surface); }
  </div>
  </div>
 
- <div class="page-heading" style="margin-top:48px">
- <h1 style="font-size:26px">WC 2022 Backtest</h1>
+ <div class="page-heading sub">
+ <h1>WC 2022 Backtest</h1>
  <p>Model accuracy against known outcomes</p>
  </div>
  <div id="val-stats" style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:32px"></div>
