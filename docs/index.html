@@ -1409,6 +1409,31 @@ select option { background:var(--bg-surface); }
  </div>
  </div>
 
+ <!-- Over/Under & BTTS bets section -->
+ <div id="bets-loading" class="loading"><div class="spinner"></div> Calculando mercados de goles…</div>
+ <div id="bets-content" style="display:none;margin-bottom:32px">
+ <div class="card card-featured">
+ <div class="card-title">Mercados de goles y BTTS</div>
+ <div id="bets-kpis" class="vb-kpis" style="margin-bottom:18px"></div>
+ <div class="vb-table-wrap">
+ <table class="vb-table">
+  <thead><tr>
+   <th>Grupo</th>
+   <th>Partido</th>
+   <th>Mercado</th>
+   <th class="ta-r">Cuota</th>
+   <th>Modelo vs impl.</th>
+   <th class="ta-r">Ventaja</th>
+   <th class="ta-r">VE%</th>
+   <th class="ta-r">Kelly%</th>
+   <th class="ta-r">Stake</th>
+  </tr></thead>
+  <tbody id="bets-tbody"></tbody>
+ </table>
+ </div>
+ </div>
+ </div>
+
  <div id="vb-loading" class="loading"><div class="spinner"></div> Buscando valor en el mercado…</div>
  <div id="vb-content" style="display:none">
  <div class="vb-kpis" id="vb-kpis"></div>
@@ -1548,7 +1573,7 @@ function showPage(n) {
  document.querySelectorAll('.page-section').forEach(s => s.classList.toggle('active', s.id === 'page-' + n));
  if (n === 'valuebets') {
   if (!valueBetsLoaded) loadValueBets();
-  
+  if (!betsLoaded) loadBets();
  }
  if (n === 'bracket' && !bracketLoaded) loadBracket();
 }
@@ -2246,6 +2271,116 @@ async function loadValueBets() {
 
  } catch(e) {
  loading.innerHTML = `<span style="color:var(--red)">Failed to load value bets: ${e.message}</span>`;
+ }
+}
+
+/* ─────────────────────────────────────────────
+ BETS (OVER/UNDER & BTTS)
+───────────────────────────────────────────── */
+async function loadBets() {
+ betsLoaded = true;
+ const loading = document.getElementById('bets-loading');
+ const content = document.getElementById('bets-content');
+ try {
+  const res = await fetch('/api/bets');
+  const d = await res.json();
+
+  // ── Parlays ──
+  const parlayDefs = [
+   { key: 'over_25',  title: 'Parlay Over 2.5',  color: 'var(--lime)' },
+   { key: 'under_35', title: 'Parlay Under 3.5',  color: 'var(--blue)' },
+   { key: 'btts',     title: 'Parlay BTTS Sí',    color: 'var(--gold)' },
+  ];
+  const cards = document.getElementById('parlay-cards');
+  cards.innerHTML = parlayDefs.map(({ key, title, color }) => {
+   const p = d.parlays[key];
+   if (!p || !p.legs.length) return '';
+   const legs = p.legs.map(l =>
+    `<div style="padding:5px 0;border-bottom:1px solid rgba(255,255,255,.06);font-size:11px">
+      <span style="opacity:.65">${l.match}</span>
+      <span style="float:right;color:${color};font-weight:600">${l.market} @ ${l.odds.toFixed(2)}</span>
+     </div>`
+   ).join('');
+   return `<div style="background:rgba(255,255,255,.04);border-radius:12px;padding:16px">
+    <div style="font-weight:700;font-size:13px;color:${color};margin-bottom:10px">${title}</div>
+    ${legs}
+    <div style="margin-top:12px;display:flex;justify-content:space-between;font-size:12px">
+     <span style="opacity:.6">Cuota combinada</span>
+     <strong style="color:${color}">${p.combined_odds.toFixed(1)}x</strong>
+    </div>
+    <div style="display:flex;justify-content:space-between;font-size:12px">
+     <span style="opacity:.6">Prob. modelo</span>
+     <strong>${p.combined_p.toFixed(2)}%</strong>
+    </div>
+    <div style="display:flex;justify-content:space-between;font-size:12px;margin-top:4px">
+     <span style="opacity:.6">Stake sugerido</span>
+     <strong>$${p.suggested_stake}</strong>
+    </div>
+    <div style="display:flex;justify-content:space-between;font-size:12px">
+     <span style="opacity:.6">Retorno esperado</span>
+     <strong style="color:${color}">$${p.expected_return}</strong>
+    </div>
+   </div>`;
+  }).join('');
+  document.getElementById('parlays-container').style.display = '';
+
+  // ── KPIs ──
+  const s = d.summary;
+  document.getElementById('bets-kpis').innerHTML = `
+   <div class="vb-kpi">
+    <div class="vb-kpi-label">Total apuestas</div>
+    <div class="vb-kpi-value">${s.total_bets}</div>
+    <div class="vb-kpi-sub">Over/Under y BTTS</div>
+   </div>
+   <div class="vb-kpi">
+    <div class="vb-kpi-label">Stake total</div>
+    <div class="vb-kpi-value">$${s.total_stake}</div>
+    <div class="vb-kpi-sub">de $1 000 bankroll</div>
+   </div>
+   <div class="vb-kpi">
+    <div class="vb-kpi-label">Ganancia esperada</div>
+    <div class="vb-kpi-value" style="color:var(--lime)">$${s.expected_profit}</div>
+    <div class="vb-kpi-sub">en valor esperado</div>
+   </div>
+   <div class="vb-kpi">
+    <div class="vb-kpi-label">ROI esperado</div>
+    <div class="vb-kpi-value" style="color:var(--lime)">+${s.roi}%</div>
+    <div class="vb-kpi-sub">retorno sobre inversión</div>
+   </div>
+  `;
+
+  // ── Tabla ──
+  const catColor = {
+   'O/U 1.5': 'var(--blue)',
+   'O/U 2.5': 'var(--lime)',
+   'O/U 3.5': 'var(--gold)',
+   'BTTS':    '#e879f9',
+  };
+  document.getElementById('bets-tbody').innerHTML = d.bets.map(b => `
+   <tr>
+    <td><span class="vb-badge">${b.group}</span></td>
+    <td style="font-size:11px">${b.match}</td>
+    <td><span style="color:${catColor[b.cat]||'inherit'};font-size:11px;font-weight:600">${b.market}</span></td>
+    <td class="ta-r">${b.mkt_odds.toFixed(2)}</td>
+    <td>
+     <div style="display:flex;align-items:center;gap:6px;font-size:11px">
+      <span style="color:var(--lime)">${(b.p_model*100).toFixed(1)}%</span>
+      <span style="opacity:.4">vs</span>
+      <span style="opacity:.7">${(b.p_mkt*100).toFixed(1)}%</span>
+     </div>
+    </td>
+    <td class="ta-r" style="color:var(--lime)">+${b.edge.toFixed(1)}%</td>
+    <td class="ta-r" style="color:var(--lime)">+${b.ev_pct.toFixed(1)}%</td>
+    <td class="ta-r">${b.stake_pct.toFixed(2)}%</td>
+    <td class="ta-r">$${b.stake_usd.toFixed(1)}</td>
+   </tr>
+  `).join('');
+
+  loading.style.display = 'none';
+  content.style.display = '';
+
+ } catch(e) {
+  loading.innerHTML = `<span style="color:var(--red)">Error al cargar apuestas de goles: ${e.message}</span>`;
  }
 }
 
