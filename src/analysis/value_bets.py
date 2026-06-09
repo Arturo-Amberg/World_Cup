@@ -287,13 +287,18 @@ def elo_corrected_lambdas(team_db: dict, team_a: str, team_b: str,
 
     raw_ratio = lam_strong / max(lam_weak, 0.10)
 
-    # Skip correction when ELO diff is small AND lambdas already favour the stronger side.
-    # If raw_ratio < 1.0 the stronger team has a lower expected-goals lambda — the stats
-    # are inverted (e.g. Brazil's GA is inflated from CONMEBOL while Morocco's GA is
-    # deflated from weak African opposition). In that case apply the correction even for
-    # small ELO gaps so that handicap probabilities don't get wildly distorted.
-    if abs(elo_diff) <= 300 and raw_ratio >= 1.0:
+    # Skip correction only when the ELO gap is truly small (≤ 80) AND the lambdas
+    # already favour the stronger side.  For medium and large gaps (> 80) we fall
+    # through to the poisson_gap check even when raw_ratio ≥ 1.0, because the raw
+    # lambda ratio can still badly understate the quality gap (e.g. Belgium–Iran at
+    # diff=121 or Uzbekistan–Colombia at diff=264 both get raw_ratio > 1 from stats
+    # compiled against weak confederation opponents).
+    # If raw_ratio < 1.0 (stronger team has lower expected goals — inverted) the
+    # correction always runs regardless of ELO gap size.
+    if abs(elo_diff) <= 80 and raw_ratio >= 1.0:
         return lam_h, lam_a
+    if abs(elo_diff) > 80 and abs(elo_diff) <= 300 and raw_ratio >= 1.0:
+        pass  # fall through to poisson_gap check below
 
     # Compute raw Poisson outright win probability for the stronger side
     def _poisson_win(ls, lw):
@@ -875,6 +880,18 @@ def find_value_bets(odds_data: list[dict], mc: dict | None, team_db: dict) -> li
         if len(valid) < 3:
             continue
 
+        # Only compute group corners when at least half the teams have real stats.
+        # Teams without corners data fall back to WC_AVG_CORNERS (5.0/5.0), making
+        # every group produce exactly 60 expected corners — meaningless noise.
+        from src.models.stacked_predictor import WC_AVG_CORNERS as _WC_CRN
+        n_with_data = sum(
+            1 for t in valid
+            if team_db[t].get("CORNERS_FOR", _WC_CRN) != _WC_CRN
+            or team_db[t].get("CORNERS_AGAINST", _WC_CRN) != _WC_CRN
+        )
+        if n_with_data < max(2, len(valid) // 2):
+            continue  # not enough real corners data — skip
+
         lam_group = 0.0
         n_matches = 0
         for ta, tb in _itools.combinations(valid, 2):
@@ -908,6 +925,29 @@ def find_value_bets(odds_data: list[dict], mc: dict | None, team_db: dict) -> li
 
     # ── 10. HANDICAP (3-WAY) ─────────────────────────────────────────────────
     # line "h_cap - a_cap": effective score = actual + handicap; home win/draw/away win
+
+    # Pre-build Coolbet 1X2 fair home probability per match.
+    # Used below to skip handicap bets when our model's outright probability
+    # is far from the bookmaker's implied probability (signal of ELO miscalibration).
+    _bookie_home_fair: dict[str, float] = {}
+    for row in odds_data:
+        if row.get("page") != "matches" or row.get("market") != "Match Result (1X2)":
+            continue
+        mn = row["match"]
+        if mn not in _bookie_home_fair:
+            # Collect all 3 outcomes for this match to remove margin
+            _trio = [r for r in odds_data
+                     if r.get("match") == mn and r.get("market") == "Match Result (1X2)"]
+            if len(_trio) != 3:
+                continue
+            _raws = [1.0 / r["odds"] for r in _trio]
+            _tot  = sum(_raws)
+            # Identify which row is the home team (first part of "Home - Away")
+            _home_raw = mn.split(" - ", 1)[0]
+            for i, r in enumerate(_trio):
+                if r["selection"].strip() == _home_raw.strip():
+                    _bookie_home_fair[mn] = (_raws[i] / _tot)
+                    break
 
     def _score_matrix(lam_h, lam_a, max_g=12):
         """Dixon-Coles corrected joint score probabilities."""
@@ -969,6 +1009,20 @@ def find_value_bets(odds_data: list[dict], mc: dict | None, team_db: dict) -> li
             continue
         if home_team not in team_db or away_team not in team_db:
             continue
+
+        # Skip handicap bets when our outright model diverges from the bookmaker's
+        # 1X2 implied probability by more than 8 pp.  This typically means the
+        # Poisson lambda model is miscalibrated for the quality gap — either the
+        # weaker team's ELO is inflated from weak-confederation qualifiers (Asia,
+        # Middle East), or the stronger team's goal distribution is understated
+        # (e.g. France vs Iraq where raw λ gives France 2.0 goals when ~3.0 is
+        # implied by the bookmaker pricing).
+        _bookie_hf = _bookie_home_fair.get(match_name)
+        if _bookie_hf is not None:
+            _pred_out = blended_match_prob(team_db, home_team, away_team)
+            if abs(_pred_out["p_win_a"] - _bookie_hf) > 0.08:
+                continue
+
         lam_h, lam_a = elo_corrected_lambdas(team_db, home_team, away_team)
 
         for key, ld in lines_dict.items():
@@ -1240,6 +1294,37 @@ def find_value_bets(odds_data: list[dict], mc: dict | None, team_db: dict) -> li
 
     # ── 17. GROUP STAGE H2H (who finishes higher in group standings) ───────────
     # Approximation: P(A above B) from direct match prob + relative qual strength
+
+    # Build a (frozenset of team names) → bookie fair home-win probability lookup
+    # for all group-stage 1X2 markets.  Used below to skip H2H bets when the
+    # model and bookmaker disagree on the direct match by more than 10 pp.
+    _h2h_bookie: dict[frozenset, tuple[str, str, float]] = {}
+    for _row in odds_data:
+        if _row.get("page") != "matches" or _row.get("market") != "Match Result (1X2)":
+            continue
+        _mn = _row["match"]
+        _trio = [r for r in odds_data
+                 if r.get("match") == _mn and r.get("market") == "Match Result (1X2)"]
+        if len(_trio) != 3:
+            continue
+        _h_raw, _a_raw = _mn.split(" - ", 1)[0], _mn.split(" - ", 1)[1]
+        _h_t = best_match(_h_raw, model_teams)
+        _a_t = best_match(_a_raw, model_teams)
+        if not _h_t or not _a_t:
+            continue
+        _key = frozenset([_h_t, _a_t])
+        if _key in _h2h_bookie:
+            continue
+        _raws = [1.0 / r["odds"] for r in _trio]
+        _tot  = sum(_raws)
+        _h_fair = None
+        for _i, _r in enumerate(_trio):
+            if _r["selection"].strip() == _h_raw.strip():
+                _h_fair = _raws[_i] / _tot
+                break
+        if _h_fair is not None:
+            _h2h_bookie[_key] = (_h_t, _a_t, _h_fair)   # (home_team, away_team, fair_home_win)
+
     for row in odds_data:
         mkt = row.get("market", "")
         if "Group Stage H2H" not in mkt:
@@ -1257,6 +1342,15 @@ def find_value_bets(odds_data: list[dict], mc: dict | None, team_db: dict) -> li
             continue
         if t_a not in team_db or t_b not in team_db:
             continue
+
+        # Skip when the direct match probability diverges from bookmaker's 1X2 by
+        # more than 10 pp — same calibration guard used for handicap bets.
+        _pair_key = frozenset([t_a, t_b])
+        if _pair_key in _h2h_bookie:
+            _bh_home, _bh_away, _bh_fair = _h2h_bookie[_pair_key]
+            _mp_check = blended_match_prob(team_db, _bh_home, _bh_away)
+            if abs(_mp_check["p_win_a"] - _bh_fair) > 0.10:
+                continue
 
         # P(A finishes above B in group) ≈ direct match prob + group-strength blend
         mp = blended_match_prob(team_db, t_a, t_b)
