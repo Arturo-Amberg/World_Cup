@@ -1401,15 +1401,7 @@ select option { background:var(--bg-surface); }
  <p>Mercados donde el modelo ve ventaja respecto a las cuotas de mercado.</p>
  </div>
 
- <!-- Parlays block (from loadBets) -->
- <div id="parlays-container" style="display:none">
- <div class="card card-featured" style="margin-bottom:24px">
- <div class="card-title" style="color:var(--gold)">Mejores parlays</div>
- <div id="parlay-cards" style="display:grid;grid-template-columns:repeat(3,1fr);gap:18px"></div>
- </div>
- </div>
-
- <div id="vb-loading" class="loading"><div class="spinner"></div> Buscando valor en el mercado…</div>
+<div id="vb-loading" class="loading"><div class="spinner"></div> Buscando valor en el mercado…</div>
  <div id="vb-content" style="display:none">
  <div class="vb-kpis" id="vb-kpis"></div>
  <div class="vb-controls">
@@ -1477,7 +1469,7 @@ select option { background:var(--bg-surface); }
  <div class="section">
   <div class="page-heading">
    <h1>El camino al título</h1>
-   <p>El equipo más probable en cada puesto, basado en 1.500 simulaciones del torneo completo.</p>
+   <p>El equipo más probable en cada puesto, basado en 100.000 simulaciones del torneo completo.</p>
   </div>
 
   <div id="bk-loading" class="loading"><div class="spinner"></div> Simulando el cuadro…</div>
@@ -1511,6 +1503,18 @@ select option { background:var(--bg-surface); }
      <div class="bracket-stage-label">Ronda de 32</div>
     </div>
     <div class="bracket-layout" id="bk-bracket"></div>
+   </div>
+
+   <!-- Top-10 stage probability table -->
+   <div class="page-heading" style="margin-top:36px;margin-bottom:14px">
+    <h2 style="font-size:13px;font-weight:700;letter-spacing:0.06em;color:var(--txt-3);text-transform:uppercase">Probabilidades por fase — Top 10</h2>
+    <p style="font-size:11px;color:var(--txt-3);margin-top:4px">Basado en 100.000 simulaciones del torneo completo</p>
+   </div>
+   <div class="card" style="overflow-x:auto;padding:0 0 4px 0">
+    <table id="bk-stage-table" style="width:100%;border-collapse:collapse;font-size:13px">
+     <thead id="bk-stage-thead"></thead>
+     <tbody id="bk-stage-tbody"></tbody>
+    </table>
    </div>
   </div>
  </div>
@@ -1655,6 +1659,57 @@ async function loadBracket() {
    <div class="bracket-col r16">${colR16R}</div>
    <div class="bracket-col r32">${colR32R}</div>
   `;
+
+  // ── Stage probability table (Top 10) ──────────────────────────
+  function tProb(arr, team) {
+   return (arr.find(x => x.team === team) || {prob: 0}).prob;
+  }
+  const top10 = d.champion.slice(0, 10).map((row, i) => {
+   const t = row.team;
+   const pChamp  = row.prob;
+   const pFinal  = tProb(d.final.a, t) + tProb(d.final.b, t);
+   const pSF     = d.sf.reduce((s, m) => s + tProb(m.a, t) + tProb(m.b, t), 0);
+   const pQF     = d.qf.reduce((s, m) => s + tProb(m.a, t) + tProb(m.b, t), 0);
+   const pRunnerUp = Math.max(0, pFinal - pChamp);
+   const pThird    = Math.max(0, pSF - pFinal);
+   return { rank: i + 1, team: t, pChamp, pRunnerUp, pThird, pFinal, pSF, pQF };
+  });
+
+  function stagePct(v) { return v > 0.005 ? (v * 100).toFixed(1) + '%' : '—'; }
+  function stageBar(v, color, maxW = 100) {
+   const w = Math.min(Math.round(v / maxW * 100), 100);
+   return `<td style="padding:10px 12px;white-space:nowrap">
+    <div style="display:flex;align-items:center;gap:8px">
+     <div style="width:64px;height:5px;background:rgba(255,255,255,.08);border-radius:3px;flex-shrink:0">
+      <div style="width:${w}%;height:100%;background:${color};border-radius:3px"></div>
+     </div>
+     <span style="font-family:var(--font-mono);font-size:11px;color:var(--txt-2)">${stagePct(v)}</span>
+    </div>
+   </td>`;
+  }
+  const maxChamp = top10[0].pChamp;
+
+  document.getElementById('bk-stage-thead').innerHTML = `
+   <tr style="border-bottom:1px solid rgba(255,255,255,.1)">
+    <th style="padding:10px 12px;text-align:left;font-size:10px;color:var(--txt-3);font-weight:600;white-space:nowrap">#</th>
+    <th style="padding:10px 12px;text-align:left;font-size:10px;color:var(--txt-3);font-weight:600;white-space:nowrap">Equipo</th>
+    <th style="padding:10px 12px;text-align:left;font-size:10px;color:var(--gold);font-weight:700;white-space:nowrap">🥇 Campeón</th>
+    <th style="padding:10px 12px;text-align:left;font-size:10px;color:#c0c0c0;font-weight:700;white-space:nowrap">🥈 Finalista</th>
+    <th style="padding:10px 12px;text-align:left;font-size:10px;color:#cd7f32;font-weight:700;white-space:nowrap">🥉 3º/4º</th>
+    <th style="padding:10px 12px;text-align:left;font-size:10px;color:var(--txt-3);font-weight:600;white-space:nowrap">Semis</th>
+    <th style="padding:10px 12px;text-align:left;font-size:10px;color:var(--txt-3);font-weight:600;white-space:nowrap">Cuartos</th>
+   </tr>`;
+
+  document.getElementById('bk-stage-tbody').innerHTML = top10.map((r, i) => `
+   <tr style="border-bottom:1px solid rgba(255,255,255,.04)${i === 0 ? ';background:rgba(255,200,50,.04)' : ''}">
+    <td style="padding:10px 12px;font-size:11px;color:var(--txt-3);font-weight:700">${r.rank}</td>
+    <td style="padding:10px 12px;font-weight:600;font-size:13px;white-space:nowrap">${r.team}</td>
+    ${stageBar(r.pChamp,    'var(--gold)',   maxChamp)}
+    ${stageBar(r.pRunnerUp, '#c0c0c0',       maxChamp)}
+    ${stageBar(r.pThird,    '#cd7f32',       maxChamp)}
+    ${stageBar(r.pSF,       'var(--blue)',   1)}
+    ${stageBar(r.pQF,       'var(--txt-3)',  1)}
+   </tr>`).join('');
 
   loading.style.display = 'none';
   content.style.display = '';
@@ -2212,41 +2267,8 @@ async function loadValueBets() {
 
   _vbData = [...vbRaw, ...betsNorm];
 
-  // ── Parlays ──
-  const parlayDefs = [
-   { key: 'over_25',  title: 'Parlay Over 2.5',  color: 'var(--lime)' },
-   { key: 'under_35', title: 'Parlay Under 3.5',  color: 'var(--blue)' },
-   { key: 'btts',     title: 'Parlay BTTS Sí',    color: 'var(--gold)' },
-  ];
-  document.getElementById('parlay-cards').innerHTML = parlayDefs.map(({ key, title, color }) => {
-   const p = betsRaw.parlays[key];
-   if (!p || !p.legs.length) return '';
-   const legs = p.legs.map(l =>
-    `<div style="padding:5px 0;border-bottom:1px solid rgba(255,255,255,.06);font-size:11px">
-      <span style="opacity:.65">${l.match}</span>
-      <span style="float:right;color:${color};font-weight:600">${l.market} @ ${l.odds.toFixed(2)}</span>
-     </div>`
-   ).join('');
-   return `<div style="background:rgba(255,255,255,.04);border-radius:12px;padding:16px">
-    <div style="font-weight:700;font-size:13px;color:${color};margin-bottom:10px">${title}</div>
-    ${legs}
-    <div style="margin-top:12px;display:flex;justify-content:space-between;font-size:12px">
-     <span style="opacity:.6">Cuota combinada</span><strong style="color:${color}">${p.combined_odds.toFixed(1)}x</strong>
-    </div>
-    <div style="display:flex;justify-content:space-between;font-size:12px">
-     <span style="opacity:.6">Prob. modelo</span><strong>${p.combined_p.toFixed(2)}%</strong>
-    </div>
-    <div style="display:flex;justify-content:space-between;font-size:12px;margin-top:4px">
-     <span style="opacity:.6">Stake sugerido</span><strong>$${p.suggested_stake}</strong>
-    </div>
-    <div style="display:flex;justify-content:space-between;font-size:12px">
-     <span style="opacity:.6">Retorno esperado</span><strong style="color:${color}">$${p.expected_return}</strong>
-    </div>
-   </div>`;
-  }).join('');
-  document.getElementById('parlays-container').style.display = '';
 
-  // ── KPIs ──
+// ── KPIs ──
   const totalBets = _vbData.length;
   const avgEV     = _vbData.reduce((s,r) => s + r.ev, 0) / totalBets;
   const bestEdge  = Math.max(..._vbData.map(r => r.edge));
