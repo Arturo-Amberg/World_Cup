@@ -71,7 +71,7 @@ def main():
         target_dir.mkdir(exist_ok=True)
         out_path = target_dir / "static_data.js"
         out_path.write_text(js, encoding="utf-8")
-        size_kb = out_path.st_size / 1024
+        size_kb = out_path.stat().st_size / 1024
         print(f"\nWrote {out_path}  ({size_kb:.1f} KB)")
 
         # Also inline the data into index.html
