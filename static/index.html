@@ -34,6 +34,8 @@
  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 
  --ease-out: cubic-bezier(.2, 0, 0, 1);
+ --ease-out-quart: cubic-bezier(0.25, 1, 0.5, 1);
+ --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 *,*::before,*::after { margin:0; padding:0; box-sizing:border-box; }
@@ -95,8 +97,15 @@ header {
 .page-tab.active { color:var(--txt); background: #ffffff; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
 
 /* ── Pages ── */
+@keyframes page-in {
+ from { opacity: 0; transform: translateY(7px); }
+ to   { opacity: 1; transform: translateY(0); }
+}
 .page-section { display:none; }
-.page-section.active { display:block; }
+.page-section.active {
+ display: block;
+ animation: page-in 0.22s var(--ease-out-quart) both;
+}
 .section { max-width:1280px; margin:0 auto; padding:48px 40px; }
 
 /* ── Cards ── */
@@ -344,12 +353,23 @@ select option { background:var(--bg-surface); }
  background:var(--txt); color:var(--bg); border:none;
  padding:14px 28px; border-radius:999px;
  font-size:15px; font-weight:700;
- cursor:pointer; transition: background 0.15s, box-shadow 0.15s; width:100%;
+ cursor:pointer; transition: background 0.15s, box-shadow 0.15s, transform 0.1s; width:100%;
  outline:none;
 }
 .predict-btn:hover { background: #3a3a3c; box-shadow:0 8px 24px rgba(0,0,0,0.12); }
 .predict-btn:focus-visible { box-shadow: 0 0 0 3px var(--lime); }
-.predict-btn:active { background: #1d1d1f; }
+.predict-btn:active { background: #1d1d1f; transform: scale(0.98); }
+
+/* ── Predictor results reveal ── */
+#results {
+ opacity: 0;
+ transform: translateY(10px);
+ transition: opacity 0.28s var(--ease-out-quart), transform 0.28s var(--ease-out-quart);
+}
+#results.results-visible {
+ opacity: 1;
+ transform: translateY(0);
+}
 
 /* Inner tabs */
 .tabs {
@@ -591,12 +611,26 @@ select option { background:var(--bg-surface); }
 }
 
 /* ── Keyboard shortcuts overlay ── */
+@keyframes overlay-fade {
+ from { opacity: 0; }
+ to   { opacity: 1; }
+}
+@keyframes card-rise {
+ from { opacity: 0; transform: scale(0.96) translateY(8px); }
+ to   { opacity: 1; transform: scale(1) translateY(0); }
+}
 #shortcuts-overlay {
  display:none; position:fixed; inset:0; z-index:1000;
  background:rgba(0,0,0,0.3); backdrop-filter:blur(4px);
  align-items:center; justify-content:center;
 }
-#shortcuts-overlay.show { display:flex; }
+#shortcuts-overlay.show {
+ display:flex;
+ animation: overlay-fade 0.18s ease-out both;
+}
+#shortcuts-overlay.show .shortcuts-card {
+ animation: card-rise 0.22s var(--ease-out-quart) both;
+}
 .shortcuts-card {
  background:var(--bg-card); border:1px solid var(--border-hi);
  border-radius:var(--r-xl); padding:28px 32px;
@@ -1028,6 +1062,15 @@ select option { background:var(--bg-surface); }
 .bk-group-rank { font-size: 9px; font-weight: 700; margin-right: 4px; color: var(--txt-3); }
 .bk-group-rank.first  { color: var(--lime); }
 .bk-group-rank.second { color: var(--txt-2); }
+
+/* ── Reduced motion ── */
+@media (prefers-reduced-motion: reduce) {
+ *, *::before, *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+ }
+}
 </style>
 </head>
 <body>
@@ -1968,14 +2011,19 @@ function resetPredict() {
  document.getElementById('odd-a').value = '';
  document.getElementById('odd-draw').value = '';
  document.getElementById('odd-b').value = '';
- document.getElementById('results').style.display = 'none';
+ const r = document.getElementById('results');
+ r.classList.remove('results-visible');
+ r.style.display = 'none';
  document.getElementById('reset-btn').style.display = 'none';
  document.getElementById('empty-state').style.display = 'block';
 }
 
 function renderResults(d) {
  document.getElementById('loading').style.display = 'none';
- document.getElementById('results').style.display = 'block';
+ const resultsEl = document.getElementById('results');
+ resultsEl.style.display = 'block';
+ resultsEl.classList.remove('results-visible');
+ requestAnimationFrame(() => requestAnimationFrame(() => resultsEl.classList.add('results-visible')));
  document.getElementById('empty-state').style.display = 'none';
  document.getElementById('reset-btn').style.display = 'inline';
 
