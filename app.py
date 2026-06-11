@@ -624,8 +624,8 @@ def api_bets():
     team_db = load_team_db()
     BANKROLL = 1000.0
 
-    # Fixed market lines: (market_odds, implied_prob)
-    FIXED = {
+    # Fallback fixed odds (used only when Coolbet data has no odds for that match/line)
+    FIXED_FALLBACK = {
         "Over 1.5":   1.45,
         "Under 1.5":  2.80,
         "Over 2.5":   1.85,
@@ -635,6 +635,63 @@ def api_bets():
         "BTTS Yes":   1.82,
         "BTTS No":    2.02,
     }
+
+    # Build per-match O/U odds lookup from live Coolbet data
+    # Structure: coolbet_ou[(home, away, "Over/Under", line_float)] = odds
+    coolbet_ou: dict = {}
+    coolbet_btts: dict = {}
+    try:
+        import json as _json
+        from pathlib import Path as _Path
+        _raw = _json.loads(_Path("data/coolbet/latest.json").read_text())
+        for _r in _raw:
+            if _r.get("page") != "matches":
+                continue
+            _mkt = _r.get("market", "")
+            _home = _r.get("home", "").strip()
+            _away = _r.get("away", "").strip()
+            if _mkt == "Total Goals Over / Under":
+                _sel  = _r.get("selection", "")   # "Over" or "Under"
+                _line = _r.get("line", "")
+                try:
+                    _lf = float(_line)
+                    coolbet_ou[(_home, _away, _sel, _lf)] = float(_r["odds"])
+                except (ValueError, TypeError):
+                    pass
+            elif _mkt == "Both Teams to Score":
+                _sel = _r.get("selection", "")
+                coolbet_btts[(_home, _away, _sel)] = float(_r["odds"])
+    except Exception:
+        pass  # fall back to FIXED if file missing or malformed
+
+    def _get_ou_odds(home: str, away: str, sel: str, line: float) -> float:
+        """Look up actual Coolbet odds; fall back to FIXED_FALLBACK."""
+        # Try direct match
+        o = coolbet_ou.get((home, away, sel, line))
+        if o:
+            return o
+        # Try reversed (away listed first on Coolbet sometimes)
+        o = coolbet_ou.get((away, home, sel, line))
+        if o:
+            return o
+        # Fuzzy: match any key where both team names appear
+        hl, al = home.lower(), away.lower()
+        for (ch, ca, cs, cl), co in coolbet_ou.items():
+            if cs == sel and cl == line:
+                if (hl in ch.lower() or ch.lower() in hl) and \
+                   (al in ca.lower() or ca.lower() in al):
+                    return co
+        mkt_label = f"{sel} {line}"
+        over_under = "Over" if sel == "Over" else "Under"
+        label = f"{over_under} {line}"
+        return FIXED_FALLBACK.get(label, FIXED_FALLBACK.get(f"{over_under} {int(line)}.5" if line % 1 == 0 else label, 1.80))
+
+    def _get_btts_odds(home: str, away: str, sel: str) -> float:
+        o = coolbet_btts.get((home, away, sel))
+        if o: return o
+        o = coolbet_btts.get((away, home, sel))
+        if o: return o
+        return FIXED_FALLBACK.get(f"BTTS {sel}", 1.90)
 
     def kelly(p, odds, frac=0.25, cap=0.04):
         ev = p * odds - 1
@@ -681,7 +738,19 @@ def api_bets():
             rnd = ri // 2 + 1
             match_label = f"{an} vs {bn}"
 
-            for mkt, mkt_odds in FIXED.items():
+            # Get live Coolbet odds for this specific match
+            live_odds = {
+                "Over 1.5":  _get_ou_odds(an, bn, "Over",  1.5),
+                "Under 1.5": _get_ou_odds(an, bn, "Under", 1.5),
+                "Over 2.5":  _get_ou_odds(an, bn, "Over",  2.5),
+                "Under 2.5": _get_ou_odds(an, bn, "Under", 2.5),
+                "Over 3.5":  _get_ou_odds(an, bn, "Over",  3.5),
+                "Under 3.5": _get_ou_odds(an, bn, "Under", 3.5),
+                "BTTS Yes":  _get_btts_odds(an, bn, "Yes"),
+                "BTTS No":   _get_btts_odds(an, bn, "No"),
+            }
+
+            for mkt, mkt_odds in live_odds.items():
                 p = probs[mkt]
                 p_mkt = 1.0 / mkt_odds
                 if p <= p_mkt:
