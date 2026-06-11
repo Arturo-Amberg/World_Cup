@@ -146,6 +146,11 @@ def index():
     return send_from_directory("static", "index.html")
 
 
+@app.route("/scores")
+def scores():
+    return send_from_directory("static", "scores.html")
+
+
 @app.route("/api/teams")
 def api_teams():
     from src.models.tournament import BASE_TEAM_DB
