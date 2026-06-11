@@ -638,6 +638,16 @@ def api_bets():
 
     # Build per-match O/U odds lookup from live Coolbet data
     # Structure: coolbet_ou[(home, away, "Over/Under", line_float)] = odds
+    _BETS_NORM = {
+        "Czechia":              "Czech Republic",
+        "Congo DR":             "DR Congo",
+        "Democratic Republic of Congo": "DR Congo",
+        "Côte d'Ivoire":        "Ivory Coast",
+        "Cabo Verde":           "Cape Verde",
+        "Bosnia and Herzegovina": "Bosnia & Herzegovina",
+        "United States":        "USA",
+        "Curacao":              "Curaçao",
+    }
     coolbet_ou: dict = {}
     coolbet_btts: dict = {}
     try:
@@ -648,8 +658,9 @@ def api_bets():
             if _r.get("page") != "matches":
                 continue
             _mkt = _r.get("market", "")
-            _home = _r.get("home", "").strip()
-            _away = _r.get("away", "").strip()
+            # Normalize Coolbet team names to match model team names
+            _home = _BETS_NORM.get(_r.get("home", "").strip(), _r.get("home", "").strip())
+            _away = _BETS_NORM.get(_r.get("away", "").strip(), _r.get("away", "").strip())
             if _mkt == "Total Goals Over / Under":
                 _sel  = _r.get("selection", "")   # "Over" or "Under"
                 _line = _r.get("line", "")
@@ -664,34 +675,33 @@ def api_bets():
     except Exception:
         pass  # fall back to FIXED if file missing or malformed
 
-    def _get_ou_odds(home: str, away: str, sel: str, line: float) -> float:
-        """Look up actual Coolbet odds; fall back to FIXED_FALLBACK."""
+    def _get_ou_odds(home: str, away: str, sel: str, line: float):
+        """Return live Coolbet O/U odds, or None if the match isn't listed yet."""
         # Try direct match
         o = coolbet_ou.get((home, away, sel, line))
         if o:
             return o
-        # Try reversed (away listed first on Coolbet sometimes)
+        # Try reversed (Coolbet sometimes lists away team first)
         o = coolbet_ou.get((away, home, sel, line))
         if o:
             return o
-        # Fuzzy: match any key where both team names appear
+        # Fuzzy: match any key where both team names appear (handles minor name diffs)
         hl, al = home.lower(), away.lower()
         for (ch, ca, cs, cl), co in coolbet_ou.items():
             if cs == sel and cl == line:
                 if (hl in ch.lower() or ch.lower() in hl) and \
                    (al in ca.lower() or ca.lower() in al):
                     return co
-        mkt_label = f"{sel} {line}"
-        over_under = "Over" if sel == "Over" else "Under"
-        label = f"{over_under} {line}"
-        return FIXED_FALLBACK.get(label, FIXED_FALLBACK.get(f"{over_under} {int(line)}.5" if line % 1 == 0 else label, 1.80))
+        # Match not found — Coolbet doesn't have this game yet (e.g. Round 3)
+        return None
 
-    def _get_btts_odds(home: str, away: str, sel: str) -> float:
+    def _get_btts_odds(home: str, away: str, sel: str):
+        """Return live Coolbet BTTS odds, or None if not available."""
         o = coolbet_btts.get((home, away, sel))
         if o: return o
         o = coolbet_btts.get((away, home, sel))
         if o: return o
-        return FIXED_FALLBACK.get(f"BTTS {sel}", 1.90)
+        return None  # Coolbet does not offer an in-match BTTS market
 
     def kelly(p, odds, frac=0.25, cap=0.04):
         ev = p * odds - 1
@@ -738,7 +748,8 @@ def api_bets():
             rnd = ri // 2 + 1
             match_label = f"{an} vs {bn}"
 
-            # Get live Coolbet odds for this specific match
+            # Get live Coolbet odds for this specific match.
+            # BTTS may be None when Coolbet has no in-match market for it.
             live_odds = {
                 "Over 1.5":  _get_ou_odds(an, bn, "Over",  1.5),
                 "Under 1.5": _get_ou_odds(an, bn, "Under", 1.5),
@@ -751,6 +762,8 @@ def api_bets():
             }
 
             for mkt, mkt_odds in live_odds.items():
+                if mkt_odds is None:
+                    continue  # no real bookmaker odds available — skip
                 p = probs[mkt]
                 p_mkt = 1.0 / mkt_odds
                 if p <= p_mkt:
