@@ -460,6 +460,13 @@ def find_value_bets(odds_data: list[dict], mc: dict | None, team_db: dict) -> li
             return
         raw_imp = implied(odds_val)
         imp = fair_imp if fair_imp is not None else raw_imp
+        # Weak-team inflation guard (all categories): the ML model is known to
+        # overestimate win probabilities for weak teams vs strong opposition.
+        # When the bookmaker prices an outcome below 8% AND the model claims
+        # more than 3× the bookmaker's fair probability, the edge is almost
+        # certainly a calibration artifact rather than genuine mispricing.
+        if imp < 0.08 and model_prob > 3.0 * imp:
+            return
         edge = model_prob - imp
         exp_val = ev(model_prob, odds_val)
         kelly = kelly_fraction(model_prob, odds_val)
