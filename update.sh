@@ -1,0 +1,161 @@
+#!/usr/bin/env bash
+# update.sh — Daily update for World Cup 2026 predictor
+#
+# Usage:
+#   ./update.sh              # full update: scrape odds + stats + bets + push
+#   ./update.sh --no-push    # skip git push (dry run / offline)
+#   ./update.sh --no-odds    # skip Coolbet scrape (use existing latest.json)
+#   ./update.sh --no-bets    # skip value bets recalculation
+#   ./update.sh --sims=20000 # more precise Monte Carlo (default: 10000)
+#
+# What it does (in order):
+#   1. Scrape fresh odds from Coolbet  (requires Chrome open + logged in)
+#   2. Refresh team stats from GitHub CSV dataset
+#   3. Recalculate value bets (Monte Carlo vs fresh Coolbet odds)
+#   4. Regenerate docs/static_data.js snapshot
+#   5. Commit and push to GitHub Pages
+
+set -euo pipefail
+
+# ── config ────────────────────────────────────────────────────────────────────
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$SCRIPT_DIR"
+
+PUSH=true
+RUN_ODDS=true
+RUN_BETS=true
+SIMS=10000
+
+for arg in "$@"; do
+  case "$arg" in
+    --no-push) PUSH=false ;;
+    --no-odds) RUN_ODDS=false ;;
+    --no-bets) RUN_BETS=false ;;
+    --sims=*)  SIMS="${arg#*=}" ;;
+  esac
+done
+
+PYTHON="$(command -v python3)"
+COOLBET_DATA="data/coolbet/latest.json"
+CDP_PORT=9222
+LOG="data/update.log"
+mkdir -p data
+
+# ── helpers ───────────────────────────────────────────────────────────────────
+timestamp() { date "+%Y-%m-%d %H:%M:%S"; }
+log()     { echo "[$(timestamp)] $*" | tee -a "$LOG"; }
+section() {
+  echo "" | tee -a "$LOG"
+  echo "──────────────────────────────────────────────────" | tee -a "$LOG"
+  echo "  $*" | tee -a "$LOG"
+  echo "──────────────────────────────────────────────────" | tee -a "$LOG"
+}
+
+chrome_cdp_alive() {
+  # Returns 0 (true) if Chrome is listening on the CDP port
+  curl -sf --max-time 2 "http://localhost:${CDP_PORT}/json/version" > /dev/null 2>&1
+}
+
+# ── start ─────────────────────────────────────────────────────────────────────
+section "World Cup 2026 — Daily Update  $(timestamp)"
+
+# ── step 1: scrape Coolbet odds ───────────────────────────────────────────────
+section "Step 1/4 — Scraping Coolbet odds"
+
+if [ "$RUN_ODDS" = false ]; then
+  log "Skipped (--no-odds) — using existing $COOLBET_DATA"
+elif chrome_cdp_alive; then
+  log "Chrome CDP detected on port $CDP_PORT — running scraper …"
+  "$PYTHON" src/scrapers/coolbet_scraper.py 2>&1 | tee -a "$LOG"
+  SCRAPE_EXIT="${PIPESTATUS[0]}"
+  if [ "$SCRAPE_EXIT" -ne 0 ]; then
+    log "WARNING: coolbet_scraper.py exited with code $SCRAPE_EXIT — continuing with existing data"
+  else
+    log "Coolbet odds updated ✓  ($(wc -l < "$COOLBET_DATA" 2>/dev/null || echo '?') lines)"
+  fi
+else
+  log "Chrome CDP not found on port $CDP_PORT"
+  if [ -f "$COOLBET_DATA" ]; then
+    ODDS_AGE=$(( $(date +%s) - $(stat -f %m "$COOLBET_DATA" 2>/dev/null || echo 0) ))
+    ODDS_HOURS=$(( ODDS_AGE / 3600 ))
+    log "  Using cached odds ($ODDS_HOURS hours old)"
+    log "  To scrape fresh odds, open Chrome with:"
+    log "    /Applications/Google\\ Chrome.app/Contents/MacOS/Google\\ Chrome --remote-debugging-port=9222"
+    log "  Then visit coolbet.com and re-run ./update.sh"
+  else
+    log "  No cached odds found — value bets will be skipped"
+    RUN_BETS=false
+  fi
+fi
+
+# ── step 2: team stats + static snapshot ─────────────────────────────────────
+section "Step 2/4 — Refreshing team stats & static snapshot"
+log "Running refresh_daily.py …"
+
+"$PYTHON" scripts/refresh_daily.py 2>&1 | tee -a "$LOG"
+REFRESH_EXIT="${PIPESTATUS[0]}"
+
+if [ "$REFRESH_EXIT" -ne 0 ]; then
+  log "ERROR: refresh_daily.py exited with code $REFRESH_EXIT"
+  exit 1
+fi
+
+# ── step 3: value bets ────────────────────────────────────────────────────────
+section "Step 3/4 — Recalculating value bets"
+
+if [ "$RUN_BETS" = false ]; then
+  log "Skipped (--no-bets or no Coolbet data)"
+elif [ ! -f "$COOLBET_DATA" ]; then
+  log "Skipped — no Coolbet data at $COOLBET_DATA"
+else
+  log "Running value_bets.py with --sims=$SIMS …"
+  "$PYTHON" -m src.analysis.value_bets --sims="$SIMS" 2>&1 | tee -a "$LOG"
+  BETS_EXIT="${PIPESTATUS[0]}"
+  if [ "$BETS_EXIT" -ne 0 ]; then
+    log "WARNING: value_bets.py exited with code $BETS_EXIT — continuing anyway"
+  else
+    log "Value bets updated ✓"
+    # Re-generate snapshot to capture fresh bets
+    log "Re-generating static snapshot with fresh bets …"
+    "$PYTHON" scripts/generate_static_data.py 2>&1 | tee -a "$LOG"
+  fi
+fi
+
+# ── step 4: git push ──────────────────────────────────────────────────────────
+section "Step 4/4 — Git push"
+
+if [ "$PUSH" = false ]; then
+  log "Skipped (--no-push)"
+else
+  # Stage anything that changed: snapshot, value bets, Coolbet odds
+  git add \
+    docs/static_data.js \
+    static/static_data.js \
+    data/coolbet/latest.json \
+    data/coolbet/latest.csv \
+    data/coolbet/value_bets.json \
+    2>/dev/null || true
+
+  if git diff --cached --quiet; then
+    log "Nothing new to commit — already up to date."
+  else
+    COMMIT_MSG="Daily update $(date '+%Y-%m-%d'): odds + stats + bets
+
+Auto-generated by update.sh  $(timestamp)
+
+Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>"
+    git commit -m "$COMMIT_MSG"
+    git push
+    log "Pushed ✓"
+  fi
+fi
+
+# ── done ──────────────────────────────────────────────────────────────────────
+section "Done — $(timestamp)"
+log "Log saved to $LOG"
+echo ""
+echo "  Run again anytime:     ./update.sh"
+echo "  Skip odds scrape:      ./update.sh --no-odds"
+echo "  Dry run (no push):     ./update.sh --no-push"
+echo "  High-precision bets:   ./update.sh --sims=50000"
+echo ""

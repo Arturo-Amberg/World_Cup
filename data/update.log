@@ -1,0 +1,1094 @@
+
+──────────────────────────────────────────────────
+  World Cup 2026 — Daily Update  2026-06-11 01:06:23
+──────────────────────────────────────────────────
+
+──────────────────────────────────────────────────
+  Step 1/4 — Scraping Coolbet odds
+──────────────────────────────────────────────────
+[2026-06-11 01:06:23] Chrome CDP not found on port 9222
+[2026-06-11 01:06:23]   Using cached odds (56 hours old)
+[2026-06-11 01:06:23]   To scrape fresh odds, open Chrome with:
+[2026-06-11 01:06:23]     /Applications/Google\ Chrome.app/Contents/MacOS/Google\ Chrome --remote-debugging-port=9222
+[2026-06-11 01:06:23]   Then visit coolbet.com and re-run ./update.sh
+
+──────────────────────────────────────────────────
+  Step 2/4 — Refreshing team stats & static snapshot
+──────────────────────────────────────────────────
+[2026-06-11 01:06:23] Running refresh_daily.py …
+2026-06-11 01:06:23  ============================================================
+2026-06-11 01:06:23  refresh_daily.py — starting
+2026-06-11 01:06:23  Cache: 63 teams already have stats
+2026-06-11 01:06:23  Fetching 60 teams: ['Spain', 'France', 'England', 'Germany', 'Brazil', 'Argentina', 'Portugal', 'Netherlands', 'Belgium', 'Croatia', 'Morocco', 'Japan', 'USA', 'Mexico', 'Colombia', 'Uruguay', 'South Korea', 'Switzerland', 'Senegal', 'Austria', 'Turkey', 'Norway', 'Sweden', 'Scotland', 'Czech Republic', 'Serbia', 'Ukraine', 'Ecuador', 'Canada', 'Poland', 'Australia', 'Iran', 'Tunisia', 'Algeria', 'Ivory Coast', 'Ghana', 'Saudi Arabia', 'Egypt', 'Nigeria', 'Cameroon', 'Paraguay', 'Costa Rica', 'Panama', 'Honduras', 'Jamaica', 'Bolivia', 'Venezuela', 'South Africa', 'Iraq', 'Indonesia', 'Uzbekistan', 'Slovakia', 'Romania', 'New Zealand', 'El Salvador', 'Guatemala', 'Qatar', 'Bosnia & Herzegovina', 'DR Congo', 'Cape Verde']
+2026-06-11 01:06:23    [1/60] Spain …
+  [github_stats] Downloaded 49,472 rows from martj42/international_results
+2026-06-11 01:06:24      ✓ GF=3.04  GA=1.19  (goals only — GitHub CSV source)
+2026-06-11 01:06:24    [2/60] France …
+2026-06-11 01:06:24      ✓ GF=2.14  GA=1.1  (goals only — GitHub CSV source)
+2026-06-11 01:06:24    [3/60] England …
+2026-06-11 01:06:24      ✓ GF=2.39  GA=0.43  (goals only — GitHub CSV source)
+2026-06-11 01:06:24    [4/60] Germany …
+2026-06-11 01:06:24      ✓ GF=2.2  GA=1.09  (goals only — GitHub CSV source)
+2026-06-11 01:06:24    [5/60] Brazil …
+2026-06-11 01:06:24      ✓ GF=1.73  GA=1.16  (goals only — GitHub CSV source)
+2026-06-11 01:06:24    [6/60] Argentina …
+2026-06-11 01:06:24      ✓ GF=1.91  GA=0.58  (goals only — GitHub CSV source)
+2026-06-11 01:06:24    [7/60] Portugal …
+2026-06-11 01:06:24      ✓ GF=1.92  GA=1.15  (goals only — GitHub CSV source)
+2026-06-11 01:06:24    [8/60] Netherlands …
+2026-06-11 01:06:24      ✓ GF=1.87  GA=1.06  (goals only — GitHub CSV source)
+2026-06-11 01:06:24    [9/60] Belgium …
+2026-06-11 01:06:24      ✓ GF=2.61  GA=1.34  (goals only — GitHub CSV source)
+2026-06-11 01:06:24    [10/60] Croatia …
+2026-06-11 01:06:24      ✓ GF=1.77  GA=1.11  (goals only — GitHub CSV source)
+2026-06-11 01:06:24    [11/60] Morocco …
+2026-06-11 01:06:24      ✓ GF=1.38  GA=0.52  (goals only — GitHub CSV source)
+2026-06-11 01:06:24    [12/60] Japan …
+2026-06-11 01:06:24      ✓ GF=1.55  GA=0.63  (goals only — GitHub CSV source)
+2026-06-11 01:06:24    [13/60] USA …
+2026-06-11 01:06:24      ✓ GF=1.58  GA=1.62  (goals only — GitHub CSV source)
+2026-06-11 01:06:24    [14/60] Mexico …
+2026-06-11 01:06:24      ✓ GF=1.41  GA=0.8  (goals only — GitHub CSV source)
+2026-06-11 01:06:24    [15/60] Colombia …
+2026-06-11 01:06:24      ✓ GF=1.88  GA=1.13  (goals only — GitHub CSV source)
+2026-06-11 01:06:24    [16/60] Uruguay …
+2026-06-11 01:06:24      ✓ GF=0.88  GA=0.83  (goals only — GitHub CSV source)
+2026-06-11 01:06:24    [17/60] South Korea …
+2026-06-11 01:06:24      ✓ GF=1.64  GA=1.09  (goals only — GitHub CSV source)
+2026-06-11 01:06:24    [18/60] Switzerland …
+2026-06-11 01:06:24      ✓ GF=2.36  GA=0.89  (goals only — GitHub CSV source)
+2026-06-11 01:06:24    [19/60] Senegal …
+2026-06-11 01:06:24      ✓ GF=1.67  GA=0.76  (goals only — GitHub CSV source)
+2026-06-11 01:06:24    [20/60] Austria …
+2026-06-11 01:06:24      ✓ GF=1.48  GA=1.0  (goals only — GitHub CSV source)
+2026-06-11 01:06:24    [21/60] Turkey …
+2026-06-11 01:06:24      ✓ GF=2.04  GA=1.27  (goals only — GitHub CSV source)
+2026-06-11 01:06:24    [22/60] Norway …
+2026-06-11 01:06:24      ✓ GF=2.65  GA=1.13  (goals only — GitHub CSV source)
+2026-06-11 01:06:24    [23/60] Sweden …
+2026-06-11 01:06:24      ✓ GF=1.58  GA=1.74  (goals only — GitHub CSV source)
+2026-06-11 01:06:24    [24/60] Scotland …
+2026-06-11 01:06:24      ✓ GF=1.87  GA=1.17  (goals only — GitHub CSV source)
+2026-06-11 01:06:24    [25/60] Czech Republic …
+2026-06-11 01:06:24      ✓ GF=1.62  GA=1.35  (goals only — GitHub CSV source)
+2026-06-11 01:06:24    [26/60] Serbia …
+2026-06-11 01:06:24      ✓ GF=0.55  GA=1.43  (goals only — GitHub CSV source)
+2026-06-11 01:06:24    [27/60] Ukraine …
+2026-06-11 01:06:24      ✓ GF=1.53  GA=1.83  (goals only — GitHub CSV source)
+2026-06-11 01:06:24    [28/60] Ecuador …
+2026-06-11 01:06:24      ✓ GF=0.85  GA=0.32  (goals only — GitHub CSV source)
+2026-06-11 01:06:24    [29/60] Canada …
+2026-06-11 01:06:24      ✓ GF=1.74  GA=0.6  (goals only — GitHub CSV source)
+2026-06-11 01:06:24    [30/60] Poland …
+2026-06-11 01:06:24      ✓ GF=1.51  GA=1.99  (goals only — GitHub CSV source)
+2026-06-11 01:06:24    [31/60] Australia …
+2026-06-11 01:06:24      ✓ GF=1.52  GA=0.75  (goals only — GitHub CSV source)
+2026-06-11 01:06:24    [32/60] Iran …
+2026-06-11 01:06:24      ✓ GF=1.9  GA=0.91  (goals only — GitHub CSV source)
+2026-06-11 01:06:24    [33/60] Tunisia …
+2026-06-11 01:06:24      ✓ GF=1.16  GA=1.21  (goals only — GitHub CSV source)
+2026-06-11 01:06:24    [34/60] Algeria …
+2026-06-11 01:06:24      ✓ GF=1.93  GA=0.48  (goals only — GitHub CSV source)
+2026-06-11 01:06:24    [35/60] Ivory Coast …
+2026-06-11 01:06:24      ✓ GF=1.81  GA=0.64  (goals only — GitHub CSV source)
+2026-06-11 01:06:24    [36/60] Ghana …
+2026-06-11 01:06:24      ✓ GF=0.79  GA=1.36  (goals only — GitHub CSV source)
+2026-06-11 01:06:24    [37/60] Saudi Arabia …
+2026-06-11 01:06:24      ✓ GF=0.41  GA=1.21  (goals only — GitHub CSV source)
+2026-06-11 01:06:24    [38/60] Egypt …
+2026-06-11 01:06:24      ✓ GF=0.79  GA=0.89  (goals only — GitHub CSV source)
+2026-06-11 01:06:24    [39/60] Nigeria …
+2026-06-11 01:06:24      ✓ GF=1.75  GA=0.91  (goals only — GitHub CSV source)
+2026-06-11 01:06:24    [40/60] Cameroon …
+2026-06-11 01:06:24      ✓ GF=1.09  GA=0.87  (goals only — GitHub CSV source)
+2026-06-11 01:06:24    [41/60] Paraguay …
+2026-06-11 01:06:24      ✓ GF=1.32  GA=1.0  (goals only — GitHub CSV source)
+2026-06-11 01:06:24    [42/60] Costa Rica …
+2026-06-11 01:06:24      ✓ GF=0.69  GA=1.43  (goals only — GitHub CSV source)
+2026-06-11 01:06:24    [43/60] Panama …
+2026-06-11 01:06:24      ✓ GF=1.63  GA=1.39  (goals only — GitHub CSV source)
+2026-06-11 01:06:24    [44/60] Honduras …
+2026-06-11 01:06:24      ✓ GF=0.68  GA=1.67  (goals only — GitHub CSV source)
+2026-06-11 01:06:24    [45/60] Jamaica …
+2026-06-11 01:06:24      ✓ GF=0.71  GA=1.57  (goals only — GitHub CSV source)
+2026-06-11 01:06:24    [46/60] Bolivia …
+2026-06-11 01:06:24      ✓ GF=0.66  GA=1.71  (goals only — GitHub CSV source)
+2026-06-11 01:06:24    [47/60] Venezuela …
+2026-06-11 01:06:24      ✓ GF=1.03  GA=1.81  (goals only — GitHub CSV source)
+2026-06-11 01:06:24    [48/60] South Africa …
+2026-06-11 01:06:24      ✓ GF=1.43  GA=0.77  (goals only — GitHub CSV source)
+2026-06-11 01:06:24    [49/60] Iraq …
+2026-06-11 01:06:24      ✓ GF=0.87  GA=1.21  (goals only — GitHub CSV source)
+2026-06-11 01:06:24    [50/60] Indonesia …
+2026-06-11 01:06:24      ✓ GF=0.95  GA=1.82  (goals only — GitHub CSV source)
+2026-06-11 01:06:24    [51/60] Uzbekistan …
+2026-06-11 01:06:24      ✓ GF=1.25  GA=0.81  (goals only — GitHub CSV source)
+2026-06-11 01:06:24    [52/60] Slovakia …
+2026-06-11 01:06:24      ✓ GF=1.11  GA=1.55  (goals only — GitHub CSV source)
+2026-06-11 01:06:24    [53/60] Romania …
+2026-06-11 01:06:24      ✓ GF=1.59  GA=0.86  (goals only — GitHub CSV source)
+2026-06-11 01:06:24    [54/60] New Zealand …
+2026-06-11 01:06:24      ✓ GF=0.89  GA=1.52  (goals only — GitHub CSV source)
+2026-06-11 01:06:24    [55/60] El Salvador …
+2026-06-11 01:06:24      ✓ GF=0.47  GA=1.04  (goals only — GitHub CSV source)
+2026-06-11 01:06:24    [56/60] Guatemala …
+2026-06-11 01:06:24      ✓ GF=0.83  GA=2.1  (goals only — GitHub CSV source)
+2026-06-11 01:06:24    [57/60] Qatar …
+2026-06-11 01:06:24      ✓ GF=1.36  GA=1.64  (goals only — GitHub CSV source)
+2026-06-11 01:06:24    [58/60] Bosnia & Herzegovina …
+2026-06-11 01:06:24      ✓ GF=1.07  GA=1.59  (goals only — GitHub CSV source)
+2026-06-11 01:06:24    [59/60] DR Congo …
+2026-06-11 01:06:24      ✓ GF=0.95  GA=0.84  (goals only — GitHub CSV source)
+2026-06-11 01:06:24    [60/60] Cape Verde …
+2026-06-11 01:06:24      ✓ GF=1.37  GA=1.32  (goals only — GitHub CSV source)
+2026-06-11 01:06:24  Fetched: ['Spain', 'France', 'England', 'Germany', 'Brazil', 'Argentina', 'Portugal', 'Netherlands', 'Belgium', 'Croatia', 'Morocco', 'Japan', 'USA', 'Mexico', 'Colombia', 'Uruguay', 'South Korea', 'Switzerland', 'Senegal', 'Austria', 'Turkey', 'Norway', 'Sweden', 'Scotland', 'Czech Republic', 'Serbia', 'Ukraine', 'Ecuador', 'Canada', 'Poland', 'Australia', 'Iran', 'Tunisia', 'Algeria', 'Ivory Coast', 'Ghana', 'Saudi Arabia', 'Egypt', 'Nigeria', 'Cameroon', 'Paraguay', 'Costa Rica', 'Panama', 'Honduras', 'Jamaica', 'Bolivia', 'Venezuela', 'South Africa', 'Iraq', 'Indonesia', 'Uzbekistan', 'Slovakia', 'Romania', 'New Zealand', 'El Salvador', 'Guatemala', 'Qatar', 'Bosnia & Herzegovina', 'DR Congo', 'Cape Verde']  |  Failed/skipped: []
+2026-06-11 01:06:24  Regenerating docs/static_data.js …
+
+──────────────────────────────────────────────────
+  World Cup 2026 — Daily Update  2026-06-11 01:08:05
+──────────────────────────────────────────────────
+
+──────────────────────────────────────────────────
+  Step 1/4 — Scraping Coolbet odds
+──────────────────────────────────────────────────
+[2026-06-11 01:08:05] Chrome CDP detected on port 9222 — running scraper …
+Connecting to Chrome session for cookies...
+  Got 15 cookies (reese84, visid_incap_723517 present)
+
+[matches] Fetching category 46803 (matches)...
+  0 matches
+  → 0 rows extracted
+
+[nation_specials] Fetching category 61857 (outright)...
+  0 outright events
+  → 0 rows extracted
+
+[group_specials] Fetching category 61856 (outright)...
+  0 outright events
+  → 0 rows extracted
+
+[wc_specials] Fetching category 51930 (outright)...
+  0 outright events
+  → 0 rows extracted
+
+No data to save.
+
+--- Sample (first 20 rows) ---
+[2026-06-11 01:08:09] Coolbet odds updated ✓  (   73021 lines)
+
+──────────────────────────────────────────────────
+  Step 2/4 — Refreshing team stats & static snapshot
+──────────────────────────────────────────────────
+[2026-06-11 01:08:09] Running refresh_daily.py …
+2026-06-11 01:08:09  ============================================================
+2026-06-11 01:08:09  refresh_daily.py — starting
+2026-06-11 01:08:09  Cache: 63 teams already have stats
+2026-06-11 01:08:09  Fetching 3 teams: ['Jordan', 'Haiti', 'Curaçao']
+2026-06-11 01:08:09    [1/3] Jordan …
+2026-06-11 01:08:10      ✓ GF=1.47  GA=1.37  (goals only — GitHub CSV source)
+2026-06-11 01:08:10    [2/3] Haiti …
+2026-06-11 01:08:10      ✓ GF=1.86  GA=1.67  (goals only — GitHub CSV source)
+2026-06-11 01:08:10    [3/3] Curaçao …
+2026-06-11 01:08:10      ✓ GF=1.71  GA=1.42  (goals only — GitHub CSV source)
+2026-06-11 01:08:10  Fetched: ['Jordan', 'Haiti', 'Curaçao']  |  Failed/skipped: []
+2026-06-11 01:08:10  Regenerating docs/static_data.js …
+2026-06-11 01:21:11    fetching /api/bracket … [EnsemblePredictor] Loaded 12 base models, 5 meta-learners, 107 features.
+2026-06-11 01:21:11      [ensemble] pre-computed 100/1128 matchups …
+2026-06-11 01:21:11      [ensemble] pre-computed 200/1128 matchups …
+2026-06-11 01:21:11      [ensemble] pre-computed 300/1128 matchups …
+2026-06-11 01:21:11      [ensemble] pre-computed 400/1128 matchups …
+2026-06-11 01:21:11      [ensemble] pre-computed 500/1128 matchups …
+2026-06-11 01:21:11      [ensemble] pre-computed 600/1128 matchups …
+2026-06-11 01:21:11      [ensemble] pre-computed 700/1128 matchups …
+2026-06-11 01:21:11      [ensemble] pre-computed 800/1128 matchups …
+2026-06-11 01:21:11      [ensemble] pre-computed 900/1128 matchups …
+2026-06-11 01:21:11      [ensemble] pre-computed 1000/1128 matchups …
+2026-06-11 01:21:11      [ensemble] pre-computed 1100/1128 matchups …
+2026-06-11 01:21:11      [ensemble] done — 2256 matchup entries cached.
+2026-06-11 01:21:11      [ensemble] saved 1128 matchup pairs to disk cache.
+2026-06-11 01:21:11    OK  (9,443 chars)
+2026-06-11 01:21:11      fetching /api/teams … OK  (755 chars)
+2026-06-11 01:21:11      fetching /api/tournament … OK  (30 chars)
+2026-06-11 01:21:11      fetching /api/groups … OK  (25,045 chars)
+2026-06-11 01:21:11      fetching /api/group_standings … OK  (6,158 chars)
+2026-06-11 01:21:11      fetching /api/bets … OK  (77,148 chars)
+2026-06-11 01:21:11      fetching /api/group_odds … OK  (39,770 chars)
+2026-06-11 01:21:11      fetching /api/validate …   ML model retrained without WC 2022 data (69 rows, excluded 36)
+2026-06-11 01:21:11    OK  (6,785 chars)
+2026-06-11 01:21:11      fetching /api/valuebets … OK  (99,101 chars)
+2026-06-11 01:21:11      fetching /api/team_stats … OK  (13,906 chars)
+2026-06-11 01:21:11    
+2026-06-11 01:21:11    Wrote docs/static_data.js  (243.8 KB)
+2026-06-11 01:21:11    Skipped inlining for docs/index.html (no block found)
+2026-06-11 01:21:11    
+2026-06-11 01:21:11    Wrote static/static_data.js  (243.8 KB)
+2026-06-11 01:21:11    Skipped inlining for static/index.html (no block found)
+2026-06-11 01:21:11    All endpoints OK — ready to deploy.
+2026-06-11 01:21:11    
+2026-06-11 01:21:11    Next steps:
+2026-06-11 01:21:11      git add docs/static_data.js docs/index.html
+2026-06-11 01:21:11      git commit -m 'update static snapshot'
+2026-06-11 01:21:11      git push
+2026-06-11 01:21:11  Pushing to GitHub Pages …
+2026-06-11 01:21:14    Pushed ✓
+2026-06-11 01:21:14  refresh_daily.py — done
+2026-06-11 01:21:14  ============================================================
+
+──────────────────────────────────────────────────
+  Step 3/4 — Recalculating value bets
+──────────────────────────────────────────────────
+[2026-06-11 01:21:14] Running value_bets.py with --sims=10000 …
+Loading Coolbet odds...
+  6085 odds rows loaded
+
+Running 10,000 Monte Carlo simulations...
+  1,000/10,000  (24s)
+  2,000/10,000  (30s)
+  3,000/10,000  (35s)
+  4,000/10,000  (39s)
+  5,000/10,000  (44s)
+  6,000/10,000  (48s)
+  7,000/10,000  (53s)
+  8,000/10,000  (57s)
+  9,000/10,000  (61s)
+  10,000/10,000  (66s)
+Done in 65.5s
+
+
+Searching for value bets...
+
+================================================================================
+  VALUE BETS REPORT — COOLBET WORLD CUP 2026
+  min edge: 4%  |  min EV: 6%  |  sims: 10,000
+================================================================================
+
+────────────────────────────────────────────────────────────────────────────────
+  ★  GROUP H2H  (47 bets)
+  ----------------------------------------------------------------------------
+  Selection                        Odds   Model%    Impl%       EV    Kelly
+  ----------------------------------------------------------------------------
+  Haiti above Morocco in group      41.00    19.6%     2.4%  +703.8%    17.6%
+    ↳ Group C Specials
+  Cape Verde above Spain in group   41.00    17.3%     2.4%  +609.2%    15.2%
+    ↳ Group H Specials
+  Curaçao above Ecuador in group    31.00    19.6%     3.2%  +506.0%    16.9%
+    ↳ Group E Specials
+  Panama above England in group     26.00    23.2%     3.9%  +502.1%    20.1%
+    ↳ Group L Specials
+  Jordan above Argentina in group   31.00    17.5%     3.2%  +442.6%    14.8%
+    ↳ Group J Specials
+  Curaçao above Ivory Coast in gro  17.00    23.9%     5.9%  +306.6%    19.2%
+    ↳ Group E Specials
+  Cape Verde above Uruguay in grou  14.30    26.9%     7.0%  +283.9%    21.3%
+    ↳ Group H Specials
+  Scotland above Brazil in group    10.00    32.8%    10.0%  +228.2%    25.4%
+    ↳ Group C Specials
+  Uzbekistan above Colombia in gro  11.00    28.2%     9.1%  +210.0%    21.0%
+    ↳ Group K Specials
+  Iraq above Norway in group        14.30    21.2%     7.0%  +202.6%    15.2%
+    ↳ Group I Specials
+  New Zealand above Belgium in gro  16.50    17.5%     6.1%  +188.2%    12.1%
+    ↳ Group G Specials
+  Panama above Croatia in group      9.25    30.4%    10.8%  +181.7%    22.0%
+    ↳ Group L Specials
+  Qatar above Switzerland in group  15.00    16.3%     6.7%  +144.2%    10.3%
+    ↳ Group B Specials
+  Ivory Coast above Germany in gro   6.60    36.0%    15.2%  +137.9%    24.6%
+    ↳ Group E Specials
+  Senegal above France in group      6.65    35.1%    15.0%  +133.1%    23.6%
+    ↳ Group I Specials
+  Jordan above Algeria in group      7.00    31.6%    14.3%  +120.9%    20.1%
+    ↳ Group J Specials
+  Morocco above Brazil in group      5.25    41.8%    19.1%  +119.3%    28.1%
+    ↳ Group C Specials
+  Qatar above Canada in group       12.00    17.7%     8.3%  +112.0%    10.2%
+    ↳ Group B Specials
+  DR Congo above Portugal in group   9.30    22.3%    10.8%  +107.7%    13.0%
+    ↳ Group K Specials
+  Ecuador above Germany in group     4.40    46.2%    22.7%  +103.1%    30.3%
+    ↳ Group E Specials
+  Algeria above Argentina in group   6.65    30.3%    15.0%  +101.5%    18.0%
+    ↳ Group J Specials
+  Saudi Arabia above Spain in grou  14.30    13.8%     7.0%   +97.6%     7.3%
+    ↳ Group H Specials
+  Tunisia above Netherlands in gro   8.00    24.4%    12.5%   +95.3%    13.6%
+    ↳ Group F Specials
+  Qatar above Bosnia & Herzegovina   6.25    30.6%    16.0%   +91.2%    17.4%
+    ↳ Group B Specials
+  Haiti above Scotland in group      7.25    24.3%    13.8%   +76.4%    12.2%
+    ↳ Group C Specials
+  Ghana above England in group      11.25    14.9%     8.9%   +68.1%     6.6%
+    ↳ Group L Specials
+  South Africa above Mexico in gro   6.90    24.3%    14.5%   +67.8%    11.5%
+    ↳ Group A Specials
+  Iraq above Senegal in group        7.00    23.4%    14.3%   +64.1%    10.7%
+    ↳ Group I Specials
+  Japan above Netherlands in group   3.10    49.5%    32.3%   +53.5%    25.5%
+    ↳ Group F Specials
+  Croatia above England in group     3.70    40.6%    27.0%   +50.4%    18.7%
+    ↳ Group L Specials
+  New Zealand above Egypt in group   4.70    31.8%    21.3%   +49.7%    13.4%
+    ↳ Group G Specials
+  Colombia above Portugal in group   3.00    49.5%    33.3%   +48.6%    24.3%
+    ↳ Group K Specials
+  Iran above Egypt in group          2.30    63.5%    43.5%   +46.0%    35.4%
+    ↳ Group G Specials
+  Uzbekistan above DR Congo in gro   2.40    59.6%    41.7%   +43.0%    30.7%
+    ↳ Group K Specials
+  Australia above Paraguay in grou   2.80    50.4%    35.7%   +41.3%    22.9%
+    ↳ Group D Specials
+  Senegal above Norway in group      2.98    47.3%    33.6%   +40.9%    20.6%
+    ↳ Group I Specials
+  Egypt above Belgium in group       4.55    30.7%    22.0%   +39.8%    11.2%
+    ↳ Group G Specials
+  South Korea above Mexico in grou   3.45    40.1%    29.0%   +38.2%    15.6%
+    ↳ Group A Specials
+  Uruguay above Spain in group       4.40    30.4%    22.7%   +33.6%     9.9%
+    ↳ Group H Specials
+  Sweden above Netherlands in grou   4.30    31.0%    23.3%   +33.3%    10.1%
+    ↳ Group F Specials
+  Algeria above Austria in group     2.55    51.0%    39.2%   +29.9%    19.3%
+    ↳ Group J Specials
+  Norway above France in group       3.50    37.0%    28.6%   +29.6%    11.9%
+    ↳ Group I Specials
+  South Africa above Czech Republi   3.60    35.6%    27.8%   +28.1%    10.8%
+    ↳ Group A Specials
+  Austria above Argentina in group   4.40    26.8%    22.7%   +18.1%     5.3%
+    ↳ Group J Specials
+  Tunisia above Sweden in group      2.85    40.7%    35.1%   +16.1%     8.7%
+    ↳ Group F Specials
+  South Korea above Czech Republic   1.95    59.0%    51.3%   +15.1%    15.9%
+    ↳ Group A Specials
+  Japan above Sweden in group        1.57    68.1%    63.7%    +6.9%    12.2%
+    ↳ Group F Specials
+
+────────────────────────────────────────────────────────────────────────────────
+  ★  STAGE OF ELIMINATION  (49 bets)
+  ----------------------------------------------------------------------------
+  Selection                        Odds   Model%    Impl%       EV    Kelly
+  ----------------------------------------------------------------------------
+  Haiti out Round of 16             36.00    12.5%     2.8%  +348.7%    10.0%
+    ↳ Haiti World Cup Specials
+  France out Group Stage            51.00     8.0%     2.0%  +306.5%     6.1%
+    ↳ France World Cup Specials
+  Cape Verde out Round of 16        17.00    21.6%     5.9%  +268.0%    16.8%
+    ↳ Cape Verde World Cup Specials
+  Germany out Group Stage           31.00    11.4%     3.2%  +253.7%     8.5%
+    ↳ Germany World Cup Specials
+  Jordan out Round of 16            21.00    15.5%     4.8%  +225.5%    11.3%
+    ↳ Jordan World Cup Specials
+  Uzbekistan out Round of 16        13.00    22.9%     7.7%  +198.3%    16.5%
+    ↳ Uzbekistan World Cup Specials
+  Curaçao out Round of 16           21.00    13.0%     4.8%  +172.2%     8.6%
+    ↳ Curaçao World Cup Specials
+  Iran out Round of 16               7.55    33.3%    13.2%  +151.5%    23.1%
+    ↳ Iran World Cup Specials
+  Brazil out Group Stage            26.00     9.6%     3.9%  +148.8%     5.9%
+    ↳ Brazil World Cup Specials
+  Panama out Round of 16            10.00    23.0%    10.0%  +129.9%    14.4%
+    ↳ Panama World Cup Specials
+  Australia out Round of 16          8.00    28.4%    12.5%  +127.0%    18.1%
+    ↳ Australia World Cup Specials
+  USA out Group Stage                5.60    38.2%    17.9%  +114.2%    24.8%
+    ↳ USA World Cup Specials
+  Austria out Group Stage            4.85    38.9%    20.6%   +88.7%    23.0%
+    ↳ Austria World Cup Specials
+  Portugal out Group Stage          13.50    11.9%     7.4%   +60.2%     4.8%
+    ↳ Portugal World Cup Specials
+  Tunisia out Round of 16            8.00    19.3%    12.5%   +54.5%     7.8%
+    ↳ Tunisia World Cup Specials
+  South Korea out Round of 16        5.00    30.5%    20.0%   +52.4%    13.1%
+    ↳ South Korea World Cup Specials
+  Algeria out Round of 16            5.20    29.3%    19.2%   +52.3%    12.4%
+    ↳ Algeria World Cup Specials
+  Colombia out Round of 16           5.00    30.4%    20.0%   +52.2%    13.1%
+    ↳ Colombia World Cup Specials
+  Canada out 1/4-Final              11.00    13.8%     9.1%   +52.0%     5.2%
+    ↳ Canada World Cup Specials
+  Qatar out Round of 16             11.00    13.8%     9.1%   +51.4%     5.1%
+    ↳ Qatar World Cup Specials
+  Croatia out Round of 16            4.70    32.1%    21.3%   +50.9%    13.8%
+    ↳ Croatia World Cup Specials
+  DR Congo out Round of 16           8.00    17.9%    12.5%   +43.1%     6.2%
+    ↳ Congo DR World Cup Specials
+  Ecuador out Group Stage            6.50    21.8%    15.4%   +42.0%     7.6%
+    ↳ Ecuador World Cup Specials
+  Ivory Coast out Round of 16        4.65    30.5%    21.5%   +41.9%    11.5%
+    ↳ Ivory Coast World Cup Specials
+  Netherlands out Round of 16        4.40    31.6%    22.7%   +38.9%    11.4%
+    ↳ Netherlands World Cup Specials
+  Ecuador out Round of 16            4.50    30.6%    22.2%   +37.8%    10.8%
+    ↳ Ecuador World Cup Specials
+  Austria out Round of 16            5.35    25.6%    18.7%   +36.8%     8.5%
+    ↳ Austria World Cup Specials
+  Ghana out Group Stage              1.95    69.7%    51.3%   +35.9%    37.7%
+    ↳ Ghana World Cup Specials
+  Paraguay out Round of 16           5.35    25.3%    18.7%   +35.4%     8.1%
+    ↳ Paraguay World Cup Specials
+  Netherlands out Group Stage        8.50    15.8%    11.8%   +34.5%     4.6%
+    ↳ Netherlands World Cup Specials
+  Senegal out Round of 16            5.00    26.8%    20.0%   +34.0%     8.5%
+    ↳ Senegal World Cup Specials
+  Japan out Round of 16              4.50    29.5%    22.2%   +32.9%     9.4%
+    ↳ Japan World Cup Specials
+  Sweden out Round of 16             5.20    24.7%    19.2%   +28.3%     6.7%
+    ↳ Sweden World Cup Special
+  South Africa out Round of 16       6.40    20.0%    15.6%   +28.2%     5.2%
+    ↳ South Africa World Cup Specials
+  Uruguay out Group Stage            5.50    23.1%    18.2%   +27.1%     6.0%
+    ↳ Uruguay World Cup Specials
+  Spain out Winner                   6.00    21.2%    16.7%   +27.1%     5.4%
+    ↳ Spain World Cup Specials
+  Scotland out Round of 16           4.65    27.3%    21.5%   +27.1%     7.4%
+    ↳ Scotland World Cup Specials
+  Uruguay out Round of 16            4.00    31.2%    25.0%   +25.0%     8.3%
+    ↳ Uruguay World Cup Specials
+  Norway out Group Stage             5.50    22.7%    18.2%   +24.7%     5.5%
+    ↳ Norway World Cup Specials
+  Belgium out Round of 16            4.00    30.8%    25.0%   +23.3%     7.8%
+    ↳ Belgium World Cup Specials
+  Portugal out Round of 16           4.00    30.0%    25.0%   +20.2%     6.7%
+    ↳ Portugal World Cup Specials
+  Czech Republic out Round of 16     4.65    25.6%    21.5%   +18.8%     5.1%
+    ↳ Czechia World Cup Specials
+  Canada out Round of 16             3.55    33.0%    28.2%   +17.2%     6.8%
+    ↳ Canada World Cup Specials
+  Portugal out Round of 32           3.85    30.0%    26.0%   +15.7%     5.5%
+    ↳ Portugal World Cup Specials
+  Czech Republic out Group Stage     2.90    39.7%    34.5%   +15.2%     8.0%
+    ↳ Czechia World Cup Specials
+  Bosnia & Herzegovina out Group S   2.50    46.0%    40.0%   +15.0%    10.0%
+    ↳ Bosnia & Herzegovina World Cup Specials
+  DR Congo out Group Stage           1.87    60.6%    53.5%   +13.4%    15.4%
+    ↳ Congo DR World Cup Specials
+  Sweden out Group Stage             2.60    43.1%    38.5%   +12.2%     7.6%
+    ↳ Sweden World Cup Special
+  New Zealand out Group Stage        1.47    73.6%    68.0%    +8.2%    17.3%
+    ↳ New Zealand World Cup Specials
+
+────────────────────────────────────────────────────────────────────────────────
+  ★  ADVANCEMENT  (24 bets)
+  ----------------------------------------------------------------------------
+  Selection                        Odds   Model%    Impl%       EV    Kelly
+  ----------------------------------------------------------------------------
+  Iran to Reach SF                  51.00     8.8%     2.0%  +346.8%     6.9%
+    ↳ Iran World Cup Specials
+  Algeria to Reach SF               41.00     8.9%     2.4%  +264.9%     6.6%
+    ↳ Algeria World Cup Specials
+  Iran to Reach QF                  15.00    20.8%     6.7%  +212.6%    15.2%
+    ↳ Iran World Cup Specials
+  Uzbekistan to Reach QF            41.00     6.8%     2.4%  +178.8%     4.5%
+    ↳ Uzbekistan World Cup Specials
+  Australia to Reach QF             16.00    14.7%     6.2%  +134.9%     9.0%
+    ↳ Australia World Cup Specials
+  Algeria to Reach QF               12.00    18.5%     8.3%  +122.2%    11.1%
+    ↳ Algeria World Cup Specials
+  Canada to Reach SF                21.00     9.9%     4.8%  +107.5%     5.4%
+    ↳ Canada World Cup Specials
+  Switzerland to Reach SF           13.00    15.6%     7.7%  +102.5%     8.5%
+    ↳ Switzerland World Cup Specials
+  Senegal to Reach SF               16.00    10.9%     6.2%   +74.9%     5.0%
+    ↳ Senegal World Cup Specials
+  Senegal to Reach QF                7.60    22.6%    13.2%   +71.5%    10.8%
+    ↳ Senegal World Cup Specials
+  South Korea to Reach QF           11.00    15.2%     9.1%   +67.8%     6.8%
+    ↳ South Korea World Cup Specials
+  Morocco to Reach SF               11.50    14.1%     8.7%   +62.3%     5.9%
+    ↳ Morocco World Cup Specials
+  Canada to Reach QF                 6.80    23.7%    14.7%   +61.2%    10.5%
+    ↳ Canada World Cup Specials
+  Japan to Reach SF                 12.00    13.2%     8.3%   +58.3%     5.3%
+    ↳ Japan World Cup Specials
+  Scotland to Reach QF              11.00    14.1%     9.1%   +54.5%     5.5%
+    ↳ Scotland World Cup Specials
+  Ivory Coast to Reach QF            9.50    15.0%    10.5%   +42.9%     5.0%
+    ↳ Ivory Coast World Cup Specials
+  Switzerland to Reach QF            4.40    32.1%    22.7%   +41.5%    12.2%
+    ↳ Switzerland World Cup Specials
+  Japan to Reach QF                  4.85    26.2%    20.6%   +27.3%     7.1%
+    ↳ Japan World Cup Specials
+  Morocco to Reach QF                4.45    27.9%    22.5%   +24.3%     7.0%
+    ↳ Morocco World Cup Specials
+  Portugal NOT QF                    1.64    72.0%    61.0%   +18.0%    28.2%
+    ↳ Portugal World Cup Specials
+  Brazil NOT QF                      1.72    66.9%    58.1%   +15.0%    20.9%
+    ↳ Brazil World Cup Specials
+  Netherlands NOT QF                 1.44    78.9%    69.4%   +13.7%    31.1%
+    ↳ Netherlands World Cup Specials
+  France NOT QF                      1.97    55.9%    50.8%   +10.0%    10.3%
+    ↳ France World Cup Specials
+  France NOT SF                      1.48    71.9%    67.6%    +6.4%    13.4%
+    ↳ France World Cup Specials
+
+────────────────────────────────────────────────────────────────────────────────
+  ★  MATCH 1X2  (38 bets)
+  ----------------------------------------------------------------------------
+  Selection                        Odds   Model%    Impl%       EV    Kelly
+  ----------------------------------------------------------------------------
+  Curaçao                           50.00     8.5%     1.9%  +326.6%     6.7%
+    ↳ Germany - Curaçao
+  Haiti                             35.00     8.6%     2.8%  +201.5%     5.9%
+    ↳ Brazil - Haiti
+  Draw                              17.00    16.6%     5.7%  +181.3%    11.3%
+    ↳ Germany - Curaçao
+  Jordan                            11.00    23.2%     8.8%  +155.4%    15.5%
+    ↳ Austria - Jordan
+  Iran                               8.60    26.9%    11.2%  +131.3%    17.3%
+    ↳ Belgium - Iran
+  Iraq                              25.00     8.8%     3.9%  +118.8%     5.0%
+    ↳ France - Iraq
+  Iraq                              15.00    14.3%     6.5%  +115.2%     8.2%
+    ↳ Iraq - Norway
+  Panama                             3.74    56.9%    25.9%  +112.6%    41.1%
+    ↳ Ghana - Panama
+  Uzbekistan                        12.00    16.9%     8.1%  +103.2%     9.4%
+    ↳ Portugal - Uzbekistan
+  Australia                          5.00    39.4%    19.4%   +97.0%    24.2%
+    ↳ USA - Australia
+  Draw                              11.00    16.7%     8.8%   +83.7%     8.4%
+    ↳ Brazil - Haiti
+  Curaçao                           18.00     9.9%     5.4%   +77.9%     4.6%
+    ↳ Ecuador - Curaçao
+  Draw                              11.00    15.7%     8.8%   +72.4%     7.2%
+    ↳ Spain - Cape Verde
+  Congo DR                          13.00    13.0%     7.4%   +68.7%     5.7%
+    ↳ Portugal - Congo DR
+  Uzbekistan                         9.50    17.8%    10.2%   +68.6%     8.1%
+    ↳ Uzbekistan - Colombia
+  Senegal                            7.85    20.8%    12.4%   +63.0%     9.2%
+    ↳ France - Senegal
+  Jordan                             6.50    23.8%    15.0%   +54.8%    10.0%
+    ↳ Jordan - Algeria
+  Morocco                            5.80    26.2%    16.7%   +52.1%    10.8%
+    ↳ Brazil - Morocco
+  Panama                             7.25    20.4%    13.4%   +47.7%     7.6%
+    ↳ Panama - Croatia
+  Ecuador                            2.40    61.0%    40.5%   +46.3%    33.1%
+    ↳ Ivory Coast - Ecuador
+  Draw                               9.50    15.2%    10.2%   +44.7%     5.3%
+    ↳ Spain - Saudi Arabia
+  Japan                              3.80    35.8%    25.7%   +36.1%    12.9%
+    ↳ Netherlands - Japan
+  Australia                          4.75    28.1%    20.4%   +33.5%     8.9%
+    ↳ Australia - Turkey
+  Draw                               6.50    20.5%    14.9%   +33.4%     6.1%
+    ↳ Ecuador - Curaçao
+  Paraguay                           4.00    33.3%    24.2%   +33.3%    11.1%
+    ↳ USA - Paraguay
+  Draw                               8.00    16.6%    12.2%   +32.6%     4.7%
+    ↳ France - Iraq
+  Ivory Coast                        6.25    20.7%    15.3%   +29.3%     5.6%
+    ↳ Germany - Ivory Coast
+  Draw                               6.75    19.1%    14.4%   +29.1%     5.1%
+    ↳ Iraq - Norway
+  Draw                               4.80    26.5%    20.2%   +27.0%     7.1%
+    ↳ Belgium - Iran
+  Draw                               5.50    22.9%    17.6%   +25.8%     5.7%
+    ↳ Austria - Jordan
+  Senegal                            3.60    34.7%    26.9%   +24.8%     9.5%
+    ↳ Norway - Senegal
+  South Korea                        4.75    25.7%    20.4%   +21.9%     5.9%
+    ↳ Mexico - South Korea
+  Draw                               3.45    34.5%    28.1%   +18.9%     7.7%
+    ↳ USA - Paraguay
+  Iran                               1.92    61.9%    50.6%   +18.9%    20.5%
+    ↳ Iran - New Zealand
+  Japan                              1.80    64.6%    53.8%   +16.3%    20.4%
+    ↳ Tunisia - Japan
+  South Korea                        2.72    41.4%    35.9%   +12.7%     7.4%
+    ↳ South Korea - Czechia
+  Czechia                            1.98    56.3%    49.1%   +11.4%    11.6%
+    ↳ Czechia - South Africa
+  Argentina                          1.67    66.5%    58.1%   +11.0%    16.4%
+    ↳ Argentina - Austria
+
+────────────────────────────────────────────────────────────────────────────────
+  ★  EXACT POINTS  (31 bets)
+  ----------------------------------------------------------------------------
+  Selection                        Odds   Model%    Impl%       EV    Kelly
+  ----------------------------------------------------------------------------
+  Iran exactly 9 pts                41.00     9.4%     2.4%  +284.0%     7.1%
+    ↳ Group G Specials [9]
+  USA exactly 0 pts                 51.00     6.7%     2.0%  +239.6%     4.8%
+    ↳ Group D Specials [0]
+  Panama exactly 6 pts              21.00    13.3%     4.8%  +179.0%     8.9%
+    ↳ Group L Specials [6]
+  Uzbekistan exactly 6 pts          26.00    10.4%     3.9%  +170.5%     6.8%
+    ↳ Group K Specials [6]
+  Ghana exactly 0 pts                8.50    29.7%    11.8%  +152.1%    20.3%
+    ↳ Group L Specials [0]
+  Brazil exactly 3 pts              35.00     7.0%     2.9%  +144.1%     4.2%
+    ↳ Group C Specials [3]
+  USA exactly 1 pts                 17.00    14.3%     5.9%  +144.0%     9.0%
+    ↳ Group D Specials [1]
+  Germany exactly 3 pts             26.00     8.7%     3.9%  +126.0%     5.0%
+    ↳ Group E Specials [3]
+  Jordan exactly 4 pts              14.00    15.7%     7.1%  +120.4%     9.3%
+    ↳ Group J Specials [4]
+  Iran exactly 7 pts                14.00    15.7%     7.1%  +119.9%     9.2%
+    ↳ Group G Specials [7]
+  Australia exactly 7 pts           26.00     8.4%     3.9%  +119.1%     4.8%
+    ↳ Group D Specials [7]
+  Curaçao exactly 4 pts             21.00     9.5%     4.8%   +98.8%     4.9%
+    ↳ Group E Specials [4]
+  Japan exactly 9 pts               14.00    13.6%     7.1%   +89.7%     6.9%
+    ↳ Group F Specials [9]
+  Germany exactly 4 pts             11.50    16.3%     8.7%   +87.6%     8.3%
+    ↳ Group E Specials [4]
+  Ecuador exactly 9 pts             13.00    14.4%     7.7%   +87.6%     7.3%
+    ↳ Group E Specials [9]
+  Australia exactly 6 pts           12.00    14.7%     8.3%   +75.9%     6.9%
+    ↳ Group D Specials [6]
+  Brazil exactly 4 pts              12.00    14.1%     8.3%   +68.9%     6.3%
+    ↳ Group C Specials [4]
+  Austria exactly 1 pts             17.00     9.9%     5.9%   +68.7%     4.3%
+    ↳ Group J Specials [1]
+  Panama exactly 4 pts               7.50    21.0%    13.3%   +57.5%     8.8%
+    ↳ Group L Specials [4]
+  USA exactly 3 pts                  8.75    17.8%    11.4%   +55.5%     7.2%
+    ↳ Group D Specials [3]
+  Turkey exactly 9 pts              11.00    13.4%     9.1%   +47.8%     4.8%
+    ↳ Group D Specials [9]
+  Ghana exactly 1 pts                5.50    26.7%    18.2%   +47.1%    10.5%
+    ↳ Group L Specials [1]
+  France exactly 4 pts              11.00    13.3%     9.1%   +46.8%     4.7%
+    ↳ Group I Specials [4]
+  Iran exactly 6 pts                 6.50    21.9%    15.4%   +42.0%     7.6%
+    ↳ Group G Specials [6]
+  Uzbekistan exactly 4 pts           7.00    20.0%    14.3%   +40.0%     6.7%
+    ↳ Group K Specials [4]
+  Cape Verde exactly 4 pts           8.50    15.8%    11.8%   +34.1%     4.5%
+    ↳ Group H Specials [4]
+  Curaçao exactly 3 pts              7.50    17.5%    13.3%   +31.5%     4.9%
+    ↳ Group E Specials [3]
+  Japan exactly 7 pts                7.00    18.6%    14.3%   +30.4%     5.1%
+    ↳ Group F Specials [7]
+  Ivory Coast exactly 3 pts          4.50    27.4%    22.2%   +23.1%     6.6%
+    ↳ Group E Specials [3]
+  Panama exactly 3 pts               4.50    27.3%    22.2%   +22.7%     6.5%
+    ↳ Group L Specials [3]
+  Netherlands exactly 6 pts          5.25    23.1%    19.1%   +21.1%     5.0%
+    ↳ Group F Specials [6]
+
+────────────────────────────────────────────────────────────────────────────────
+  ★  GROUP WINNER  (12 bets)
+  ----------------------------------------------------------------------------
+  Selection                        Odds   Model%    Impl%       EV    Kelly
+  ----------------------------------------------------------------------------
+  Uzbekistan                        36.00     9.9%     2.8%  +257.1%     7.3%
+    ↳ Group K Specials
+  Panama                            34.00     7.6%     2.9%  +158.1%     4.8%
+    ↳ Group L Specials
+  Iran                               7.00    35.0%    14.3%  +144.7%    24.1%
+    ↳ Group G Specials
+  Australia                          8.00    27.2%    12.5%  +117.7%    16.8%
+    ↳ Group D Specials
+  Senegal                            8.00    22.0%    12.5%   +76.3%    10.9%
+    ↳ Group I Specials
+  Scotland                          10.00    17.0%    10.0%   +69.6%     7.7%
+    ↳ Group C Specials
+  Morocco                            5.00    33.6%    20.0%   +67.8%    17.0%
+    ↳ Group C Specials
+  Ivory Coast                        6.50    25.3%    15.4%   +64.4%    11.7%
+    ↳ Group E Specials
+  Algeria                            8.00    20.0%    12.5%   +59.7%     8.5%
+    ↳ Group J Specials
+  Japan                              3.40    40.9%    29.4%   +39.1%    16.3%
+    ↳ Group F Specials
+  Canada                             3.05    38.3%    32.8%   +16.8%     8.2%
+    ↳ Group B Specials
+  Colombia                           3.00    38.6%    33.3%   +15.9%     8.0%
+    ↳ Group K Specials
+
+────────────────────────────────────────────────────────────────────────────────
+  ★  BOTH TO FINAL  (2 bets)
+  ----------------------------------------------------------------------------
+  Selection                        Odds   Model%    Impl%       EV    Kelly
+  ----------------------------------------------------------------------------
+  Spain & France both final         31.00     9.7%     3.2%  +200.4%     6.7%
+    ↳ Both to Reach the Final
+  Spain & Argentina both final      16.50    13.0%     6.1%  +115.0%     7.4%
+    ↳ Both to Reach the Final
+
+────────────────────────────────────────────────────────────────────────────────
+  ★  GROUP QUALIFICATION  (22 bets)
+  ----------------------------------------------------------------------------
+  Selection                        Odds   Model%    Impl%       EV    Kelly
+  ----------------------------------------------------------------------------
+  Curaçao to Qualify                 8.75    27.4%    11.4%  +139.4%    18.0%
+    ↳  To Qualify from Group Stage
+  USA NOT to Qualify                 5.25    38.2%    19.1%  +100.8%    23.7%
+    ↳  To Qualify from Group Stage
+  Austria NOT to Qualify             5.00    38.9%    20.0%   +94.5%    23.6%
+    ↳  To Qualify from Group Stage
+  Haiti to Qualify                   7.25    26.6%    13.8%   +92.5%    14.8%
+    ↳  To Qualify from Group Stage
+  Portugal NOT to Qualify           13.00    11.9%     7.7%   +54.3%     4.5%
+    ↳  To Qualify from Group Stage
+  Jordan to Qualify                  4.40    34.0%    22.7%   +49.6%    14.6%
+    ↳  To Qualify from Group Stage
+  Panama to Qualify                  2.95    50.6%    33.9%   +49.4%    25.3%
+    ↳  To Qualify from Group Stage
+  Ecuador NOT to Qualify             6.75    21.8%    14.8%   +47.4%     8.2%
+    ↳  To Qualify from Group Stage
+  Uzbekistan to Qualify              2.70    52.7%    37.0%   +42.3%    24.9%
+    ↳  To Qualify from Group Stage
+  Iraq to Qualify                    5.75    24.6%    17.4%   +41.3%     8.7%
+    ↳  To Qualify from Group Stage
+  Cape Verde to Qualify              2.95    47.0%    33.9%   +38.6%    19.8%
+    ↳  To Qualify from Group Stage
+  Iran to Qualify                    1.55    87.5%    64.5%   +35.6%    64.7%
+    ↳  To Qualify from Group Stage
+  Australia to Qualify               1.83    71.4%    54.6%   +30.7%    37.0%
+    ↳  To Qualify from Group Stage
+  Ghana NOT to Qualify               1.85    69.7%    54.0%   +28.9%    34.0%
+    ↳  To Qualify from Group Stage
+  Egypt NOT to Qualify               3.20    38.9%    31.2%   +24.6%    11.2%
+    ↳  To Qualify from Group Stage
+  Qatar to Qualify                   4.25    29.0%    23.5%   +23.4%     7.2%
+    ↳  To Qualify from Group Stage
+  Uruguay NOT to Qualify             5.25    23.1%    19.1%   +21.3%     5.0%
+    ↳  To Qualify from Group Stage
+  Bosnia & Herzegovina NOT to Qual   2.60    46.0%    38.5%   +19.6%    12.2%
+    ↳  To Qualify from Group Stage
+  Czech Republic NOT to Qualify      2.95    39.7%    33.9%   +17.2%     8.8%
+    ↳  To Qualify from Group Stage
+  Algeria to Qualify                 1.47    77.1%    68.0%   +13.3%    28.3%
+    ↳  To Qualify from Group Stage
+  South Africa to Qualify            2.50    45.1%    40.0%   +12.7%     8.4%
+    ↳  To Qualify from Group Stage
+  South Korea to Qualify             1.40    76.2%    71.4%    +6.7%    16.7%
+    ↳  To Qualify from Group Stage
+
+────────────────────────────────────────────────────────────────────────────────
+  ★  TOTAL GOALS  (71 bets)
+  ----------------------------------------------------------------------------
+  Selection                        Odds   Model%    Impl%       EV    Kelly
+  ----------------------------------------------------------------------------
+  Under 0.5                          9.90    20.0%     9.9%   +98.3%    11.1%
+    ↳ New Zealand - Egypt [0.5]
+  Under 0.5                          9.80    16.6%     9.7%   +62.8%     7.1%
+    ↳ Brazil - Morocco [0.5]
+  Under 0.5                          8.70    18.6%    10.9%   +62.0%     8.1%
+    ↳ Saudi Arabia - Uruguay [0.5]
+  Under 1.5                          3.20    48.3%    30.7%   +54.6%    24.8%
+    ↳ New Zealand - Egypt [1.5]
+  Under 1.5                          3.29    46.9%    28.9%   +54.1%    23.6%
+    ↳ Saudi Arabia - Uruguay [1.5]
+  Under 1.5                          5.10    29.2%    19.3%   +49.0%    12.0%
+    ↳ Austria - Jordan [1.5]
+  Over 4.5                           6.10    23.0%    15.6%   +40.1%     7.9%
+    ↳ Haiti - Scotland [4.5]
+  Under 2.5                          1.85    74.6%    51.4%   +38.0%    44.6%
+    ↳ Saudi Arabia - Uruguay [2.5]
+  Under 1.5                          3.20    42.2%    29.7%   +35.2%    16.0%
+    ↳ Brazil - Morocco [1.5]
+  Over 3.5                           3.29    41.0%    28.9%   +35.0%    15.3%
+    ↳ Haiti - Scotland [3.5]
+  Under 2.5                          1.74    76.1%    56.4%   +32.2%    43.7%
+    ↳ New Zealand - Egypt [2.5]
+  Under 2.5                          2.31    56.8%    41.2%   +31.1%    23.8%
+    ↳ Austria - Jordan [2.5]
+  Over 4.5                           4.60    28.2%    20.7%   +29.9%     8.3%
+    ↳ Qatar - Switzerland [4.5]
+  Over 4.5                           6.10    21.2%    15.6%   +29.5%     5.8%
+    ↳ Netherlands - Sweden [4.5]
+  Over 3.5                           3.29    38.9%    28.9%   +27.8%    12.1%
+    ↳ Netherlands - Sweden [3.5]
+  Over 3.5                           2.67    47.2%    35.7%   +26.1%    15.6%
+    ↳ Qatar - Switzerland [3.5]
+  Under 2.5                          1.78    70.7%    54.0%   +25.8%    33.1%
+    ↳ Brazil - Morocco [2.5]
+  Over 4.5                           6.20    20.3%    15.8%   +25.8%     5.0%
+    ↳ Germany - Ivory Coast [4.5]
+  Under 2.5                          2.50    50.2%    38.1%   +25.4%    17.0%
+    ↳ France - Iraq [2.5]
+  Over 3.5                           4.20    29.6%    23.4%   +24.2%     7.6%
+    ↳ Mexico - South Africa [3.5]
+  Under 1.5                          4.70    26.4%    20.8%   +23.9%     6.5%
+    ↳ England - Ghana [1.5]
+  Over 3.5                           4.30    28.2%    22.1%   +21.1%     6.4%
+    ↳ USA - Paraguay [3.5]
+  Under 2.5                          2.29    52.6%    42.8%   +20.6%    15.9%
+    ↳ England - Ghana [2.5]
+  Under 1.5                          3.42    35.2%    27.9%   +20.4%     8.5%
+    ↳ Uruguay - Cape Verde [1.5]
+  Under 2.5                          3.18    37.7%    30.0%   +20.0%     9.2%
+    ↳ Spain - Cape Verde [2.5]
+  Under 2.5                          1.89    63.2%    50.4%   +19.5%    21.9%
+    ↳ Uruguay - Cape Verde [2.5]
+  Over 2.5                           1.89    63.2%    50.4%   +19.4%    21.9%
+    ↳ Haiti - Scotland [2.5]
+  Over 3.5                           4.50    26.5%    21.2%   +19.1%     5.5%
+    ↳ Turkey - Paraguay [3.5]
+  Under 3.5                          1.32    90.0%    72.2%   +18.8%    58.8%
+    ↳ Saudi Arabia - Uruguay [3.5]
+  Over 3.5                           3.15    37.6%    31.1%   +18.6%     8.6%
+    ↳ Germany - Ivory Coast [3.5]
+  Over 3.5                           3.42    34.6%    27.9%   +18.3%     7.6%
+    ↳ Canada - Qatar [3.5]
+  Under 3.5                          1.52    77.7%    62.6%   +18.1%    34.8%
+    ↳ Austria - Jordan [3.5]
+  Under 1.5                          4.80    24.4%    19.9%   +17.2%     4.5%
+    ↳ France - Iraq [1.5]
+  Under 3.5                          1.62    72.1%    58.8%   +16.9%    27.2%
+    ↳ France - Iraq [3.5]
+  Over 2.5                           1.89    61.2%    50.4%   +15.6%    17.5%
+    ↳ Netherlands - Sweden [2.5]
+  Over 2.5                           2.22    51.7%    44.1%   +14.9%    12.2%
+    ↳ Mexico - South Africa [2.5]
+  Under 2.5                          2.45    46.9%    38.9%   +14.8%    10.2%
+    ↳ Portugal - Uzbekistan [2.5]
+  Under 1.5                          3.70    30.9%    26.5%   +14.4%     5.3%
+    ↳ Netherlands - Japan [1.5]
+  Over 2.5                           1.66    68.7%    57.3%   +14.0%    21.2%
+    ↳ Qatar - Switzerland [2.5]
+  Under 2.5                          1.93    58.9%    50.7%   +14.0%    15.0%
+    ↳ Netherlands - Japan [2.5]
+  Over 2.5                           2.27    50.2%    41.9%   +13.9%    10.9%
+    ↳ USA - Paraguay [2.5]
+  Under 2.5                          1.62    70.2%    58.8%   +13.8%    22.2%
+    ↳ Scotland - Morocco [2.5]
+  Under 2.5                          2.37    48.0%    40.2%   +13.7%    10.0%
+    ↳ Iraq - Norway [2.5]
+  Under 3.5                          1.89    60.0%    50.4%   +13.4%    15.0%
+    ↳ Spain - Cape Verde [3.5]
+  Over 2.5                           2.35    48.2%    40.5%   +13.4%     9.9%
+    ↳ Turkey - Paraguay [2.5]
+  Under 1.5                          2.70    41.7%    35.2%   +12.5%     7.4%
+    ↳ Scotland - Morocco [1.5]
+  Under 3.5                          1.51    74.2%    64.9%   +12.5%    24.2%
+    ↳ England - Ghana [3.5]
+  Over 1.5                           1.33    84.5%    71.6%   +12.4%    37.7%
+    ↳ Haiti - Scotland [1.5]
+  Under 2.5                          1.85    60.5%    51.4%   +11.9%    14.0%
+    ↳ Jordan - Algeria [2.5]
+  Over 2.5                           1.96    57.0%    48.6%   +11.7%    12.2%
+    ↳ Canada - Qatar [2.5]
+  Over 2.5                           1.85    60.0%    53.0%   +11.1%    13.0%
+    ↳ Germany - Ivory Coast [2.5]
+  Over 1.5                           1.48    74.8%    64.3%   +10.7%    22.3%
+    ↳ Turkey - Paraguay [1.5]
+  Over 1.5                           1.45    76.2%    65.7%   +10.5%    23.3%
+    ↳ USA - Paraguay [1.5]
+  Over 3.5                           3.18    34.7%    30.0%   +10.3%     4.7%
+    ↳ Belgium - Iran [3.5]
+  Under 2.5                          1.94    56.9%    50.6%   +10.1%    10.8%
+    ↳ Argentina - Algeria [2.5]
+  Over 1.5                           1.32    83.4%    72.2%   +10.1%    31.5%
+    ↳ Netherlands - Sweden [1.5]
+  Under 3.5                          1.33    82.6%    71.6%    +9.9%    30.0%
+    ↳ Uruguay - Cape Verde [3.5]
+  Over 1.5                           1.36    80.5%    70.0%    +9.5%    26.4%
+    ↳ Canada - Qatar [1.5]
+  Under 3.5                          1.56    70.2%    61.1%    +9.4%    16.9%
+    ↳ Iraq - Norway [3.5]
+  Under 3.5                          1.58    69.1%    60.3%    +9.2%    15.9%
+    ↳ Portugal - Uzbekistan [3.5]
+  Under 4.5                          1.40    77.8%    68.0%    +9.0%    22.5%
+    ↳ Spain - Cape Verde [4.5]
+  Over 1.5                           1.41    76.9%    69.4%    +8.5%    20.8%
+    ↳ Mexico - South Africa [1.5]
+  Over 2.5                           2.33    46.5%    42.1%    +8.3%     6.2%
+    ↳ South Korea - Czechia [2.5]
+  Under 3.5                          1.36    79.4%    72.0%    +8.0%    22.3%
+    ↳ Netherlands - Japan [3.5]
+  Under 2.5                          2.55    42.3%    37.4%    +7.8%     5.0%
+    ↳ Spain - Saudi Arabia [2.5]
+  Under 2.5                          2.20    48.7%    43.3%    +7.2%     6.0%
+    ↳ Ecuador - Curaçao [2.5]
+  Over 1.5                           1.43    74.7%    66.6%    +6.8%    15.8%
+    ↳ Mexico - South Korea [1.5]
+  Under 3.5                          1.65    64.7%    57.7%    +6.7%    10.3%
+    ↳ Spain - Saudi Arabia [3.5]
+  Under 3.5                          1.32    80.6%    72.2%    +6.4%    20.0%
+    ↳ Jordan - Algeria [3.5]
+  Over 1.5                           1.44    73.5%    67.9%    +6.1%    13.7%
+    ↳ South Korea - Czechia [1.5]
+  Under 2.5                          1.66    63.9%    57.3%    +6.0%     9.2%
+    ↳ Tunisia - Japan [2.5]
+
+────────────────────────────────────────────────────────────────────────────────
+  ★  HANDICAP  (38 bets)
+  ----------------------------------------------------------------------------
+  Selection                        Odds   Model%    Impl%       EV    Kelly
+  ----------------------------------------------------------------------------
+  Iraq HCP 1-0                       4.50    36.2%    20.8%   +63.0%    18.0%
+    ↳ Iraq - Norway [1-0]
+  Ecuador HCP 1-0                    5.25    28.1%    17.8%   +47.2%    11.1%
+    ↳ Ivory Coast - Ecuador [1-0]
+  Switzerland HCP 4-0               10.00    14.1%     9.4%   +41.4%     4.6%
+    ↳ Qatar - Switzerland [4-0]
+  Switzerland HCP 3-0                5.00    27.8%    18.7%   +39.0%     9.8%
+    ↳ Qatar - Switzerland [3-0]
+  Scotland HCP 3-0                   9.50    14.4%     9.8%   +36.7%     4.3%
+    ↳ Haiti - Scotland [3-0]
+  Senegal HCP 1-0                    8.75    15.5%    10.7%   +35.6%     4.6%
+    ↳ Norway - Senegal [1-0]
+  Iraq HCP 2-0                       2.25    60.1%    41.5%   +35.2%    28.2%
+    ↳ Iraq - Norway [2-0]
+  Draw HCP 2-0                       7.75    17.4%    12.1%   +34.9%     5.2%
+    ↳ Ivory Coast - Ecuador [2-0]
+  Czechia HCP 0-1                    3.85    33.7%    24.2%   +29.8%    10.4%
+    ↳ Czechia - South Africa [0-1]
+  Scotland HCP 2-0                   4.40    29.4%    21.3%   +29.3%     8.6%
+    ↳ Haiti - Scotland [2-0]
+  Netherlands HCP 0-2                5.50    23.4%    17.0%   +28.4%     6.3%
+    ↳ Netherlands - Sweden [0-2]
+  Switzerland HCP 2-0                2.70    47.2%    34.6%   +27.6%    16.2%
+    ↳ Qatar - Switzerland [2-0]
+  Scotland HCP 1-0                   2.45    50.6%    38.1%   +24.0%    16.6%
+    ↳ Haiti - Scotland [1-0]
+  Netherlands HCP 0-1                2.85    43.3%    32.7%   +23.5%    12.7%
+    ↳ Netherlands - Sweden [0-1]
+  Mexico HCP 0-2                     4.50    27.3%    21.1%   +22.6%     6.5%
+    ↳ Mexico - South Africa [0-2]
+  Iraq HCP 3-0                       1.53    80.1%    61.0%   +22.5%    42.5%
+    ↳ Iraq - Norway [3-0]
+  New Zealand HCP 1-0                2.14    56.5%    44.6%   +20.9%    18.4%
+    ↳ New Zealand - Egypt [1-0]
+  Switzerland HCP 1-0                1.73    68.9%    54.2%   +19.2%    26.3%
+    ↳ Qatar - Switzerland [1-0]
+  Mexico HCP 0-1                     2.33    49.8%    40.8%   +16.2%    12.1%
+    ↳ Mexico - South Africa [0-1]
+  Saudi Arabia HCP 1-0               2.85    40.4%    32.8%   +15.0%     8.1%
+    ↳ Saudi Arabia - Uruguay [1-0]
+  Japan HCP 1-0                      3.35    34.3%    28.5%   +14.9%     6.4%
+    ↳ Tunisia - Japan [1-0]
+  Ecuador HCP 0-1                    1.33    86.4%    70.4%   +14.9%    45.1%
+    ↳ Ivory Coast - Ecuador [0-1]
+  Colombia HCP 0-1                   2.50    45.8%    37.3%   +14.4%     9.6%
+    ↳ Colombia - Congo DR [0-1]
+  Senegal HCP 0-1                    2.75    41.6%    34.6%   +14.3%     8.2%
+    ↳ France - Senegal [0-1]
+  Panama HCP 1-0                     2.60    43.6%    35.9%   +13.3%     8.3%
+    ↳ Panama - Croatia [1-0]
+  New Zealand HCP 2-0                1.38    81.8%    68.8%   +13.1%    34.2%
+    ↳ New Zealand - Egypt [2-0]
+  Canada HCP 0-1                     3.40    32.9%    28.0%   +11.9%     4.9%
+    ↳ Canada - Bosnia & Herzegovina [0-1]
+  Saudi Arabia HCP 2-0               1.60    69.6%    58.2%   +11.4%    19.0%
+    ↳ Saudi Arabia - Uruguay [2-0]
+  Saudi Arabia HCP 0-3               1.80    61.6%    52.0%   +10.8%    13.5%
+    ↳ Spain - Saudi Arabia [0-3]
+  Saudi Arabia HCP 0-2               2.90    38.2%    32.3%   +10.8%     5.7%
+    ↳ Spain - Saudi Arabia [0-2]
+  Senegal HCP 0-1                    1.80    61.1%    51.8%   +10.0%    12.5%
+    ↳ Norway - Senegal [0-1]
+  Germany HCP 0-1                    2.53    43.3%    37.6%    +9.4%     6.1%
+    ↳ Germany - Ivory Coast [0-1]
+  Canada HCP 0-2                     3.50    31.2%    26.7%    +9.3%     3.7%
+    ↳ Canada - Qatar [0-2]
+  Uzbekistan HCP 1-0                 3.00    36.2%    31.1%    +8.7%     4.3%
+    ↳ Uzbekistan - Colombia [1-0]
+  Canada HCP 0-1                     2.02    53.8%    46.4%    +8.7%     8.5%
+    ↳ Canada - Qatar [0-1]
+  Scotland HCP 1-0                   1.87    57.9%    49.9%    +8.2%     9.4%
+    ↳ Scotland - Morocco [1-0]
+  Tunisia HCP 0-1                    1.88    57.2%    49.7%    +7.5%     8.5%
+    ↳ Sweden - Tunisia [0-1]
+  Saudi Arabia HCP 0-4               1.34    79.9%    70.0%    +7.1%    20.8%
+    ↳ Spain - Saudi Arabia [0-4]
+
+────────────────────────────────────────────────────────────────────────────────
+  ★  GROUP GOALS  (9 bets)
+  ----------------------------------------------------------------------------
+  Selection                        Odds   Model%    Impl%       EV    Kelly
+  ----------------------------------------------------------------------------
+  Group H Under 17.5 Goals           1.78    80.1%    53.5%   +42.5%    54.5%
+    ↳ Group H Specials [17.5]
+  Group J Under 16.5 Goals           1.78    70.5%    53.5%   +25.5%    32.7%
+    ↳ Group J Specials [16.5]
+  Group G Under 15.5 Goals           2.00    61.9%    47.6%   +23.7%    23.7%
+    ↳ Group G Specials [15.5]
+  Group K Under 16.5 Goals           1.95    63.2%    48.7%   +23.2%    24.5%
+    ↳ Group K Specials [16.5]
+  Group L Under 17.5 Goals           1.72    69.7%    55.2%   +19.9%    27.6%
+    ↳ Group L Specials [17.5]
+  Group C Under 17.5 Goals           1.85    64.0%    51.3%   +18.4%    21.6%
+    ↳ Group C Specials [17.5]
+  Group D Over 14.5 Goals            1.82    63.4%    52.4%   +15.3%    18.7%
+    ↳ Group D Specials [14.5]
+  Group E Under 17.5 Goals           2.00    56.1%    47.6%   +12.2%    12.2%
+    ↳ Group E Specials [17.5]
+  Group B Over 15.5 Goals            1.85    60.4%    51.3%   +11.7%    13.8%
+    ↳ Group B Specials [15.5]
+
+────────────────────────────────────────────────────────────────────────────────
+  ★  TOURNAMENT H2H  (6 bets)
+  ----------------------------------------------------------------------------
+  Selection                        Odds   Model%    Impl%       EV    Kelly
+  ----------------------------------------------------------------------------
+  Sweden further than Norway         3.10    43.4%    32.3%   +34.6%    16.5%
+    ↳ Tournament H2H
+  Sweden further than USA            2.70    49.0%    37.0%   +32.4%    19.1%
+    ↳ Tournament H2H
+  Canada further than USA            2.20    56.7%    45.5%   +24.7%    20.5%
+    ↳ Tournament H2H
+  Sweden further than Mexico         2.75    43.7%    36.4%   +20.2%    11.5%
+    ↳ Tournament H2H
+  Canada further than Norway         2.25    51.0%    44.4%   +14.8%    11.9%
+    ↳ Tournament H2H
+  Canada further than Mexico         2.20    51.3%    45.5%   +12.9%    10.8%
+    ↳ Tournament H2H
+
+────────────────────────────────────────────────────────────────────────────────
+  ★  DOUBLE CHANCE WINNER  (1 bets)
+  ----------------------------------------------------------------------------
+  Selection                        Odds   Model%    Impl%       EV    Kelly
+  ----------------------------------------------------------------------------
+  Spain or Argentina wins WC         3.75    33.8%    26.7%   +26.8%     9.7%
+    ↳ Specials
+
+================================================================================
+  TOTAL: 350 value bets found
+
+  TOP 5 BY KELLY FRACTION (STAKE SIZE):
+  1. ★★★ Iran to Qualify ( To Qualify from Group Stage)
+     Kelly 64.7% | Odds 1.55 | Model 87.5% | EV +35.6%
+  2. ★★★ Under 3.5 (Saudi Arabia - Uruguay)
+     Kelly 58.8% | Odds 1.32 | Model 90.0% | EV +18.8%
+  3. ★★★ Group H Under 17.5 Goals (Group H Specials)
+     Kelly 54.5% | Odds 1.78 | Model 80.1% | EV +42.5%
+  4. ★★★ Ecuador HCP 0-1 (Ivory Coast - Ecuador)
+     Kelly 45.1% | Odds 1.33 | Model 86.4% | EV +14.9%
+  5. ★★★ Under 2.5 (Saudi Arabia - Uruguay)
+     Kelly 44.6% | Odds 1.85 | Model 74.6% | EV +38.0%
+================================================================================
+
+  Saved → data/coolbet/value_bets.json
+[2026-06-11 01:22:20] Value bets updated ✓
+[2026-06-11 01:22:20] Re-generating static snapshot with fresh bets …
+  fetching /api/bracket … OK  (9,443 chars)
+  fetching /api/teams … OK  (755 chars)
+  fetching /api/tournament … OK  (30 chars)
+  fetching /api/groups … OK  (25,047 chars)
+  fetching /api/group_standings … OK  (6,160 chars)
+  fetching /api/bets … OK  (77,148 chars)
+  fetching /api/group_odds … OK  (39,680 chars)
+  fetching /api/validate …   ML model retrained without WC 2022 data (69 rows, excluded 36)
+OK  (6,785 chars)
+  fetching /api/valuebets … OK  (97,370 chars)
+  fetching /api/team_stats … OK  (13,906 chars)
+
+Wrote docs/static_data.js  (242.1 KB)
+Skipped inlining for docs/index.html (no block found)
+
+Wrote static/static_data.js  (242.1 KB)
+Skipped inlining for static/index.html (no block found)
+All endpoints OK — ready to deploy.
+
+Next steps:
+  git add docs/static_data.js docs/index.html
+  git commit -m 'update static snapshot'
+  git push
+
+──────────────────────────────────────────────────
+  Step 4/4 — Git push
+──────────────────────────────────────────────────
+[2026-06-11 01:22:30] Pushed ✓
+
+──────────────────────────────────────────────────
+  Done — 2026-06-11 01:22:30
+──────────────────────────────────────────────────
+[2026-06-11 01:22:30] Log saved to data/update.log
