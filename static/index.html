@@ -16,7 +16,7 @@
   const _nativeFetch = window.fetch.bind(window);
   const _SD = window.STATIC_DATA || {};
   const TEAM_ELO = {}, TEAM_GF = {}, TEAM_GA = {}, TEAM_POSS = {};
-  const WC_MU = 1.40, DC_RHO = -0.12, WC_REG = 0.70;
+  const WC_MU = 1.40, DC_RHO = -0.12, WC_REG = 0.70, WC_SCALE = 1.145;
   const HOST_NATIONS = new Set(['USA','Mexico','Canada']);
   const _groups = _SD['/api/groups'] || {};
   for (const g of Object.values(_groups)) {
@@ -46,8 +46,8 @@
     const gaA = WC_REG*Math.max(0.3,GA_AVG[ta]||WC_MU)+(1-WC_REG)*WC_MU;
     const gfB = WC_REG*Math.max(0.3,GF_AVG[tb]||WC_MU)+(1-WC_REG)*WC_MU;
     const gaB = WC_REG*Math.max(0.3,GA_AVG[tb]||WC_MU)+(1-WC_REG)*WC_MU;
-    let lamA = (gfA/WC_MU)*(gaB/WC_MU)*WC_MU;
-    let lamB = (gfB/WC_MU)*(gaA/WC_MU)*WC_MU;
+    let lamA = (gfA/WC_MU)*(gaB/WC_MU)*WC_MU*WC_SCALE;
+    let lamB = (gfB/WC_MU)*(gaA/WC_MU)*WC_MU*WC_SCALE;
     lamA *= 1+(((TEAM_POSS[ta]||50)/100)-0.5)*0.10;
     lamB *= 1+(((TEAM_POSS[tb]||50)/100)-0.5)*0.10;
     if (homeTeam && HOST_NATIONS.has(homeTeam)) { if(ta===homeTeam) lamA*=1.08; else if(tb===homeTeam) lamB*=1.08; }

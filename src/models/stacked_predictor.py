@@ -23,6 +23,8 @@ import os
 WC_AVG_GOALS   = 1.40   # Goals per team per WC match (2.8 total; 2018: 2.64, 2022: 2.69, trending up)
 WC_REGRESSION  = 0.70   # Blend of team's own stats vs WC mean; 0.70 preserves team character while
                         # moderating extreme qualifier records (e.g. GA=0.32 → 0.64 effective)
+WC_GOAL_SCALE  = 1.145  # Calibration: qualifier GA averages only 1.056 vs WC target 1.40, creating
+                        # systematic under-prediction; this lifts model output to the 2.8 goals/match target
 WC_AVG_CORNERS = 5.0    # Corners per team per WC match
 WC_AVG_SOT     = 4.0    # Shots on target per team per WC match
 WC_AVG_YELLOWS = 1.8    # Yellow cards per team per WC match
@@ -345,6 +347,8 @@ def _compute_lambdas(
     lam_a = lam_a * (avail_a / avail_b)
     lam_b = lam_b * (avail_b / avail_a)
 
+    lam_a *= WC_GOAL_SCALE
+    lam_b *= WC_GOAL_SCALE
     lam_a = max(0.15, min(5.0, lam_a))
     lam_b = max(0.15, min(5.0, lam_b))
     return lam_a, lam_b
