@@ -20,7 +20,9 @@ import os
 # ─────────────────────────────────────────────
 #  Constantes del modelo
 # ─────────────────────────────────────────────
-WC_AVG_GOALS   = 1.30   # Goals per team per WC match (WC 2018: 1.32, WC 2022: 1.34)
+WC_AVG_GOALS   = 1.40   # Goals per team per WC match (2.8 total; 2018: 2.64, 2022: 2.69, trending up)
+WC_REGRESSION  = 0.70   # Blend of team's own stats vs WC mean; 0.70 preserves team character while
+                        # moderating extreme qualifier records (e.g. GA=0.32 → 0.64 effective)
 WC_AVG_CORNERS = 5.0    # Corners per team per WC match
 WC_AVG_SOT     = 4.0    # Shots on target per team per WC match
 WC_AVG_YELLOWS = 1.8    # Yellow cards per team per WC match
@@ -281,10 +283,19 @@ def _compute_lambdas(
     name_a = team_a.get("name", "")
     name_b = team_b.get("name", "")
 
-    gf_a = max(0.3, team_a.get("GF_AVG", mu))
-    ga_a = max(0.3, team_a.get("GA_AVG", mu))
-    gf_b = max(0.3, team_b.get("GF_AVG", mu))
-    ga_b = max(0.3, team_b.get("GA_AVG", mu))
+    # Raw rolling stats (qualifier/friendly averages, uncapped)
+    gf_a_raw = max(0.3, team_a.get("GF_AVG", mu))
+    ga_a_raw = max(0.3, team_a.get("GA_AVG", mu))
+    gf_b_raw = max(0.3, team_b.get("GF_AVG", mu))
+    ga_b_raw = max(0.3, team_b.get("GA_AVG", mu))
+
+    # Regress toward the WC mean so extreme qualifier records (e.g. GA=0.32 for Ecuador)
+    # don't dominate — at the WC every team faces quality opposition.
+    r = WC_REGRESSION
+    gf_a = r * gf_a_raw + (1 - r) * mu
+    ga_a = r * ga_a_raw + (1 - r) * mu
+    gf_b = r * gf_b_raw + (1 - r) * mu
+    ga_b = r * ga_b_raw + (1 - r) * mu
 
     lam_a = (gf_a / mu) * (ga_b / mu) * mu
     lam_b = (gf_b / mu) * (ga_a / mu) * mu
