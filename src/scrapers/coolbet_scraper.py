@@ -89,8 +89,15 @@ def fetch_category(session: requests.Session, cat_id: int, limit: int = 500) -> 
     }, timeout=20)
     r.raise_for_status()
     data = r.json()
+    # Handle both response shapes:
+    #   old: [{..., "matches": [...]}]
+    #   new: {"categories": [{..., "matches": [...]}]}
     if isinstance(data, list) and data:
         return data[0].get("matches", [])
+    if isinstance(data, dict):
+        cats = data.get("categories", [])
+        if cats:
+            return cats[0].get("matches", [])
     return []
 
 

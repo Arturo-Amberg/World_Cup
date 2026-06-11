@@ -233,7 +233,18 @@ def blended_match_prob(team_db: dict, team_a: str, team_b: str,
             p_d = 1.0 - p_h - p_a
             return {"p_win_a": p_h, "p_draw": max(0.05, p_d), "p_win_b": p_a}
 
-    # Case 1: ELO gap correction (non-inverted) — blend toward ELO+Poisson.
+    # Case 1a: Extreme ELO gap (> 400) — Poisson is also biased by weak-opponent
+    # stats, so blend toward pure ELO only (not the ELO+Poisson mix).
+    # Blend cap raised to 0.92 because the gap is large enough that the ELO
+    # signal is far more reliable than any rolling-stat component.
+    if elo_diff > 400:
+        blend = min(0.92, 0.70 + (elo_diff - 400) / 500)
+        p_h = lerp(pred["p_win_a"], elo["win_a"], blend)
+        p_a = lerp(pred["p_win_b"], elo["win_b"], blend)
+        p_d = 1.0 - p_h - p_a
+        return {"p_win_a": p_h, "p_draw": max(0.05, p_d), "p_win_b": p_a}
+
+    # Case 1b: ELO gap correction (non-inverted) — blend toward ELO+Poisson.
     # The ML (80% weight) overclaims teams whose stats come from weak competitions.
     # Threshold lowered to 80 so medium gaps (Belgium-Iran at 121, Austria-Jordan at 150)
     # get corrected. Blend formula is aggressive so even a 120-diff gap gets ~68% correction.
@@ -1325,6 +1336,23 @@ def find_value_bets(odds_data: list[dict], mc: dict | None, team_db: dict) -> li
         if _h_fair is not None:
             _h2h_bookie[_key] = (_h_t, _a_t, _h_fair)   # (home_team, away_team, fair_home_win)
 
+    # Build a bookmaker-implied probability lookup for each H2H market.
+    # Used below to guard against the model over-claiming extreme underdogs.
+    _h2h_mkt_implied: dict[str, dict[str, float]] = {}
+    for _row in odds_data:
+        if _row.get("page") != "group_specials":
+            continue
+        _mkt = _row.get("market", "")
+        if "Group Stage H2H" not in _mkt:
+            continue
+        _h2h_mkt_implied.setdefault(_mkt, {})[_row["selection"]] = 1.0 / _row["odds"]
+    # Normalise to fair probabilities (remove bookmaker margin)
+    for _mkt, _sides in _h2h_mkt_implied.items():
+        _tot = sum(_sides.values())
+        if _tot > 0:
+            for _sel in _sides:
+                _sides[_sel] /= _tot
+
     for row in odds_data:
         mkt = row.get("market", "")
         if "Group Stage H2H" not in mkt:
@@ -1379,6 +1407,17 @@ def find_value_bets(odds_data: list[dict], mc: dict | None, team_db: dict) -> li
 
         sel = row.get("selection", "")
         t_sel = best_match(sel, model_teams)
+
+        # Bookmaker ratio guard: when the bookmaker's own H2H implied prob for
+        # the selected side is very low (< 5 %), the model's calibration for
+        # extreme mismatches is unreliable and inflates the underdog's chance.
+        # Skip if model_prob > 3× bookmaker-implied — that gap is noise, not edge.
+        _bk_implied = _h2h_mkt_implied.get(mkt, {}).get(row.get("selection", ""), None)
+        if _bk_implied is not None and _bk_implied < 0.05:
+            _model_p = p_a if t_sel == t_a else p_b
+            if _model_p > 3.0 * _bk_implied:
+                continue
+
         if t_sel == t_a:
             check(row["page"], row["match"], mkt, "",
                   f"{t_a} above {t_b} in group", row["odds"], p_a, "Group H2H")
