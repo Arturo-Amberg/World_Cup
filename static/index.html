@@ -1565,6 +1565,23 @@ select option { background:var(--bg-surface); }
    <h1>Resultados más probables</h1>
    <p>El marcador más probable por partido según el modelo Poisson + ML, con las dos alternativas más cercanas.</p>
   </div>
+  <div id="scores-stats" style="display:none;gap:16px;margin-bottom:32px;flex-wrap:wrap">
+   <div class="bets-kpi-card">
+    <div class="vb-kpi-label">Media de goles / partido</div>
+    <div class="vb-kpi-value" id="scores-avg-xg">—</div>
+    <div class="vb-kpi-sub">xG modelo · fase de grupos</div>
+   </div>
+   <div class="bets-kpi-card">
+    <div class="vb-kpi-label">Partidos analizados</div>
+    <div class="vb-kpi-value" id="scores-match-count">—</div>
+    <div class="vb-kpi-sub">72 partidos · 12 grupos</div>
+   </div>
+   <div class="bets-kpi-card">
+    <div class="vb-kpi-label">Rango xG total</div>
+    <div class="vb-kpi-value" style="font-size:18px" id="scores-xg-range">—</div>
+    <div class="vb-kpi-sub">mínimo – máximo por partido</div>
+   </div>
+  </div>
   <div id="scores-loading" class="loading"><div class="spinner"></div> Cargando partidos…</div>
   <div class="groups-grid" id="scores-grid" style="display:none"></div>
  </div>
@@ -1917,6 +1934,22 @@ function renderScores(d) {
  if (grid.dataset.rendered) return; // already built
  grid.dataset.rendered = '1';
 
+ // Compute global stats
+ let totalXg = 0, matchCount = 0, maxXg = 0, minXg = 999;
+ for (const g of Object.values(d)) {
+  for (const m of g.matches) {
+   const t = m.xg_a + m.xg_b;
+   totalXg += t; matchCount++;
+   if (t > maxXg) maxXg = t;
+   if (t < minXg) minXg = t;
+  }
+ }
+ const avgXg = totalXg / matchCount;
+ document.getElementById('scores-avg-xg').textContent   = avgXg.toFixed(2);
+ document.getElementById('scores-match-count').textContent = matchCount;
+ document.getElementById('scores-xg-range').textContent = `${minXg.toFixed(2)} – ${maxXg.toFixed(2)}`;
+ document.getElementById('scores-stats').style.display = 'flex';
+
  grid.innerHTML = order.filter(id => d[id]).map(id => {
   const group = d[id];
   const chips = group.teams.map(t => `<span class="team-chip">${t}</span>`).join('');
@@ -1938,6 +1971,7 @@ function renderScores(d) {
     const pct0 = (s0.prob * 100).toFixed(1) + '%';
     const alt1 = s1 ? `<div class="sm-alt"><span class="sm-alt-score">${s1.score}</span><span class="sm-alt-pct">${(s1.prob*100).toFixed(1)}%</span></div>` : '';
     const alt2 = s2 ? `<div class="sm-alt"><span class="sm-alt-score">${s2.score}</span><span class="sm-alt-pct">${(s2.prob*100).toFixed(1)}%</span></div>` : '';
+    const xgTotal = (m.xg_a + m.xg_b).toFixed(2);
     return `
     <div class="sm-match" onclick="analyzeMatch('${m.team_a}','${m.team_b}')">
      <div class="sm-match-hdr">
@@ -1954,6 +1988,7 @@ function renderScores(d) {
       <span class="sm-score-pct">${pct0}</span>
      </div>
      <div class="sm-alts">${alt1}${alt2}</div>
+     <div style="text-align:center;font-family:var(--font-mono);font-size:10px;color:var(--txt-3);margin-top:2px">xG ${m.xg_a} + ${m.xg_b} = <strong style="color:var(--txt-2)">${xgTotal}</strong></div>
     </div>`;
    }).join('');
    return `
