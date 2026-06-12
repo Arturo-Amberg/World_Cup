@@ -1567,9 +1567,9 @@ select option { background:var(--bg-surface); }
   </div>
   <div id="scores-stats" style="display:none;gap:16px;margin-bottom:32px;flex-wrap:wrap">
    <div class="bets-kpi-card">
-    <div class="vb-kpi-label">Media de goles / partido</div>
+    <div class="vb-kpi-label">xG medio / partido</div>
     <div class="vb-kpi-value" id="scores-avg-xg">—</div>
-    <div class="vb-kpi-sub">xG modelo · fase de grupos</div>
+    <div class="vb-kpi-sub">goles esperados (media) · no el marcador más probable</div>
    </div>
    <div class="bets-kpi-card">
     <div class="vb-kpi-label">Partidos analizados</div>
@@ -1965,13 +1965,16 @@ function renderScores(d) {
   const matchesHtml = byJornada.map((ms, ji) => {
    if (!ms.length) return '';
    const rows = ms.map(m => {
+    // Expected score: round each team's xG to nearest 0.5 for display
+    const expA = Math.round(m.xg_a * 2) / 2;
+    const expB = Math.round(m.xg_b * 2) / 2;
+    const expScore = `${expA.toFixed(1)} – ${expB.toFixed(1)}`;
+    const xgTotal = (m.xg_a + m.xg_b).toFixed(2);
+    // Most probable single scoreline (Poisson mode)
     const s0 = m.top_scores[0] || {score: m.top_score, prob: 0};
     const s1 = m.top_scores[1] || null;
-    const s2 = m.top_scores[2] || null;
-    const pct0 = (s0.prob * 100).toFixed(1) + '%';
     const alt1 = s1 ? `<div class="sm-alt"><span class="sm-alt-score">${s1.score}</span><span class="sm-alt-pct">${(s1.prob*100).toFixed(1)}%</span></div>` : '';
-    const alt2 = s2 ? `<div class="sm-alt"><span class="sm-alt-score">${s2.score}</span><span class="sm-alt-pct">${(s2.prob*100).toFixed(1)}%</span></div>` : '';
-    const xgTotal = (m.xg_a + m.xg_b).toFixed(2);
+    const pct0 = (s0.prob * 100).toFixed(1) + '%';
     return `
     <div class="sm-match" onclick="analyzeMatch('${m.team_a}','${m.team_b}')">
      <div class="sm-match-hdr">
@@ -1984,11 +1987,17 @@ function renderScores(d) {
       <span class="sm-team-b">${m.team_b}</span>
      </div>
      <div class="sm-score-primary">
-      <span class="sm-score-val">${s0.score}</span>
-      <span class="sm-score-pct">${pct0}</span>
+      <span class="sm-score-val">${expScore}</span>
+      <span class="sm-score-pct">xG total: ${xgTotal}</span>
      </div>
-     <div class="sm-alts">${alt1}${alt2}</div>
-     <div style="text-align:center;font-family:var(--font-mono);font-size:10px;color:var(--txt-3);margin-top:2px">xG ${m.xg_a} + ${m.xg_b} = <strong style="color:var(--txt-2)">${xgTotal}</strong></div>
+     <div class="sm-alts">
+      <div class="sm-alt" style="flex:1.2">
+       <span style="font-size:10px;color:var(--txt-3);font-weight:600">más probable</span>
+       <span class="sm-alt-score">${s0.score}</span>
+       <span class="sm-alt-pct">${pct0}</span>
+      </div>
+      ${alt1}
+     </div>
     </div>`;
    }).join('');
    return `
