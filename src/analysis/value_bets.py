@@ -358,8 +358,8 @@ def elo_corrected_lambdas(team_db: dict, team_a: str, team_b: str,
     # Scale to bring raw_ratio up to the implied target.
     # s² = target / raw  →  stronger *= s, weaker /= s
     s = math.sqrt(implied_ratio / raw_ratio)
-    lam_strong_new = max(0.15, min(4.0, lam_strong * s))
-    lam_weak_new   = max(0.15, min(4.0, lam_weak   / s))
+    lam_strong_new = max(0.15, min(3.0, lam_strong * s))
+    lam_weak_new   = max(0.15, min(3.0, lam_weak   / s))
 
     if elo_diff > 0:
         return lam_strong_new, lam_weak_new
@@ -879,6 +879,79 @@ def find_value_bets(odds_data: list[dict], mc: dict | None, team_db: dict) -> li
             check("matches", match_name, "Both Teams to Score", "",
                   "BTTS No", btts_dict["no"], p_btts_no, "BTTS",
                   fair_imp=fair_no)
+
+    # ── 8b. INDIVIDUAL TEAM GOALS O/U ([Home] / [Away] Total Goals) ─────────
+    # Coolbet offers separate O/U lines for each team's own goal count.
+    # We model each team's scoring as an independent Poisson process with
+    # the same λ values already computed for the full-match goals model.
+    # Same Asian push convention as poisson_ou_probs (integer lines = push on exact score).
+
+    def poisson_team_ou(lam: float, line: float):
+        """P(team scores > line) and P(team scores < line), both conditional on non-push."""
+        max_g = 15
+        p_over = 0.0
+        p_under = 0.0
+        for k in range(max_g + 1):
+            p = math.exp(-lam) * lam**k / math.factorial(k)
+            if k > line:
+                p_over += p
+            elif k < line:
+                p_under += p
+        p_nonpush = p_over + p_under
+        if p_nonpush > 0:
+            p_over  /= p_nonpush
+            p_under /= p_nonpush
+        return p_over, p_under
+
+    for side_key, side_label, lam_idx in [
+        ("[Home] Total Goals", "Home Goals", 0),
+        ("[Away] Total Goals", "Away Goals", 1),
+    ]:
+        side_data: dict[str, dict] = {}
+        for row in odds_data:
+            if row["page"] == "match_sidebets" and row.get("market_type") == side_key:
+                try:
+                    line_val = float(str(row.get("line", "")).strip())
+                except (ValueError, TypeError):
+                    continue
+                mn = row["match"]
+                side_data.setdefault(mn, {})[f"{row['selection']}_{line_val}"] = row["odds"]
+
+        for match_name, s_dict in side_data.items():
+            parts = match_name.split(" - ", 1)
+            if len(parts) != 2:
+                continue
+            home_raw, away_raw = parts
+            home_team = best_match(home_raw, model_teams)
+            away_team = best_match(away_raw, model_teams)
+            if not home_team or not away_team:
+                continue
+            if home_team not in team_db or away_team not in team_db:
+                continue
+
+            lams = elo_corrected_lambdas(team_db, home_team, away_team)
+            lam = lams[lam_idx]  # 0 = home lambda, 1 = away lambda
+
+            for line in [0.5, 1.0, 1.5, 2.0, 2.5]:
+                p_over, p_under = poisson_team_ou(lam, line)
+                over_key  = f"Over_{line}"
+                under_key = f"Under_{line}"
+
+                fair_over = fair_under = None
+                if over_key in s_dict and under_key in s_dict:
+                    raw_o = implied(s_dict[over_key])
+                    raw_u = implied(s_dict[under_key])
+                    fair  = remove_margin([raw_o, raw_u])
+                    fair_over, fair_under = fair[0], fair[1]
+
+                if over_key in s_dict:
+                    check("match_sidebets", match_name, side_label, str(line),
+                          f"Over {line}", s_dict[over_key], p_over, side_label,
+                          fair_imp=fair_over)
+                if under_key in s_dict:
+                    check("match_sidebets", match_name, side_label, str(line),
+                          f"Under {line}", s_dict[under_key], p_under, side_label,
+                          fair_imp=fair_under)
 
     # ── 9. GROUP STAGE CORNER TOTALS ─────────────────────────────────────────
     # Coolbet: "Total Corners in the Group" O/U per group (A–L)
