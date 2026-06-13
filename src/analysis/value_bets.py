@@ -358,8 +358,8 @@ def elo_corrected_lambdas(team_db: dict, team_a: str, team_b: str,
     # Scale to bring raw_ratio up to the implied target.
     # s² = target / raw  →  stronger *= s, weaker /= s
     s = math.sqrt(implied_ratio / raw_ratio)
-    lam_strong_new = max(0.15, min(3.0, lam_strong * s))
-    lam_weak_new   = max(0.15, min(3.0, lam_weak   / s))
+    lam_strong_new = max(0.15, min(3.5, lam_strong * s))
+    lam_weak_new   = max(0.15, min(3.5, lam_weak   / s))
 
     if elo_diff > 0:
         return lam_strong_new, lam_weak_new
@@ -996,30 +996,37 @@ def find_value_bets(odds_data: list[dict], mc: dict | None, team_db: dict) -> li
             continue
         grp_teams = groups[grp_ltr]
         valid = [t for t in grp_teams if t in team_db]
-        if len(valid) < 3:
+        if len(valid) < 2:
             continue
 
-        # Only compute group corners when at least half the teams have real stats.
-        # Teams without corners data fall back to WC_AVG_CORNERS (5.0/5.0), making
-        # every group produce exactly 60 expected corners — meaningless noise.
+        # Require at least 2 teams with real corners data (not just WC avg defaults)
         from src.models.stacked_predictor import WC_AVG_CORNERS as _WC_CRN
         n_with_data = sum(
             1 for t in valid
             if team_db[t].get("CORNERS_FOR", _WC_CRN) != _WC_CRN
             or team_db[t].get("CORNERS_AGAINST", _WC_CRN) != _WC_CRN
         )
-        if n_with_data < max(2, len(valid) // 2):
-            continue  # not enough real corners data — skip
+        if n_with_data < 2:
+            continue
+
+        # Build a full 4-team roster: teams in team_db use real stats; missing teams
+        # get a default profile (WC average) so all C(4,2)=6 matchups are counted.
+        _default_team = {"CORNERS_FOR": _WC_CRN, "CORNERS_AGAINST": _WC_CRN,
+                         "GOALS_FOR": 1.4, "GOALS_AGAINST": 1.4,
+                         "SHOTS_FOR": 4.0, "SHOTS_AGAINST": 4.0,
+                         "YELLOWS_FOR": 1.8, "YELLOWS_AGAINST": 1.8,
+                         "INJURIES": 0}
+        team_roster = {t: team_db.get(t, _default_team) for t in grp_teams}
 
         lam_group = 0.0
         n_matches = 0
-        for ta, tb in _itools.combinations(valid, 2):
+        for ta, tb in _itools.combinations(grp_teams, 2):
             try:
-                lam_a, lam_b = corners_model(team_db[ta], team_db[tb])
+                lam_a, lam_b = corners_model(team_roster[ta], team_roster[tb])
                 lam_group += lam_a + lam_b
                 n_matches += 1
             except Exception:
-                lam_group += 9.0
+                lam_group += 9.07   # WC historical average per match
                 n_matches += 1
 
         if n_matches == 0:
@@ -1448,14 +1455,19 @@ def find_value_bets(odds_data: list[dict], mc: dict | None, team_db: dict) -> li
         _gsc_under_odds, _           = _gsc_sides["Under"]
 
         _lam_grpstage_corners = 0.0
+        _default_team2 = {"CORNERS_FOR": _WC_CRN, "CORNERS_AGAINST": _WC_CRN,
+                          "GOALS_FOR": 1.4, "GOALS_AGAINST": 1.4,
+                          "SHOTS_FOR": 4.0, "SHOTS_AGAINST": 4.0,
+                          "YELLOWS_FOR": 1.8, "YELLOWS_AGAINST": 1.8,
+                          "INJURIES": 0}
         for _grp_ltr2, _grp_teams2 in groups.items():
-            _valid2 = [t for t in _grp_teams2 if t in team_db]
-            for _ta2, _tb2 in _itools.combinations(_valid2, 2):
+            _roster2 = {t: team_db.get(t, _default_team2) for t in _grp_teams2}
+            for _ta2, _tb2 in _itools.combinations(_grp_teams2, 2):
                 try:
-                    _lca, _lcb = corners_model(team_db[_ta2], team_db[_tb2])
+                    _lca, _lcb = corners_model(_roster2[_ta2], _roster2[_tb2])
                     _lam_grpstage_corners += _lca + _lcb
                 except Exception:
-                    _lam_grpstage_corners += 9.3  # WC avg fallback
+                    _lam_grpstage_corners += 9.07  # WC historical avg fallback
 
         _k_gsc = int(_gsc_line)
         _p_gsc_over  = 1.0 - _poisson_cdf_large(_k_gsc, _lam_grpstage_corners)

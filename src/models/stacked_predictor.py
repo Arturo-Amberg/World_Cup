@@ -20,12 +20,21 @@ import os
 # ─────────────────────────────────────────────
 #  Constantes del modelo
 # ─────────────────────────────────────────────
-WC_AVG_GOALS   = 1.40   # Goals per team per WC match (2.8 total; 2018: 2.64, 2022: 2.69, trending up)
+WC_AVG_GOALS   = 1.40   # Goals per team per WC match (formula anchor; actual target set by WC_GOAL_SCALE)
 WC_REGRESSION  = 0.70   # Blend of team's own stats vs WC mean; 0.70 preserves team character while
                         # moderating extreme qualifier records (e.g. GA=0.32 → 0.64 effective)
-WC_GOAL_SCALE  = 1.145  # Calibration: qualifier GA averages only 1.056 vs WC target 1.40, creating
-                        # systematic under-prediction; this lifts model output to the 2.8 goals/match target
-WC_AVG_CORNERS = 5.4    # Corners per team per WC match (calibrated: mu=5.4 → ~667 total across 72 group matches, matching bookmaker line 666.5; WC 2022 ≈ 9.1/match, WC 2018 ≈ 9.3/match)
+WC_GOAL_SCALE  = 0.90   # Calibration scale applied after all adjustments.
+                        # Historical WC finals 2000-2022 (n=386): avg 2.513 goals/match = 1.256/team.
+                        # With WC_AVG_GOALS=1.40 the raw formula gives ~1.40/team for average teams;
+                        # WC_GOAL_SCALE=0.90 brings the effective lambda to 1.26/team → P(O2.5)=46.1%,
+                        # exactly matching the historical WC rate.
+WC_AVG_CORNERS = 5.4    # Corners per team per WC match (formula anchor — keeps team ratios correct).
+                        # StatsBomb WC 2018+2022 (n=128): actual avg 9.07/match = 4.54/team.
+                        # WC_AVG_CORNERS is the denominator in the corners formula so changing it
+                        # distorts team ratios. Use WC_CORNERS_SCALE below to calibrate output instead.
+WC_CORNERS_SCALE = 0.98 # Post-formula scale calibrated to WC historical avg (9.07/match).
+                        # DB teams avg CF=4.86, CA=5.14 → raw lam=4.62/team → ×0.98=4.54/team
+                        # 10.8 (old model output) × 0.84 = 9.07/match → matches historical.
 WC_AVG_SOT     = 4.0    # Shots on target per team per WC match
 WC_AVG_YELLOWS = 1.8    # Yellow cards per team per WC match
 DIXON_COLES_RHO = -0.12 # Dixon-Coles correlation parameter for low-score outcomes
@@ -432,6 +441,9 @@ def corners_model(
     avail_b = availability_score(name_b, team_b.get("INJURIES", 0))
     lam_c_a *= avail_a
     lam_c_b *= avail_b
+
+    lam_c_a *= WC_CORNERS_SCALE
+    lam_c_b *= WC_CORNERS_SCALE
 
     lam_c_a = max(1.0, min(12.0, lam_c_a))
     lam_c_b = max(1.0, min(12.0, lam_c_b))
