@@ -102,7 +102,7 @@
 
  --red: #ff3b30;
  --red-dim: rgba(255,59,48,0.1);
- --gold: #c79a00;
+ --gold: #7a5c00;
  --gold-bg: #ffcc00;
  --gold-dim: rgba(255,204,0,0.12);
 
@@ -499,7 +499,7 @@ select option { background:var(--bg-surface); }
  gap:24px; margin-bottom:12px;
 }
 .score-num {
- font-size:clamp(52px, 8vw, 84px); font-weight:800;
+ font-size:72px; font-weight:800;
  line-height:1; letter-spacing:-0.05em;
 }
 .score-num.a { color:var(--txt); }
@@ -611,7 +611,7 @@ select option { background:var(--bg-surface); }
  background:var(--bg-raised); border:1px solid var(--border);
  border-radius:var(--r-lg); padding:16px;
  display:flex; align-items:center; justify-content:space-between;
- transition:all 0.15s;
+ transition:border-color 0.15s, box-shadow 0.15s;
 }
 .player-card:hover { border-color:var(--border-hi); }
 .player-name { font-size:14px; font-weight:700; margin-bottom:2px; color:var(--txt); }
@@ -792,6 +792,51 @@ select option { background:var(--bg-surface); }
 /* ── Divider ── */
 .divider { border:none; border-top:1px solid var(--border); margin:32px 0; }
 
+/* ── Button resets for semantic nav/shortcuts elements ── */
+button.page-tab {
+ appearance: none; -webkit-appearance: none;
+ border: none; font: inherit; cursor: pointer;
+}
+button.hdr-pill-btn {
+ appearance: none; -webkit-appearance: none;
+ background: var(--bg-raised); border: 1px solid var(--border);
+ font-family: var(--font-mono); font-size: 13px; font-weight: 600;
+ color: var(--txt-2); padding: 2px 8px; border-radius: var(--r-md);
+ cursor: pointer; line-height: 1.6;
+ transition: background 0.12s, color 0.12s;
+}
+button.hdr-pill-btn:hover { background: var(--border); color: var(--txt); }
+button.hdr-pill-btn:focus-visible { box-shadow: 0 0 0 2px var(--accent); outline: none; }
+
+/* ── Advanced filters disclosure ── */
+.vb-adv-row {
+ display: flex; gap: 12px; align-items: center; flex-wrap: wrap;
+ padding: 12px 16px; margin-top: 8px;
+ background: var(--bg-raised); border-radius: var(--r-md);
+ border: 1px solid var(--border);
+}
+.vb-adv-toggle {
+ appearance: none; -webkit-appearance: none; border: none;
+ background: none; font: inherit; cursor: pointer;
+ font-size: 12px; font-weight: 600; color: var(--txt-3);
+ padding: 6px 10px; border-radius: var(--r-md);
+ border: 1px solid var(--border); background: var(--bg-card);
+ transition: color 0.12s, border-color 0.12s;
+ white-space: nowrap;
+}
+.vb-adv-toggle:hover { color: var(--txt-2); border-color: var(--border-hi); }
+.vb-adv-toggle.active { color: var(--accent); border-color: var(--accent); }
+.vb-adv-toggle:focus-visible { box-shadow: 0 0 0 2px var(--accent); outline: none; }
+.vb-clear-btn {
+ appearance: none; -webkit-appearance: none; border: none;
+ background: none; font: inherit; cursor: pointer;
+ font-size: 12px; font-weight: 600; color: var(--accent);
+ padding: 6px 10px; border-radius: var(--r-md);
+ transition: background 0.12s;
+ margin-left: auto;
+}
+.vb-clear-btn:hover { background: var(--accent-dim); }
+
 /* ── Reset prediction ── */
 .reset-btn {
  display:none; background:none; border:none; cursor:pointer;
@@ -815,7 +860,7 @@ select option { background:var(--bg-surface); }
  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
 }
 .vb-kpi-label {
- font-size: 10px;
+ font-size: 11px;
  font-weight: 700;
  letter-spacing: .02em;
  color: var(--txt-3);
@@ -946,9 +991,9 @@ select option { background:var(--bg-surface); }
  display: inline-block;
  padding: 2px 7px;
  border-radius: 4px;
- font-size: 9px;
+ font-size: 11px;
  font-weight: 700;
- letter-spacing: .06em;
+ letter-spacing: .04em;
  text-transform: uppercase;
  white-space: nowrap;
 }
@@ -968,7 +1013,7 @@ select option { background:var(--bg-surface); }
 .vb-prob-bar-cell { min-width: 120px; }
 .vb-prob-bars { display: flex; flex-direction: column; gap: 3px; }
 .vb-prob-row { display: flex; align-items: center; gap: 6px; font-size: 10px; }
-.vb-prob-row-label { width: 38px; color: var(--txt-3); font-size: 9px; letter-spacing:.03em; text-align: right; }
+.vb-prob-row-label { width: 38px; color: var(--txt-3); font-size: 11px; letter-spacing:.02em; text-align: right; }
 .vb-bar-track { flex: 1; height: 7px; background: rgba(0,0,0,.07); border-radius: 3px; overflow: hidden; }
 .vb-bar-fill { height: 100%; border-radius: 3px; }
 .vb-bar-fill.model { background: var(--lime); }
@@ -1327,7 +1372,7 @@ select option { background:var(--bg-surface); }
   <div class="shortcut-row"><span class="shortcut-desc">Inicio</span><kbd class="shortcut-key">1</kbd></div>
   <div class="shortcut-row"><span class="shortcut-desc">Predictor</span><kbd class="shortcut-key">2</kbd></div>
   <div class="shortcut-row"><span class="shortcut-desc">Apuestas</span><kbd class="shortcut-key">3</kbd></div>
-  <div class="shortcut-row"><span class="shortcut-desc">Modelo</span><kbd class="shortcut-key">4</kbd></div>
+  <div class="shortcut-row"><span class="shortcut-desc">Marcadores</span><kbd class="shortcut-key">4</kbd></div>
   <div class="shortcut-row"><span class="shortcut-desc">Cuadro</span><kbd class="shortcut-key">5</kbd></div>
   <div class="shortcut-row"><span class="shortcut-desc">Analizar partido seleccionado</span><kbd class="shortcut-key">Enter</kbd></div>
   <div class="shortcut-row"><span class="shortcut-desc">Abrir este panel</span><kbd class="shortcut-key">?</kbd></div>
@@ -1345,17 +1390,17 @@ select option { background:var(--bg-surface); }
  <div class="hdr-pills">
   <div class="hdr-pill" title="ELO + Poisson + ML, ponderados">modelo v3.2</div>
   <div class="hdr-pill" title="Monte Carlo sobre 100.000 torneos simulados">100k sims</div>
-  <div class="hdr-pill" style="cursor:pointer;font-size:13px;padding:2px 8px" onclick="document.getElementById('shortcuts-overlay').classList.add('show')" title="Atajos de teclado">?</div>
+  <button class="hdr-pill-btn" type="button" onclick="document.getElementById('shortcuts-overlay').classList.add('show')" aria-label="Atajos de teclado" title="Atajos de teclado">?</button>
  </div>
 </header>
 
 <!-- ── Nav ── -->
-<nav class="page-nav">
- <div class="page-tab active" onclick="showPage('overview')">Inicio</div>
- <div class="page-tab" onclick="showPage('predictor')">Predictor</div>
- <div class="page-tab" onclick="showPage('valuebets')">Apuestas</div>
- <div class="page-tab" onclick="showPage('scores')">Marcadores</div>
- <div class="page-tab" onclick="showPage('bracket')">Cuadro</div>
+<nav class="page-nav" role="tablist" aria-label="Secciones">
+ <button class="page-tab active" type="button" role="tab" aria-selected="true"  aria-controls="page-overview"   onclick="showPage('overview')">Inicio</button>
+ <button class="page-tab"        type="button" role="tab" aria-selected="false" aria-controls="page-predictor"  onclick="showPage('predictor')">Predictor</button>
+ <button class="page-tab"        type="button" role="tab" aria-selected="false" aria-controls="page-valuebets"  onclick="showPage('valuebets')">Apuestas</button>
+ <button class="page-tab"        type="button" role="tab" aria-selected="false" aria-controls="page-scores"     onclick="showPage('scores')">Marcadores</button>
+ <button class="page-tab"        type="button" role="tab" aria-selected="false" aria-controls="page-bracket"    onclick="showPage('bracket')">Cuadro</button>
 </nav>
 
 <!-- ══ OVERVIEW ══ -->
@@ -1508,53 +1553,59 @@ select option { background:var(--bg-surface); }
  <div id="vb-content" style="display:none">
  <div class="vb-kpis" id="vb-kpis"></div>
  <div class="vb-controls">
- <div class="vb-cat-tabs" id="vb-cat-tabs">
- <div class="vb-cat-tab active" data-cat="All">Todo</div>
- </div>
- <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:10px">
- <input class="vb-search" id="vb-search" placeholder="Buscar equipo, mercado…" type="text" autocomplete="off" style="flex:1;min-width:160px">
- <span class="vb-sort-label">Grupo</span>
- <select class="vb-sort-select" id="vb-group-filter" onchange="vbRender()">
- <option value="all">Todos</option>
- <option>A</option><option>B</option><option>C</option><option>D</option>
- <option>E</option><option>F</option><option>G</option><option>H</option>
- <option>I</option><option>J</option><option>K</option><option>L</option>
- </select>
- <span class="vb-sort-label">Ordenar</span>
- <select class="vb-sort-select" id="vb-sort" onchange="vbSetSort(this.value)">
- <option value="kelly">Kelly %</option>
- <option value="ev">Valor esperado</option>
- <option value="edge">Ventaja %</option>
- <option value="odds">Cuota (mayor→menor)</option>
- <option value="model">Prob. modelo</option>
- </select>
- <span class="vb-sort-label">Kelly mín.</span>
- <select class="vb-sort-select" id="vb-min-kelly" onchange="vbRender()">
- <option value="0">Cualquiera</option>
- <option value="0.05">5%+</option>
- <option value="0.10">10%+</option>
- <option value="0.15">15%+</option>
- <option value="0.20">20%+</option>
- </select>
- <span class="vb-sort-label">Prob. mín.</span>
- <select class="vb-sort-select" id="vb-min-prob" onchange="vbRender()">
- <option value="0">Cualquiera</option>
- <option value="0.10">10%+</option>
- <option value="0.20">20%+</option>
- <option value="0.30">30%+</option>
- <option value="0.40">40%+</option>
- <option value="0.50">50%+</option>
- </select>
- <span class="vb-sort-label">VE máx.</span>
- <select class="vb-sort-select" id="vb-max-ev" onchange="vbRender()">
- <option value="999">Sin límite</option>
- <option value="2.0">≤200%</option>
- <option value="1.5">≤150%</option>
- <option value="1.0">≤100%</option>
- <option value="0.5">≤50%</option>
- </select>
- <span class="vb-count" id="vb-count"></span>
- </div>
+  <!-- Primary bar: category tabs + search + sort + advanced toggle -->
+  <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+   <div class="vb-cat-tabs" id="vb-cat-tabs">
+    <div class="vb-cat-tab active" data-cat="All">Todo</div>
+   </div>
+   <input class="vb-search" id="vb-search" placeholder="Buscar equipo, mercado…" type="text" autocomplete="off">
+   <span class="vb-sort-label">Ordenar</span>
+   <select class="vb-sort-select" id="vb-sort" onchange="vbSetSort(this.value)">
+    <option value="kelly">Kelly %</option>
+    <option value="ev">Valor esperado</option>
+    <option value="edge">Ventaja %</option>
+    <option value="odds">Cuota (mayor→menor)</option>
+    <option value="model">Prob. modelo</option>
+   </select>
+   <button class="vb-adv-toggle" id="vb-adv-toggle" type="button" onclick="vbToggleAdv()">Filtros ▾</button>
+   <span class="vb-count" id="vb-count"></span>
+  </div>
+  <!-- Advanced filters (collapsed by default) -->
+  <div class="vb-adv-row" id="vb-adv-row" style="display:none">
+   <span class="vb-sort-label">Grupo</span>
+   <select class="vb-sort-select" id="vb-group-filter" onchange="vbRender()">
+    <option value="all">Todos</option>
+    <option>A</option><option>B</option><option>C</option><option>D</option>
+    <option>E</option><option>F</option><option>G</option><option>H</option>
+    <option>I</option><option>J</option><option>K</option><option>L</option>
+   </select>
+   <span class="vb-sort-label">Kelly mín.</span>
+   <select class="vb-sort-select" id="vb-min-kelly" onchange="vbRender()">
+    <option value="0">Cualquiera</option>
+    <option value="0.05">5%+</option>
+    <option value="0.10">10%+</option>
+    <option value="0.15">15%+</option>
+    <option value="0.20">20%+</option>
+   </select>
+   <span class="vb-sort-label">Prob. mín.</span>
+   <select class="vb-sort-select" id="vb-min-prob" onchange="vbRender()">
+    <option value="0">Cualquiera</option>
+    <option value="0.10">10%+</option>
+    <option value="0.20">20%+</option>
+    <option value="0.30">30%+</option>
+    <option value="0.40">40%+</option>
+    <option value="0.50">50%+</option>
+   </select>
+   <span class="vb-sort-label">VE máx.</span>
+   <select class="vb-sort-select" id="vb-max-ev" onchange="vbRender()">
+    <option value="999">Sin límite</option>
+    <option value="2.0">≤200%</option>
+    <option value="1.5">≤150%</option>
+    <option value="1.0">≤100%</option>
+    <option value="0.5">≤50%</option>
+   </select>
+   <button class="vb-clear-btn" type="button" onclick="vbClearAdv()" title="Restablecer filtros avanzados">Limpiar</button>
+  </div>
  </div>
  <div class="vb-table-wrap">
  <table class="vb-table">
@@ -1695,7 +1746,11 @@ let betsLoaded = false, edgesLoaded = false, validationLoaded = false, valueBets
 
 function showPage(n) {
  const pages = ['overview','predictor','valuebets','scores','bracket'];
- document.querySelectorAll('.page-tab').forEach((t,i) => t.classList.toggle('active', pages[i] === n));
+ document.querySelectorAll('.page-tab').forEach((t,i) => {
+   const active = pages[i] === n;
+   t.classList.toggle('active', active);
+   t.setAttribute('aria-selected', active ? 'true' : 'false');
+ });
  document.querySelectorAll('.page-section').forEach(s => s.classList.toggle('active', s.id === 'page-' + n));
  if (n === 'valuebets') {
   if (!valueBetsLoaded) loadValueBets();
@@ -1911,15 +1966,15 @@ function renderGroups(d) {
  <span class="gm-vs">VS</span>
  <span class="gm-team-b">${m.team_b}</span>
  </div>
- <div class="prob-bar-wrap" style="margin-bottom:8px">
+ <div class="prob-bar-wrap" style="margin-bottom:8px" role="img" aria-label="Probabilidades: ${m.team_a} ${pa}%, empate ${pd}%, ${m.team_b} ${pb}%">
  <div class="pb-a" style="width:${m.p_win_a*100}%"></div>
  <div class="pb-draw" style="width:${m.p_draw*100}%"></div>
  <div class="pb-b" style="width:${m.p_win_b*100}%"></div>
  </div>
  <div class="gm-probs">
- <span class="gm-prob-a">${pa}%</span>
- <span class="gm-prob-draw">${pd}% D</span>
- <span class="gm-prob-b">${pb}%</span>
+ <span class="gm-prob-a"><span style="font-size:10px;font-weight:600;opacity:0.7">V</span> ${pa}%</span>
+ <span class="gm-prob-draw">${pd}% <span style="font-size:10px;font-weight:600;opacity:0.7">D</span></span>
+ <span class="gm-prob-b">${pb}% <span style="font-size:10px;font-weight:600;opacity:0.7">V</span></span>
  </div>
  <div class="gm-meta">
  <span class="gm-xg">xG ${m.xg_a} — ${m.xg_b}</span>
@@ -2540,6 +2595,27 @@ function vbSetSort(key) {
  }
  }
  document.getElementById('vb-sort').value = _vbSort;
+ vbRender();
+}
+
+function vbToggleAdv() {
+ const row = document.getElementById('vb-adv-row');
+ const btn = document.getElementById('vb-adv-toggle');
+ const open = row.style.display === 'none';
+ row.style.display = open ? 'flex' : 'none';
+ btn.textContent = open ? 'Filtros ▴' : 'Filtros ▾';
+ btn.classList.toggle('active', open);
+}
+
+function vbClearAdv() {
+ const g = document.getElementById('vb-group-filter');
+ const k = document.getElementById('vb-min-kelly');
+ const p = document.getElementById('vb-min-prob');
+ const e = document.getElementById('vb-max-ev');
+ if (g) g.value = 'all';
+ if (k) k.value = '0';
+ if (p) p.value = '0';
+ if (e) e.value = '999';
  vbRender();
 }
 
