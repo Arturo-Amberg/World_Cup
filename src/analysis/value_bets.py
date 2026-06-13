@@ -624,11 +624,19 @@ def find_value_bets(odds_data: list[dict], mc: dict | None, team_db: dict) -> li
     def poisson_ou_probs(home_lam, away_lam, line):
         """P(over line) and P(under line) for total goals.
         Uses Dixon-Coles τ correction for low-score outcomes (consistent with match model).
+
+        Over/Under semantics follow standard sportsbook convention:
+          Over line  → total > line  (e.g. Over 1.0 requires ≥2 goals)
+          Under line → total < line  (e.g. Under 1.0 requires 0 goals)
+        For half-integer lines (0.5, 1.5 …) this matches 1-p_over exactly.
+        For integer lines (1.0, 2.0 …) p_over + p_under < 1 (the push case
+        is excluded from both sides, as in a standard binary market).
         """
         from src.models.stacked_predictor import DIXON_COLES_RHO
         rho = DIXON_COLES_RHO
         max_g = 15
-        p_over = 0.0
+        p_over  = 0.0
+        p_under = 0.0
         p_total = 0.0
         for h in range(max_g + 1):
             ph = math.exp(-home_lam) * home_lam**h / math.factorial(h)
@@ -654,10 +662,28 @@ def find_value_bets(odds_data: list[dict], mc: dict | None, team_db: dict) -> li
                 total = h + a
                 if total > line:
                     p_over += p
-        # Renormalize (τ adjustments may shift total slightly from 1.0)
+                elif total < line:
+                    p_under += p
+                # total == line → push/refund (Asian line convention).
+                # Push probability is excluded from both sides; we will normalize later.
+
+        # Step 1: renormalize for τ (small correction from Dixon-Coles)
         if p_total > 0:
-            p_over /= p_total
-        return p_over, 1.0 - p_over
+            p_over  /= p_total
+            p_under /= p_total
+
+        # Step 2: conditional normalization to exclude the push probability.
+        # For half-integer lines P(push) = 0 and this is a no-op.
+        # For integer lines (1.0, 2.0 …) Coolbet uses Asian convention:
+        #   - Over wins if total > line, push (refund) if total == line, lose if total < line
+        # The book's implied probability is therefore the conditional probability given
+        # a non-push outcome, so our model must match that conditional.
+        p_nonpush = p_over + p_under
+        if p_nonpush > 0:
+            p_over  /= p_nonpush
+            p_under /= p_nonpush
+
+        return p_over, p_under
 
     for match_name, ou_dict in match_ou.items():
         parts = match_name.split(" - ", 1)
