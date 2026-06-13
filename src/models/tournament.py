@@ -388,44 +388,38 @@ def sim_match(
     lam_a = max(0.15, lam_a)
     lam_b = max(0.15, lam_b)
 
-    # Sample goals from Poisson and let the scoreline determine the outcome.
-    # This keeps scores consistent with the Poisson lambdas (no truncation bias).
-    # The stacked model probabilities are used as a light correction via
-    # rejection sampling: if outcome disagrees with stacked model, accept with
-    # probability proportional to stacked/poisson ratio (capped for stability).
-    from src.models.stacked_predictor import _poisson_3way
-    poi_pa, poi_pd, poi_pb = _poisson_3way(lam_a, lam_b)
-
-    # Sample until we get a valid scoreline (max 5 attempts, then accept as-is)
-    for _attempt in range(5):
-        gf_a = _sample_poisson(lam_a)
-        gf_b = _sample_poisson(lam_b)
-
-        if gf_a > gf_b:
-            poi_p = poi_pa
-            stack_p = pred["p_win_a"]
-        elif gf_a == gf_b:
-            poi_p = poi_pd
-            stack_p = pred["p_draw"]
+    # Determine the match outcome (win/draw/loss) from stacked model probabilities,
+    # then sample Poisson goal counts consistent with that outcome.
+    # This ensures the winner probabilities match the (ELO-corrected) stacked model,
+    # while keeping goal counts realistic for GD tiebreakers.
+    _r = random.random()
+    if _r < pred["p_win_a"]:
+        # A wins: sample until gf_a > gf_b
+        for _ in range(20):
+            gf_a = _sample_poisson(lam_a)
+            gf_b = _sample_poisson(lam_b)
+            if gf_a > gf_b:
+                break
         else:
-            poi_p = poi_pb
-            stack_p = pred["p_win_b"]
-
-        # Accept with probability proportional to stacked/poisson ratio
-        # (capped at 2.0 to prevent extreme rejection rates)
-        if poi_p > 0:
-            accept_ratio = min(2.0, stack_p / poi_p)
-        else:
-            accept_ratio = 1.0
-        if random.random() < accept_ratio:
-            break
-
-    if gf_a > gf_b:
+            gf_a = max(1, _sample_poisson(lam_a))
+            gf_b = max(0, gf_a - 1 - _sample_poisson(max(0.01, lam_b - lam_a)))
         winner = team_a["name"]
-    elif gf_b > gf_a:
-        winner = team_b["name"]
+    elif _r < pred["p_win_a"] + pred["p_draw"]:
+        # Draw: sample equal scores
+        gf_a = _sample_poisson(lam_a)
+        gf_b = gf_a
+        winner = None
     else:
-        winner = None  # Empate
+        # B wins: sample until gf_b > gf_a
+        for _ in range(20):
+            gf_a = _sample_poisson(lam_a)
+            gf_b = _sample_poisson(lam_b)
+            if gf_b > gf_a:
+                break
+        else:
+            gf_b = max(1, _sample_poisson(lam_b))
+            gf_a = max(0, gf_b - 1 - _sample_poisson(max(0.01, lam_a - lam_b)))
+        winner = team_b["name"]
 
     went_to_et = False
     went_to_pens = False

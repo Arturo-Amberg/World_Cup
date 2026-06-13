@@ -25,7 +25,7 @@ WC_REGRESSION  = 0.70   # Blend of team's own stats vs WC mean; 0.70 preserves t
                         # moderating extreme qualifier records (e.g. GA=0.32 → 0.64 effective)
 WC_GOAL_SCALE  = 1.145  # Calibration: qualifier GA averages only 1.056 vs WC target 1.40, creating
                         # systematic under-prediction; this lifts model output to the 2.8 goals/match target
-WC_AVG_CORNERS = 5.0    # Corners per team per WC match
+WC_AVG_CORNERS = 5.4    # Corners per team per WC match (calibrated: mu=5.4 → ~667 total across 72 group matches, matching bookmaker line 666.5; WC 2022 ≈ 9.1/match, WC 2018 ≈ 9.3/match)
 WC_AVG_SOT     = 4.0    # Shots on target per team per WC match
 WC_AVG_YELLOWS = 1.8    # Yellow cards per team per WC match
 DIXON_COLES_RHO = -0.12 # Dixon-Coles correlation parameter for low-score outcomes
@@ -293,11 +293,20 @@ def _compute_lambdas(
 
     # Regress toward the WC mean so extreme qualifier records (e.g. GA=0.32 for Ecuador)
     # don't dominate — at the WC every team faces quality opposition.
-    r = WC_REGRESSION
-    gf_a = r * gf_a_raw + (1 - r) * mu
-    ga_a = r * ga_a_raw + (1 - r) * mu
-    gf_b = r * gf_b_raw + (1 - r) * mu
-    ga_b = r * ga_b_raw + (1 - r) * mu
+    # SOS-adjusted regression: teams that played weak opponents get MORE regression.
+    # SOS_RATIO = avg_opponent_ELO / ~1749. A team with SOS=0.94 played opponents
+    # ~6% below WC average, so inflate their regression rate accordingly.
+    sos_a = team_a.get("SOS_RATIO", 1.0)
+    sos_b = team_b.get("SOS_RATIO", 1.0)
+    sos_penalty_a = max(0.0, (1.0 - sos_a) * 3.0)   # e.g. SOS=0.94 → +0.18 extra regression
+    sos_penalty_b = max(0.0, (1.0 - sos_b) * 3.0)
+    r_a = min(0.93, WC_REGRESSION + sos_penalty_a)
+    r_b = min(0.93, WC_REGRESSION + sos_penalty_b)
+
+    gf_a = r_a * gf_a_raw + (1 - r_a) * mu
+    ga_a = r_a * ga_a_raw + (1 - r_a) * mu
+    gf_b = r_b * gf_b_raw + (1 - r_b) * mu
+    ga_b = r_b * ga_b_raw + (1 - r_b) * mu
 
     lam_a = (gf_a / mu) * (ga_b / mu) * mu
     lam_b = (gf_b / mu) * (ga_a / mu) * mu
@@ -712,7 +721,7 @@ def apply_elo_correction(
         p_weaker   = pred["p_win_b"] if a_is_stronger else pred["p_win_a"]
         if p_weaker > p_stronger:
             inversion = p_weaker - p_stronger
-            blend = min(0.85, 0.50 + (elo_diff - 3) / 300 + inversion)
+            blend = min(0.90, 0.50 + (elo_diff - 3) / 300 + inversion)
             # When the ML inverts who the favourite is, the Poisson is also likely
             # miscalibrated. Use pure ELO as the correction target.
             p_h = lerp(pred["p_win_a"], elo["win_a"], blend)
@@ -721,9 +730,9 @@ def apply_elo_correction(
             return {"p_win_a": p_h, "p_draw": max(0.05, p_d), "p_win_b": p_a}
 
     # Case 1: ELO gap correction (non-inverted) — blend toward ELO+Poisson.
-    # Threshold 80: even medium gaps (diff=120) get a meaningful correction.
-    if elo_diff > 80:
-        blend = min(0.85, (elo_diff - 80) / 60)
+    # Threshold 75: catches cases like Algeria vs Jordan (Δ≈80) and similar.
+    if elo_diff >= 75:
+        blend = min(0.90, (elo_diff - 75) / 55)
         p_h = lerp(pred["p_win_a"], target_h, blend)
         p_a = lerp(pred["p_win_b"], target_a, blend)
         p_d = 1.0 - p_h - p_a

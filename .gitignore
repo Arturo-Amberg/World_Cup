@@ -30,6 +30,21 @@ data/models/*.pkl
 data/mc_results.json
 catboost_info/
 
+# Logs
+app.log
+data/*.log
+data/refresh_daily.log
+
+# Timestamped Coolbet scrape dumps (keep only latest.* and value_bets.json)
+data/coolbet/coolbet_odds_*.json
+data/coolbet/coolbet_odds_*.csv
+data/coolbet/model_value_bets.csv
+data/coolbet/tactical_predictions.csv
+
+# Scratch / temp
+results_*.txt
+downloaded_files/
+
 # Environments
 .env
 .venv

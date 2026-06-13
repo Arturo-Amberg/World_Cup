@@ -96,6 +96,7 @@ def run_monte_carlo(n: int) -> dict:
     qual      = defaultdict(int)   # qualified from group stage
     grp_win   = defaultdict(int)   # group winner
     grp_2nd   = defaultdict(int)   # group second
+    grp_above = defaultdict(int)   # (a, b) → times a finished above b in same group
 
     t0 = time.time()
     print(f"\nRunning {n:,} Monte Carlo simulations...")
@@ -112,6 +113,10 @@ def run_monte_carlo(n: int) -> dict:
         for grp, ranking in r["group_results"].items():
             if len(ranking) >= 1: grp_win[ranking[0]] += 1
             if len(ranking) >= 2: grp_2nd[ranking[1]] += 1
+            # Track pairwise A>B finishes for Group H2H
+            for pos_i, team_i in enumerate(ranking):
+                for team_j in ranking[pos_i + 1:]:
+                    grp_above[(team_i, team_j)] += 1
             # Top 2 always qualify
             if len(ranking) >= 1: qual[ranking[0]] += 1
             if len(ranking) >= 2: qual[ranking[1]] += 1
@@ -156,6 +161,7 @@ def run_monte_carlo(n: int) -> dict:
         "grp_win":  {t: c / n for t, c in grp_win.items()},
         "grp_2nd":  {t: c / n for t, c in grp_2nd.items()},
         "qual":     {t: c / n for t, c in qual.items()},
+        "grp_above": {k: c / n for k, c in grp_above.items()},
     }
 
 # ── match-level probabilities ─────────────────────────────────────────────────
@@ -224,7 +230,7 @@ def blended_match_prob(team_db: dict, team_a: str, team_b: str,
         p_weaker   = pred["p_win_b"] if a_is_stronger else pred["p_win_a"]
         if p_weaker > p_stronger:
             inversion = p_weaker - p_stronger
-            blend = min(0.85, 0.50 + (elo_diff - 3) / 300 + inversion)
+            blend = min(0.90, 0.50 + (elo_diff - 3) / 300 + inversion)
             # When the ML inverts who the favourite is, the Poisson is also likely
             # miscalibrated (both are skewed by weak-opponent stats). Use pure ELO
             # as the correction target for inverted predictions.
@@ -245,11 +251,9 @@ def blended_match_prob(team_db: dict, team_a: str, team_b: str,
         return {"p_win_a": p_h, "p_draw": max(0.05, p_d), "p_win_b": p_a}
 
     # Case 1b: ELO gap correction (non-inverted) — blend toward ELO+Poisson.
-    # The ML (80% weight) overclaims teams whose stats come from weak competitions.
-    # Threshold lowered to 80 so medium gaps (Belgium-Iran at 121, Austria-Jordan at 150)
-    # get corrected. Blend formula is aggressive so even a 120-diff gap gets ~68% correction.
-    if elo_diff > 80:
-        blend = min(0.85, (elo_diff - 80) / 60)
+    # Threshold 75 matches apply_elo_correction in stacked_predictor.py.
+    if elo_diff >= 75:
+        blend = min(0.90, (elo_diff - 75) / 55)
         p_h = lerp(pred["p_win_a"], target_h, blend)
         p_a = lerp(pred["p_win_b"], target_a, blend)
         p_d = 1.0 - p_h - p_a
@@ -462,10 +466,10 @@ def find_value_bets(odds_data: list[dict], mc: dict | None, team_db: dict) -> li
         imp = fair_imp if fair_imp is not None else raw_imp
         # Weak-team inflation guard (all categories): the ML model is known to
         # overestimate win probabilities for weak teams vs strong opposition.
-        # When the bookmaker prices an outcome below 8% AND the model claims
-        # more than 3× the bookmaker's fair probability, the edge is almost
+        # When the bookmaker prices an outcome below 14% AND the model claims
+        # more than 2.5× the bookmaker's fair probability, the edge is almost
         # certainly a calibration artifact rather than genuine mispricing.
-        if imp < 0.08 and model_prob > 3.0 * imp:
+        if imp < 0.14 and model_prob > 2.5 * imp:
             return
         edge = model_prob - imp
         exp_val = ev(model_prob, odds_val)
@@ -696,7 +700,7 @@ def find_value_bets(odds_data: list[dict], mc: dict | None, team_db: dict) -> li
 
     match_corners: dict[str, dict] = {}
     for row in odds_data:
-        if row["page"] == "matches" and "Corner" in row.get("market", ""):
+        if row["page"] == "match_sidebets" and row.get("market_type") == "Total Corners":
             line_str = str(row.get("line", "")).strip()
             try:
                 line_val = float(line_str)
@@ -755,9 +759,7 @@ def find_value_bets(odds_data: list[dict], mc: dict | None, team_db: dict) -> li
 
     match_cards: dict[str, dict] = {}
     for row in odds_data:
-        if row["page"] == "matches" and any(
-            kw in row.get("market", "") for kw in ("Yellow Card", "Booking", "Cards")
-        ):
+        if row["page"] == "match_sidebets" and row.get("market_type") == "Total Cards":
             line_str = str(row.get("line", "")).strip()
             try:
                 line_val = float(line_str)
@@ -810,7 +812,7 @@ def find_value_bets(odds_data: list[dict], mc: dict | None, team_db: dict) -> li
     # ── 8. BOTH TEAMS TO SCORE (BTTS) ────────────────────────────────────────
     match_btts: dict[str, dict] = {}
     for row in odds_data:
-        if row["page"] == "matches" and "Both Teams" in row.get("market", ""):
+        if row["page"] == "match_sidebets" and row.get("market_type") == "Both Teams To Score":
             mn = row["match"]
             if mn not in match_btts:
                 match_btts[mn] = {}
@@ -851,6 +853,63 @@ def find_value_bets(odds_data: list[dict], mc: dict | None, team_db: dict) -> li
             check("matches", match_name, "Both Teams to Score", "",
                   "BTTS No", btts_dict["no"], p_btts_no, "BTTS",
                   fair_imp=fair_no)
+
+    # ── 8b. 1ST HALF / 2ND HALF GOALS OVER/UNDER ────────────────────────────
+    # WC first-half fraction: ~43% of goals scored in first 45 min
+    WC_1H_FRAC = 0.43
+    WC_2H_FRAC = 0.57
+
+    for half_key, half_frac, label in [
+        ("1st Half Goals", WC_1H_FRAC, "1st Half Goals"),
+        ("2nd Half Goals", WC_2H_FRAC, "2nd Half Goals"),
+    ]:
+        half_data: dict[str, dict] = {}
+        for row in odds_data:
+            if row["page"] == "match_sidebets" and row.get("market_type") == half_key:
+                line_str = str(row.get("line", "")).strip()
+                try:
+                    line_val = float(line_str)
+                except (ValueError, TypeError):
+                    continue
+                mn = row["match"]
+                half_data.setdefault(mn, {})[f"{row['selection']}_{line_val}"] = row["odds"]
+
+        for match_name, h_dict in half_data.items():
+            parts = match_name.split(" - ", 1)
+            if len(parts) != 2:
+                continue
+            home_raw, away_raw = parts
+            home_team = best_match(home_raw, model_teams)
+            away_team = best_match(away_raw, model_teams)
+            if not home_team or not away_team:
+                continue
+            if home_team not in team_db or away_team not in team_db:
+                continue
+
+            lam_h_full, lam_a_full = elo_corrected_lambdas(team_db, home_team, away_team)
+            lam_h = lam_h_full * half_frac
+            lam_a = lam_a_full * half_frac
+
+            for line in [0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5]:
+                p_over, p_under = poisson_ou_probs(lam_h, lam_a, line)
+                over_key  = f"Over_{line}"
+                under_key = f"Under_{line}"
+
+                fair_over = fair_under = None
+                if over_key in h_dict and under_key in h_dict:
+                    raw_o = implied(h_dict[over_key])
+                    raw_u = implied(h_dict[under_key])
+                    fair  = remove_margin([raw_o, raw_u])
+                    fair_over, fair_under = fair[0], fair[1]
+
+                if over_key in h_dict:
+                    check("match_sidebets", match_name, label, str(line),
+                          f"Over {line}", h_dict[over_key], p_over, label,
+                          fair_imp=fair_over)
+                if under_key in h_dict:
+                    check("match_sidebets", match_name, label, str(line),
+                          f"Under {line}", h_dict[under_key], p_under, label,
+                          fair_imp=fair_under)
 
     # ── 9. GROUP STAGE CORNER TOTALS ─────────────────────────────────────────
     # Coolbet: "Total Corners in the Group" O/U per group (A–L)
@@ -1310,6 +1369,268 @@ def find_value_bets(odds_data: list[dict], mc: dict | None, team_db: dict) -> li
               f"Group {grp_ltr} Under {line_val} Goals", under_odds, p_under, "Group Goals",
               fair_imp=fair_under)
 
+    # ── 16b. GROUP STAGE TOTAL CORNERS (all groups combined) ─────────────────
+    # Market: "Group Stage Total Corners", line: 666.5
+    # Model: sum corners_model across all 72 group matches (12 groups × 6 matchups each)
+
+    try:
+        from scipy.stats import poisson as _sp_poisson
+        _have_scipy = True
+    except ImportError:
+        _have_scipy = False
+
+    def _poisson_cdf_large(k_max: int, lam: float) -> float:
+        """P(X <= k_max) for Poisson(lam). Uses scipy for large lambda."""
+        if _have_scipy:
+            return float(_sp_poisson.cdf(k_max, lam))
+        # Normal approximation fallback
+        import math as _math2
+        z = (k_max + 0.5 - lam) / _math2.sqrt(max(lam, 1e-9))
+        return 0.5 * (1.0 + _math2.erf(z / _math2.sqrt(2)))
+
+    _gsc_sides: dict[str, tuple] = {}
+    for row in odds_data:
+        if row.get("market") == "Group Stage Total Corners" and row.get("match") == "Group Stage Totals":
+            try:
+                _line_val = float(row.get("line", 0))
+            except (TypeError, ValueError):
+                continue
+            if _line_val == 0:
+                continue
+            _sel = row.get("selection", "")
+            if _sel in ("Over", "Under"):
+                _gsc_sides[_sel] = (row["odds"], _line_val)
+
+    if "Over" in _gsc_sides and "Under" in _gsc_sides:
+        _gsc_over_odds, _gsc_line = _gsc_sides["Over"]
+        _gsc_under_odds, _           = _gsc_sides["Under"]
+
+        _lam_grpstage_corners = 0.0
+        for _grp_ltr2, _grp_teams2 in groups.items():
+            _valid2 = [t for t in _grp_teams2 if t in team_db]
+            for _ta2, _tb2 in _itools.combinations(_valid2, 2):
+                try:
+                    _lca, _lcb = corners_model(team_db[_ta2], team_db[_tb2])
+                    _lam_grpstage_corners += _lca + _lcb
+                except Exception:
+                    _lam_grpstage_corners += 9.3  # WC avg fallback
+
+        _k_gsc = int(_gsc_line)
+        _p_gsc_over  = 1.0 - _poisson_cdf_large(_k_gsc, _lam_grpstage_corners)
+        _p_gsc_under = 1.0 - _p_gsc_over
+
+        _raw_go = implied(_gsc_over_odds)
+        _raw_gu = implied(_gsc_under_odds)
+        _fair_g = remove_margin([_raw_go, _raw_gu])
+        check("group_specials", "Group Stage Totals", "Group Stage Total Corners", str(_gsc_line),
+              f"Group Stage Over {_gsc_line} Corners", _gsc_over_odds, _p_gsc_over, "Group Corners",
+              fair_imp=_fair_g[0])
+        check("group_specials", "Group Stage Totals", "Group Stage Total Corners", str(_gsc_line),
+              f"Group Stage Under {_gsc_line} Corners", _gsc_under_odds, _p_gsc_under, "Group Corners",
+              fair_imp=_fair_g[1])
+
+    # ── 16c. GROUP STAGE TOTAL GOALS — 1ST HALF AND 2ND HALF ─────────────
+    # Markets: "Group Stage Total Goals (1st Half)" line 81.5
+    #          "Group Stage Total Goals (2nd Half)" line 113.5
+    # Historical WC split: ~41.3% 1st half (WC 2018: 41.7%, WC 2022: 41.2%)
+    _WC_1H_FRAC = 0.413
+    for _half_mkt, _half_frac in [
+        ("Group Stage Total Goals (1st Half)", _WC_1H_FRAC),
+        ("Group Stage Total Goals (2nd Half)", 1.0 - _WC_1H_FRAC),
+    ]:
+        _half_sides: dict[str, tuple] = {}
+        for row in odds_data:
+            if row.get("market") == _half_mkt:
+                try:
+                    _lv = float(row.get("line", 0))
+                except (TypeError, ValueError):
+                    continue
+                if _lv == 0:
+                    continue
+                _sel = row.get("selection", "")
+                if _sel in ("Over", "Under"):
+                    _half_sides[_sel] = (row["odds"], _lv)
+
+        if "Over" not in _half_sides or "Under" not in _half_sides:
+            continue
+        _h_over_odds, _h_line = _half_sides["Over"]
+        _h_under_odds, _      = _half_sides["Under"]
+
+        # Use stack_predict (calibrated blend of ELO+Poisson+ML, target 2.8/match)
+        # rather than elo_corrected_lambdas (3.07/match) for this 72-match aggregate.
+        from src.models.stacked_predictor import stack_predict as _stack_predict3
+        _lam_half = 0.0
+        for _grp_ltr3, _grp_teams3 in groups.items():
+            _valid3 = [t for t in _grp_teams3 if t in team_db]
+            for _ta3, _tb3 in _itools.combinations(_valid3, 2):
+                try:
+                    _sp3 = _stack_predict3(team_db[_ta3], team_db[_tb3])
+                    _lh3 = _sp3.get("lam_home", 1.4)
+                    _la3 = _sp3.get("lam_away", 1.4)
+                    _lam_half += (_lh3 + _la3) * _half_frac
+                except Exception:
+                    _lam_half += 2.8 * _half_frac  # fallback
+
+        _k_h = int(_h_line)
+        _p_h_over  = 1.0 - _poisson_cdf_large(_k_h, _lam_half)
+        _p_h_under = 1.0 - _p_h_over
+
+        _raw_ho = implied(_h_over_odds)
+        _raw_hu = implied(_h_under_odds)
+        _fair_h = remove_margin([_raw_ho, _raw_hu])
+        _half_label = "1st Half" if "1st" in _half_mkt else "2nd Half"
+        check("group_specials", "Group Stage Totals", _half_mkt, str(_h_line),
+              f"Group Stage Over {_h_line} Goals ({_half_label})", _h_over_odds, _p_h_over, "Group Goals",
+              fair_imp=_fair_h[0])
+        check("group_specials", "Group Stage Totals", _half_mkt, str(_h_line),
+              f"Group Stage Under {_h_line} Goals ({_half_label})", _h_under_odds, _p_h_under, "Group Goals",
+              fair_imp=_fair_h[1])
+
+    # ── 16d. TEAM GROUP STAGE TOTAL GOALS (e.g., Argentina Over/Under 5.5) ──
+    # Market: "[Team] Group Stage Total Goals " (trailing space in Coolbet data)
+    # Model: sum expected goals FOR each team across their 3 group stage matches.
+    # Since WC 2026 venues are mostly neutral-ground, we average home and away lambdas.
+
+    import re as _re2
+    _team_grp_goals: dict[str, dict] = {}
+    for row in odds_data:
+        _mkt = row.get("market", "")
+        _mg = _re2.match(r"^(.+?)\s+Group Stage Total Goals\s*$", _mkt)
+        if not _mg:
+            continue
+        _team_raw = _mg.group(1).strip()
+        try:
+            _lv2 = float(row.get("line", 0))
+        except (TypeError, ValueError):
+            continue
+        if _lv2 == 0:
+            continue
+        _sel2 = row.get("selection", "")
+        if _sel2 in ("Over", "Under"):
+            _team_grp_goals.setdefault(_team_raw, {})[_sel2] = (row["odds"], _lv2)
+
+    # Reverse lookup: team_name → group letter
+    _team_to_grp: dict[str, str] = {}
+    for _gl, _gt in groups.items():
+        for _t in _gt:
+            _team_to_grp[_t] = _gl
+
+    for _team_raw2, _sides2 in _team_grp_goals.items():
+        if "Over" not in _sides2 or "Under" not in _sides2:
+            continue
+        _t2_over_odds, _t2_line = _sides2["Over"]
+        _t2_under_odds, _       = _sides2["Under"]
+
+        _team2 = best_match(_team_raw2, model_teams)
+        if not _team2 or _team2 not in team_db:
+            continue
+        _gl2 = _team_to_grp.get(_team2)
+        if not _gl2 or _gl2 not in groups:
+            continue
+
+        _opps = [t for t in groups[_gl2] if t != _team2 and t in team_db]
+        if len(_opps) < 3:
+            continue
+
+        # Average home/away lambda to approximate neutral-ground WC conditions
+        _lam_for2 = 0.0
+        for _opp in _opps:
+            try:
+                _lh_as_home, _  = _eg(_team2, _opp)   # team plays "home"
+                _, _la_as_away  = _eg(_opp, _team2)   # team plays "away"
+                _lam_for2 += (_lh_as_home + _la_as_away) / 2.0
+            except Exception:
+                _lam_for2 += 1.4
+
+        _k_t2 = int(_t2_line)
+        _p_t2_over  = 1.0 - _poisson_cdf(_k_t2, _lam_for2)
+        _p_t2_under = 1.0 - _p_t2_over
+
+        _raw_t2o = implied(_t2_over_odds)
+        _raw_t2u = implied(_t2_under_odds)
+        _fair_t2 = remove_margin([_raw_t2o, _raw_t2u])
+        _lbl_t2  = f"Group {_gl2} Specials"
+        check("group_specials", _lbl_t2,
+              f"{_team2} Group Stage Total Goals", str(_t2_line),
+              f"{_team2} Over {_t2_line} Goals (Group Stage)", _t2_over_odds, _p_t2_over, "Group Goals",
+              fair_imp=_fair_t2[0])
+        check("group_specials", _lbl_t2,
+              f"{_team2} Group Stage Total Goals", str(_t2_line),
+              f"{_team2} Under {_t2_line} Goals (Group Stage)", _t2_under_odds, _p_t2_under, "Group Goals",
+              fair_imp=_fair_t2[1])
+
+    # ── 16e. GROUP WITH MOST CORNERS / GROUP WITH MOST GOALS ─────────────────
+    # Markets: "Group with Most Corners" and "Group with Most Goals" (wc_specials or group_specials)
+    # Model: MC over Poisson draws for each group's total corners/goals.
+
+    import random as _random
+
+    def _group_most_mc(lam_by_group: dict[str, float], n_sims: int = 20_000) -> dict[str, float]:
+        """Monte Carlo: P(group X has the most corners/goals) via normal approx of Poisson."""
+        import random as _rnd
+        win_counts: dict[str, int] = {g: 0 for g in lam_by_group}
+        for _ in range(n_sims):
+            draws = {g: max(0.0, _rnd.gauss(lam, lam**0.5)) for g, lam in lam_by_group.items()}
+            winner = max(draws, key=draws.get)
+            win_counts[winner] += 1
+        return {g: win_counts[g] / n_sims for g in lam_by_group}
+
+    # ── Group with Most Corners ────────────────────────────────────────────
+    _grp_crn_rows = [r for r in odds_data if r.get("market") == "Group with Most Corners"]
+    if _grp_crn_rows:
+        # Build expected corners per group
+        _grp_crn_lams: dict[str, float] = {}
+        for _gl3, _gt3 in groups.items():
+            _vl3 = [t for t in _gt3 if t in team_db]
+            _lam3 = 0.0
+            for _ta4, _tb4 in _itools.combinations(_vl3, 2):
+                try:
+                    _lca2, _lcb2 = corners_model(team_db[_ta4], team_db[_tb4])
+                    _lam3 += _lca2 + _lcb2
+                except Exception:
+                    _lam3 += 9.3
+            _grp_crn_lams[_gl3] = _lam3
+
+        _crn_win_probs = _group_most_mc(_grp_crn_lams, n_sims=20_000)
+
+        for row in _grp_crn_rows:
+            _sel3 = row.get("selection", "")  # e.g. "Group A", "Group B", ...
+            _m3 = re.match(r"Group ([A-L])", _sel3)
+            if not _m3:
+                continue
+            _gl_sel = _m3.group(1)
+            _p_win3 = _crn_win_probs.get(_gl_sel, 0.0)
+            check(row["page"], row.get("match", "WC 2026"), "Group with Most Corners", "",
+                  f"Group {_gl_sel} Most Corners", row["odds"], _p_win3, "Group Corners")
+
+    # ── Group with Most Goals ──────────────────────────────────────────────
+    _grp_gls_rows = [r for r in odds_data if r.get("market") == "Group with Most Goals"]
+    if _grp_gls_rows:
+        from src.models.stacked_predictor import stack_predict as _sp_gls
+        _grp_gls_lams: dict[str, float] = {}
+        for _gl4, _gt4 in groups.items():
+            _vl4 = [t for t in _gt4 if t in team_db]
+            _lam4 = 0.0
+            for _ta5, _tb5 in _itools.combinations(_vl4, 2):
+                try:
+                    _sp5 = _sp_gls(team_db[_ta5], team_db[_tb5])
+                    _lam4 += _sp5.get("lam_home", 1.4) + _sp5.get("lam_away", 1.4)
+                except Exception:
+                    _lam4 += 2.8
+            _grp_gls_lams[_gl4] = _lam4
+
+        _gls_win_probs = _group_most_mc(_grp_gls_lams, n_sims=20_000)
+
+        for row in _grp_gls_rows:
+            _sel4 = row.get("selection", "")
+            _m4 = re.match(r"Group ([A-L])", _sel4)
+            if not _m4:
+                continue
+            _gl_sel4 = _m4.group(1)
+            _p_win4  = _gls_win_probs.get(_gl_sel4, 0.0)
+            check(row["page"], row.get("match", "WC 2026"), "Group with Most Goals", "",
+                  f"Group {_gl_sel4} Most Goals", row["odds"], _p_win4, "Group Goals")
+
     # ── 17. GROUP STAGE H2H (who finishes higher in group standings) ───────────
     # Approximation: P(A above B) from direct match prob + relative qual strength
 
@@ -1387,29 +1708,32 @@ def find_value_bets(odds_data: list[dict], mc: dict | None, team_db: dict) -> li
             if abs(_mp_check["p_win_a"] - _bh_fair) > 0.10:
                 continue
 
-        # P(A finishes above B in group) ≈ direct match prob + group-strength blend
-        mp = blended_match_prob(team_db, t_a, t_b)
-        p_direct_a = mp["p_win_a"] + 0.5 * mp["p_draw"]
+        # P(A finishes above B in group)
+        # Primary: use direct pairwise MC count (most accurate).
+        # Fallback: blend head-to-head win prob with relative top-2 strength.
+        _grp_above = mc.get("grp_above", {}) if mc else {}
+        _n_mc = mc.get("n", 1) if mc else 1
+        p_a_above_b = _grp_above.get((t_a, t_b), None)
+        p_b_above_a = _grp_above.get((t_b, t_a), None)
 
-        # Blend with relative group-finishing strength from MC if available.
-        # Use top-2 finish prob (grp_win + grp_2nd) instead of full qual prob:
-        # in the 2026 format ~8/12 third-place teams also advance, which inflates
-        # the qual probability of weak teams and overstates their "group H2H strength".
-        if mc:
-            _grp_win = mc.get("grp_win", {})
-            _grp_2nd = mc.get("grp_2nd", {})
-            top2_a = _grp_win.get(t_a, 0) + _grp_2nd.get(t_a, 0)
-            top2_b = _grp_win.get(t_b, 0) + _grp_2nd.get(t_b, 0)
-            if top2_a + top2_b > 0:
-                p_strength_a = top2_a / (top2_a + top2_b)
-            else:
-                # Fall back to qual if grp_win/grp_2nd not populated (e.g. loaded from file)
-                qa = _qual.get(t_a, 0.5)
-                qb = _qual.get(t_b, 0.5)
-                p_strength_a = qa / (qa + qb) if (qa + qb) > 0 else 0.5
-            p_a = 0.6 * p_direct_a + 0.4 * p_strength_a
+        if p_a_above_b is not None:
+            # Direct MC pairwise: most accurate signal
+            p_a = p_a_above_b
+        elif p_b_above_a is not None:
+            p_a = 1.0 - p_b_above_a
         else:
-            p_a = p_direct_a
+            # No MC pairwise data — use head-to-head win prob only (no draw credit)
+            mp = blended_match_prob(team_db, t_a, t_b)
+            p_direct_a = mp["p_win_a"]   # win only, not win+draw (draw ≠ "above")
+            if mc:
+                _grp_win = mc.get("grp_win", {})
+                _grp_2nd = mc.get("grp_2nd", {})
+                top2_a = _grp_win.get(t_a, 0) + _grp_2nd.get(t_a, 0)
+                top2_b = _grp_win.get(t_b, 0) + _grp_2nd.get(t_b, 0)
+                p_strength_a = top2_a / (top2_a + top2_b) if (top2_a + top2_b) > 0 else 0.5
+                p_a = 0.4 * p_direct_a + 0.6 * p_strength_a
+            else:
+                p_a = p_direct_a
         p_b = 1.0 - p_a
 
         sel = row.get("selection", "")
@@ -1418,11 +1742,16 @@ def find_value_bets(odds_data: list[dict], mc: dict | None, team_db: dict) -> li
         # Bookmaker ratio guard: when the bookmaker's own H2H implied prob for
         # the selected side is very low (< 5 %), the model's calibration for
         # extreme mismatches is unreliable and inflates the underdog's chance.
-        # Skip if model_prob > 3× bookmaker-implied — that gap is noise, not edge.
+        # Sanity guard: drop if model is more than 2.5× the bookmaker's implied probability.
+        # Group H2H markets where implied < 14% and our model says > 2.5x are almost always
+        # model errors (inflated underdog stats from weak confederation qualifiers).
         _bk_implied = _h2h_mkt_implied.get(mkt, {}).get(row.get("selection", ""), None)
-        if _bk_implied is not None and _bk_implied < 0.05:
+        if _bk_implied is not None:
             _model_p = p_a if t_sel == t_a else p_b
-            if _model_p > 3.0 * _bk_implied:
+            if _bk_implied < 0.14 and _model_p > 2.5 * _bk_implied:
+                continue
+            # Also drop extreme cases regardless of implied size
+            if _bk_implied < 0.25 and _model_p > 3.5 * _bk_implied:
                 continue
 
         if t_sel == t_a:

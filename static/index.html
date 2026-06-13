@@ -1482,6 +1482,15 @@ select option { background:var(--bg-surface); }
  <div class="empty-state-text">Elige los dos equipos para ver el análisis</div>
  <p style="margin-top:8px;font-size:13px;color:var(--txt-3)">Puedes introducir las cuotas del mercado para ver la ventaja del modelo.</p>
  </div>
+
+ <!-- Best odds for this match -->
+ <div id="match-best-odds" style="display:none;margin-top:32px">
+  <div class="card">
+   <div class="card-title" style="margin-bottom:16px">Mejores cuotas disponibles — Coolbet</div>
+   <div id="match-best-odds-body"></div>
+  </div>
+ </div>
+
  </div>
 </div>
 
@@ -1501,32 +1510,33 @@ select option { background:var(--bg-surface); }
  <div class="vb-controls">
  <div class="vb-cat-tabs" id="vb-cat-tabs">
  <div class="vb-cat-tab active" data-cat="All">Todo</div>
- <div class="vb-cat-tab" data-cat="Match 1X2">1X2</div>
- <div class="vb-cat-tab" data-cat="Group Qualification">Clasificación</div>
- <div class="vb-cat-tab" data-cat="Group Winner">Ganador grupo</div>
- <div class="vb-cat-tab" data-cat="Total Goals">Total goles</div>
- <div class="vb-cat-tab" data-cat="Group H2H">H2H</div>
- <div class="vb-cat-tab" data-cat="O/U 1.5">O/U 1.5</div>
- <div class="vb-cat-tab" data-cat="O/U 2.5">O/U 2.5</div>
- <div class="vb-cat-tab" data-cat="O/U 3.5">O/U 3.5</div>
- <div class="vb-cat-tab" data-cat="BTTS">BTTS</div>
  </div>
- <input class="vb-search" id="vb-search" placeholder="Buscar equipo, mercado…" type="text" autocomplete="off">
- <span class="vb-sort-label" style="margin-left:12px">Grupo</span>
+ <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:10px">
+ <input class="vb-search" id="vb-search" placeholder="Buscar equipo, mercado…" type="text" autocomplete="off" style="flex:1;min-width:160px">
+ <span class="vb-sort-label">Grupo</span>
  <select class="vb-sort-select" id="vb-group-filter" onchange="vbRender()">
  <option value="all">Todos</option>
  <option>A</option><option>B</option><option>C</option><option>D</option>
  <option>E</option><option>F</option><option>G</option><option>H</option>
  <option>I</option><option>J</option><option>K</option><option>L</option>
  </select>
- <span class="vb-sort-label" style="margin-left:12px">Ordenar</span>
- <select class="vb-sort-select" id="vb-sort">
+ <span class="vb-sort-label">Ordenar</span>
+ <select class="vb-sort-select" id="vb-sort" onchange="vbSetSort(this.value)">
+ <option value="kelly">Kelly %</option>
  <option value="ev">Valor esperado</option>
  <option value="edge">Ventaja %</option>
  <option value="odds">Cuota (mayor→menor)</option>
  <option value="model">Prob. modelo</option>
  </select>
- <span class="vb-sort-label" style="margin-left:12px">Prob. mín.</span>
+ <span class="vb-sort-label">Kelly mín.</span>
+ <select class="vb-sort-select" id="vb-min-kelly" onchange="vbRender()">
+ <option value="0">Cualquiera</option>
+ <option value="0.05">5%+</option>
+ <option value="0.10">10%+</option>
+ <option value="0.15">15%+</option>
+ <option value="0.20">20%+</option>
+ </select>
+ <span class="vb-sort-label">Prob. mín.</span>
  <select class="vb-sort-select" id="vb-min-prob" onchange="vbRender()">
  <option value="0">Cualquiera</option>
  <option value="0.10">10%+</option>
@@ -1535,7 +1545,16 @@ select option { background:var(--bg-surface); }
  <option value="0.40">40%+</option>
  <option value="0.50">50%+</option>
  </select>
+ <span class="vb-sort-label">VE máx.</span>
+ <select class="vb-sort-select" id="vb-max-ev" onchange="vbRender()">
+ <option value="999">Sin límite</option>
+ <option value="2.0">≤200%</option>
+ <option value="1.5">≤150%</option>
+ <option value="1.0">≤100%</option>
+ <option value="0.5">≤50%</option>
+ </select>
  <span class="vb-count" id="vb-count"></span>
+ </div>
  </div>
  <div class="vb-table-wrap">
  <table class="vb-table">
@@ -1547,7 +1566,7 @@ select option { background:var(--bg-surface); }
  <th title="Probabilidad del modelo vs probabilidad implícita del mercado">Modelo vs implícita</th>
  <th class="ta-r" id="th-edge" onclick="vbSetSort('edge')" title="Ventaja: probabilidad del modelo menos implícita del mercado">Ventaja</th>
  <th class="ta-r" id="th-ev" onclick="vbSetSort('ev')" title="Valor esperado: ganancia media por unidad apostada">VE</th>
- <th class="ta-r" id="th-kelly" title="Criterio Kelly: stake sugerido como % del bankroll">Kelly</th>
+ <th class="ta-r" id="th-kelly" onclick="vbSetSort('kelly')" title="Criterio Kelly: stake sugerido como % del bankroll">Kelly</th>
  </tr></thead>
  <tbody id="vb-tbody"></tbody>
  </table>
@@ -2168,6 +2187,9 @@ function renderResults(d) {
  /* ── ODDS TAB ── */
  renderOddsTab(d);
 
+ /* ── BEST COOLBET ODDS for this match ── */
+ renderMatchBestOdds(d.team_a, d.team_b);
+
  /* ── THREATS TAB ── */
  document.getElementById('threat-a-title').textContent = 'Amenazas — ' + d.team_a;
  document.getElementById('threat-b-title').textContent = 'Amenazas — ' + d.team_b;
@@ -2312,23 +2334,83 @@ function switchTab(n) {
 ───────────────────────────────────────────── */
 let _vbData = [];
 let _vbCat = 'All';
-let _vbSort = 'ev';
+let _vbSort = 'kelly';
 let _vbSearch = '';
 let _vbSortDir = -1; // -1 = desc
 
-function vbCatBadge(cat) {
- const map = {
+const VB_CAT_MAP = {
   'Match 1X2':          ['match',  '1X2'],
   'Group Qualification':['qual',   'QUAL'],
-  'Group Winner':       ['grpwin', 'GRP WIN'],
-  'Total Goals':        ['goals',  'GOALS'],
+  'Group Winner':       ['grpwin', 'GRUPO'],
+  'Total Goals':        ['goals',  'GOLES'],
   'Group H2H':          ['qual',   'H2H'],
+  'Handicap':           ['match',  'HCP'],
+  'Stage of Elimination':['qual',  'ELIM.'],
+  'Exact Points':       ['goals',  'PUNTOS'],
+  'Advancement':        ['qual',   'AVANCE'],
+  'BTTS':               ['match',  'BTTS'],
+  'Corners':            ['match',  'CÓRNERS'],
+  'Yellow Cards':       ['match',  'TARJ.'],
+  '1st Half Goals':     ['goals',  '1ª PARTE'],
+  '2nd Half Goals':     ['goals',  '2ª PARTE'],
+  'Group Goals':        ['goals',  'GRP GOL'],
+  'Group Corners':      ['match',  'GRP CRN'],
   'O/U 1.5':            ['goals',  'O/U 1.5'],
   'O/U 2.5':            ['goals',  'O/U 2.5'],
   'O/U 3.5':            ['goals',  'O/U 3.5'],
-  'BTTS':               ['match',  'BTTS'],
- };
- const [cls, label] = map[cat] || ['match', cat];
+};
+
+const VB_CAT_LABEL = {
+  'Match 1X2':           '1X2',
+  'Group Qualification': 'Clasificación',
+  'Group Winner':        'Ganador grupo',
+  'Total Goals':         'Goles totales',
+  'Group H2H':           'H2H grupo',
+  'Handicap':            'Hándicap',
+  'Stage of Elimination':'Eliminación',
+  'Exact Points':        'Puntos exactos',
+  'Advancement':         'Avance',
+  'BTTS':                'Ambos marcan',
+  'Corners':             'Córners partido',
+  'Yellow Cards':        'Tarjetas',
+  '1st Half Goals':      '1ª parte goles',
+  '2nd Half Goals':      '2ª parte goles',
+  'Group Goals':         'Goles grupo',
+  'Group Corners':       'Córners grupo',
+};
+
+function vbBuildCatTabs() {
+  const cats = [...new Set(_vbData.map(r => r.category))].sort();
+  const container = document.getElementById('vb-cat-tabs');
+  const existing = [...container.querySelectorAll('.vb-cat-tab[data-cat]')];
+  const existingCats = existing.filter(t => t.dataset.cat !== 'All').map(t => t.dataset.cat);
+  if (existingCats.join(',') === cats.join(',')) return; // no change
+  // Remove old non-All tabs
+  existing.forEach(t => { if (t.dataset.cat !== 'All') t.remove(); });
+  cats.forEach(cat => {
+    const div = document.createElement('div');
+    div.className = 'vb-cat-tab';
+    div.dataset.cat = cat;
+    div.textContent = VB_CAT_LABEL[cat] || cat;
+    div.addEventListener('click', () => {
+      document.querySelectorAll('.vb-cat-tab').forEach(t => t.classList.remove('active'));
+      div.classList.add('active');
+      _vbCat = cat;
+      vbRender();
+    });
+    container.appendChild(div);
+  });
+  // re-attach All tab listener
+  container.querySelector('[data-cat="All"]').addEventListener('click', function() {
+    document.querySelectorAll('.vb-cat-tab').forEach(t => t.classList.remove('active'));
+    this.classList.add('active');
+    _vbCat = 'All';
+    vbRender();
+  });
+}
+
+function vbCatBadge(cat) {
+ const [cls, label] = VB_CAT_MAP[cat] || ['match', cat];
  return `<span class="vb-cat-badge ${cls}">${label}</span>`;
 }
 
@@ -2339,13 +2421,16 @@ function vbEvBadge(ev) {
 }
 
 function vbRender() {
+ vbBuildCatTabs();
  let rows = _vbData;
  if (_vbCat !== 'All') rows = rows.filter(r => r.category === _vbCat);
- 
- const minProb = parseFloat(document.getElementById('vb-min-prob').value);
- if (minProb > 0) {
- rows = rows.filter(r => r.model_prob >= minProb);
- }
+
+ const minProb  = parseFloat(document.getElementById('vb-min-prob').value);
+ const minKelly = parseFloat(document.getElementById('vb-min-kelly').value);
+ const maxEv    = parseFloat(document.getElementById('vb-max-ev').value);
+ if (minProb  > 0)   rows = rows.filter(r => r.model_prob >= minProb);
+ if (minKelly > 0)   rows = rows.filter(r => r.kelly >= minKelly);
+ if (maxEv    < 999) rows = rows.filter(r => r.ev <= maxEv);
 
   const grp = document.getElementById('vb-group-filter').value;
   if (grp !== 'all') {
@@ -2367,11 +2452,12 @@ function vbRender() {
  }
  rows = [...rows].sort((a, b) => {
  let av, bv;
- if (_vbSort === 'ev') { av = a.ev; bv = b.ev; }
+ if (_vbSort === 'kelly') { av = a.kelly; bv = b.kelly; }
+ else if (_vbSort === 'ev') { av = a.ev; bv = b.ev; }
  else if (_vbSort === 'edge') { av = a.edge; bv = b.edge; }
  else if (_vbSort === 'odds') { av = a.odds; bv = b.odds; }
  else if (_vbSort === 'model') { av = a.model_prob; bv = b.model_prob; }
- else { av = a.ev; bv = b.ev; }
+ else { av = a.kelly; bv = b.kelly; }
  return _vbSortDir * (bv - av);
  });
 
@@ -2445,7 +2531,7 @@ function vbSetSort(key) {
  document.querySelectorAll('.vb-table thead th').forEach(th => {
  th.classList.remove('sorted','sort-arrow','asc');
  });
- const thMap = {ev:'th-ev', edge:'th-edge', odds:'th-odds'};
+ const thMap = {ev:'th-ev', edge:'th-edge', odds:'th-odds', kelly:'th-kelly'};
  if (thMap[key]) {
  const th = document.getElementById(thMap[key]);
  if (th) {
@@ -2518,20 +2604,12 @@ async function loadValueBets() {
    </div>
   `;
 
-  document.querySelectorAll('.vb-cat-tab').forEach(tab => {
-   tab.addEventListener('click', () => {
-    document.querySelectorAll('.vb-cat-tab').forEach(t => t.classList.remove('active'));
-    tab.classList.add('active');
-    _vbCat = tab.dataset.cat;
-    vbRender();
-   });
-  });
   document.getElementById('vb-search').addEventListener('input', e => { _vbSearch = e.target.value; vbRender(); });
-  document.getElementById('vb-sort').addEventListener('change', e => { _vbSort = e.target.value; _vbSortDir = -1; vbRender(); });
   document.getElementById('th-ev').onclick    = () => vbSetSort('ev');
   document.getElementById('th-edge').onclick  = () => vbSetSort('edge');
   document.getElementById('th-odds').onclick  = () => vbSetSort('odds');
-  document.getElementById('th-ev').classList.add('sorted','sort-arrow');
+  document.getElementById('th-kelly').onclick = () => vbSetSort('kelly');
+  document.getElementById('th-kelly').classList.add('sorted','sort-arrow');
 
   loading.style.display = 'none';
   content.style.display = '';
@@ -2540,6 +2618,100 @@ async function loadValueBets() {
  } catch(e) {
   loading.innerHTML = `<span style="color:var(--red)">Error al cargar apuestas: ${e.message}</span>`;
  }
+}
+
+/* ─────────────────────────────────────────────
+ MATCH BEST ODDS (from value bets data)
+───────────────────────────────────────────── */
+async function renderMatchBestOdds(teamA, teamB) {
+ const wrap = document.getElementById('match-best-odds');
+ const body = document.getElementById('match-best-odds-body');
+ wrap.style.display = 'none';
+ body.innerHTML = '';
+
+ // Get value bets data (already loaded by the apuestas tab, or fetch now)
+ let data = _vbData;
+ if (!data || !data.length) {
+  try {
+   const r = await fetch('/api/valuebets');
+   data = await r.json();
+  } catch(e) { return; }
+ }
+ if (!Array.isArray(data) || !data.length) return;
+
+ // Normalize name for matching
+ const norm = s => (s||'').toLowerCase().replace(/[^a-z0-9 ]/g,'').replace(/\s+/g,' ').trim();
+ const nA = norm(teamA), nB = norm(teamB);
+
+ // Filter rows belonging to this match.
+ // match-level bets: r.match == "TeamA - TeamB" (either order)
+ // group specials:   r.match == "Group X Specials", teams in r.market or r.selection
+ const matchRows = data.filter(r => {
+  const m  = norm(r.match||'');
+  const mk = norm(r.market||'');
+  const sel = norm(r.selection||'');
+  const combined = m + ' ' + mk + ' ' + sel;
+  const hasA = combined.includes(nA);
+  const hasB = combined.includes(nB);
+  if (!hasA || !hasB) return false;
+  // For match-level bets the match field should be exactly "teamA - teamB"
+  if (!m.includes('special') && !m.includes('group')) {
+   return m.includes(nA) && m.includes(nB);
+  }
+  // For group specials check market or selection contains both teams
+  return (mk.includes(nA) && mk.includes(nB)) || (sel.includes(nA) && sel.includes(nB));
+ });
+
+ if (!matchRows.length) return;
+
+ // Group by category, sort by kelly desc within each category
+ const cats = {};
+ matchRows.forEach(r => {
+  const cat = r.category || 'Other';
+  if (!cats[cat]) cats[cat] = [];
+  cats[cat].push(r);
+ });
+ for (const c of Object.values(cats)) c.sort((a,b)=>b.kelly-a.kelly);
+
+ // Build the table
+ const catOrder = ['Match 1X2','Handicap','Total Goals','BTTS','Corners','Yellow Cards',
+                   '1st Half Goals','2nd Half Goals','Group Goals'];
+ const orderedCats = [...catOrder.filter(c=>cats[c]), ...Object.keys(cats).filter(c=>!catOrder.includes(c))];
+
+ let html = `<div style="overflow-x:auto"><table class="vb-table" style="font-size:13px">
+  <thead><tr>
+   <th>Mercado</th>
+   <th>Selección</th>
+   <th class="ta-r">Cuota</th>
+   <th class="ta-r">Modelo</th>
+   <th class="ta-r">VE</th>
+   <th class="ta-r">Kelly</th>
+  </tr></thead><tbody>`;
+
+ let rowCount = 0;
+ for (const cat of orderedCats) {
+  const rows = (cats[cat]||[]).slice(0,5); // top 5 per category
+  rows.forEach(r => {
+   const evPct = (r.ev*100).toFixed(1);
+   const evColor = r.ev > 0.2 ? 'var(--accent)' : r.ev > 0 ? 'var(--gold)' : 'var(--red)';
+   const kellyPct = (r.kelly*100).toFixed(1);
+   html += `<tr>
+    <td style="color:var(--txt-3);font-size:11px">${r.category||''}</td>
+    <td><strong>${r.selection||''}</strong>${r.line?` <span style="color:var(--txt-3)">[${r.line}]</span>`:''}</td>
+    <td class="ta-r mono"><strong>${parseFloat(r.odds).toFixed(2)}</strong></td>
+    <td class="ta-r mono">${(r.model_prob*100).toFixed(1)}%</td>
+    <td class="ta-r mono" style="color:${evColor}">+${evPct}%</td>
+    <td class="ta-r mono">${kellyPct}%</td>
+   </tr>`;
+   rowCount++;
+  });
+ }
+ html += '</tbody></table></div>';
+
+ if (!rowCount) return;
+ body.innerHTML = `<p style="font-size:12px;color:var(--txt-3);margin-bottom:12px">
+  ${rowCount} apuesta${rowCount!==1?'s':''} con ventaja detectada · ordenadas por Kelly</p>` + html;
+ wrap.style.display = 'block';
 }
 
 /* ─────────────────────────────────────────────
