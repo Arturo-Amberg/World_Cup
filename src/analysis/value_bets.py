@@ -524,6 +524,35 @@ def find_value_bets(odds_data: list[dict], mc: dict | None, team_db: dict) -> li
     Cross-reference Coolbet odds with model probabilities.
     Returns list of value bet candidates, sorted by EV descending.
     """
+    import datetime as _dt
+    _today_str = _dt.date.today().isoformat()  # e.g. "2026-06-13"
+
+    # Filter out rows for matches that have already kicked off.
+    # Coolbet rows include a `match_start` field (ISO datetime string).
+    # Skip any row whose match_start date is < today (already played)
+    # or whose match_start is today but the time has already passed.
+    _now_utc = _dt.datetime.now(_dt.timezone.utc)
+    def _is_future(row: dict) -> bool:
+        ms = row.get("match_start", "")
+        if not ms:
+            return True  # no date info → keep it
+        try:
+            # match_start format: "2026-06-13T18:00:00+00:00", "...Z", or "2026-06-13"
+            if "T" in ms:
+                ms_clean = ms.replace("Z", "+00:00")
+                match_dt = _dt.datetime.fromisoformat(ms_clean)
+                # Make timezone-aware if naive (assume UTC)
+                if match_dt.tzinfo is None:
+                    match_dt = match_dt.replace(tzinfo=_dt.timezone.utc)
+            else:
+                match_dt = _dt.datetime(int(ms[:4]), int(ms[5:7]), int(ms[8:10]), 23, 59, 59,
+                                        tzinfo=_dt.timezone.utc)
+            return match_dt > _now_utc
+        except Exception:
+            return True  # can't parse → keep it
+
+    odds_data = [r for r in odds_data if _is_future(r)]
+
     from src.models.tournament import load_groups
     groups = load_groups()
 
@@ -557,7 +586,7 @@ def find_value_bets(odds_data: list[dict], mc: dict | None, team_db: dict) -> li
         # When the bookmaker prices an outcome below 14% AND the model claims
         # more than 2.5× the bookmaker's fair probability, the edge is almost
         # certainly a calibration artifact rather than genuine mispricing.
-        if imp < 0.14 and model_prob > 2.5 * imp:
+        if imp < 0.14 and model_prob > 2.3 * imp:
             return
         edge = model_prob - imp
         exp_val = ev(model_prob, odds_val)
@@ -2075,8 +2104,15 @@ def find_value_bets(odds_data: list[dict], mc: dict | None, team_db: dict) -> li
         if _row.get("page") != "matches" or _row.get("market") != "Match Result (1X2)":
             continue
         _mn = _row["match"]
-        _trio = [r for r in odds_data
-                 if r.get("match") == _mn and r.get("market") == "Match Result (1X2)"]
+        _trio_all = [r for r in odds_data
+                     if r.get("match") == _mn and r.get("market") == "Match Result (1X2)"]
+        _seen_sels_h2h: set[str] = set()
+        _trio = []
+        for _rr in _trio_all:
+            _ss = _rr.get("selection", "")
+            if _ss not in _seen_sels_h2h:
+                _seen_sels_h2h.add(_ss)
+                _trio.append(_rr)
         if len(_trio) != 3:
             continue
         _h_raw, _a_raw = _mn.split(" - ", 1)[0], _mn.split(" - ", 1)[1]
@@ -2623,8 +2659,10 @@ def find_value_bets(odds_data: list[dict], mc: dict | None, team_db: dict) -> li
         # Proxy: scale WC average SOT by each team's relative goal-scoring rate
         _gf_h = team_db[home_team].get("GF_AVG", _WC_AVG_GOALS)
         _gf_a = team_db[away_team].get("GF_AVG", _WC_AVG_GOALS)
-        _lam_sot_h = (_WC_AVG_SOT / 2.0) * (_gf_h / _WC_AVG_GOALS)
-        _lam_sot_a = (_WC_AVG_SOT / 2.0) * (_gf_a / _WC_AVG_GOALS)
+        # Regress toward WC mean (60/40) to avoid extreme values for
+        # defensively weak or attacking-light teams (e.g. Saudi Arabia GF=0.76).
+        _lam_sot_h = (_WC_AVG_SOT / 2.0) * (0.4 * _gf_h / _WC_AVG_GOALS + 0.6)
+        _lam_sot_a = (_WC_AVG_SOT / 2.0) * (0.4 * _gf_a / _WC_AVG_GOALS + 0.6)
 
         for line in [4.5, 5.0, 5.5, 6.0, 6.5, 7.0, 7.5, 8.0]:
             p_over, p_under = poisson_ou_probs(_lam_sot_h, _lam_sot_a, line)
