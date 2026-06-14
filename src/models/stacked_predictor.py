@@ -21,13 +21,12 @@ import os
 #  Constantes del modelo
 # ─────────────────────────────────────────────
 WC_AVG_GOALS   = 1.40   # Goals per team per WC match (formula anchor; actual target set by WC_GOAL_SCALE)
-WC_REGRESSION  = 0.70   # Blend of team's own stats vs WC mean; 0.70 preserves team character while
-                        # moderating extreme qualifier records (e.g. GA=0.32 → 0.64 effective)
-WC_GOAL_SCALE  = 0.90   # Calibration scale applied after all adjustments.
-                        # Historical WC finals 2000-2022 (n=386): avg 2.513 goals/match = 1.256/team.
-                        # With WC_AVG_GOALS=1.40 the raw formula gives ~1.40/team for average teams;
-                        # WC_GOAL_SCALE=0.90 brings the effective lambda to 1.26/team → P(O2.5)=46.1%,
-                        # exactly matching the historical WC rate.
+WC_REGRESSION  = 0.80   # Weight on team's own stats (1-r goes to WC mean). Higher = more team identity.
+                        # 0.80 base; SOS adjustment below can push this down to 0.45 (weak schedule)
+                        # or up to 0.93 (strong schedule), so each team's trust level is calibrated.
+WC_GOAL_SCALE  = 0.893  # Target: 1.25 goals/team for average teams (1.40 × 0.893 = 1.25).
+                        # 2014–2022 WC average was 2.667 goals/match = 1.333/team; 0.893 lands
+                        # slightly below that, accounting for the expanded 48-team field.
 WC_AVG_CORNERS = 5.4    # Corners per team per WC match (formula anchor — keeps team ratios correct).
                         # StatsBomb WC 2018+2022 (n=128): actual avg 9.07/match = 4.54/team.
                         # WC_AVG_CORNERS is the denominator in the corners formula so changing it
@@ -37,7 +36,7 @@ WC_CORNERS_SCALE = 0.98 # Post-formula scale calibrated to WC historical avg (9.
                         # 10.8 (old model output) × 0.84 = 9.07/match → matches historical.
 WC_AVG_SOT     = 4.0    # Shots on target per team per WC match
 WC_AVG_YELLOWS = 1.8    # Yellow cards per team per WC match
-DIXON_COLES_RHO = -0.12 # Dixon-Coles correlation parameter for low-score outcomes
+DIXON_COLES_RHO = -0.15 # Dixon-Coles correlation parameter for low-score outcomes
 H2H_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "data", "h2h_data.json")
 
 from src.models.predictor import VENUES, HIGH_ALTITUDE_TEAMS
@@ -274,8 +273,8 @@ def elo_model(team_a: dict, team_b: dict, home_team: str = None, venue_name: str
     elo_diff = elo_a - elo_b
     p_elo_a = 1 / (1 + math.pow(10, -elo_diff / 400))
     p_elo_b = 1 - p_elo_a
-    # Draw shrinks as mismatch grows; floor 15% consistent with historical WC rates (~16-25%).
-    draw = max(0.15, 0.25 - 0.12 * min(1.0, abs(elo_diff) / 400))
+    # Draw shrinks as mismatch grows; floor 17% consistent with historical WC rates (~17-27%).
+    draw = max(0.17, 0.27 - 0.10 * min(1.0, abs(elo_diff) / 400))
     return p_elo_a * (1 - draw), draw, p_elo_b * (1 - draw)
 
 
@@ -300,17 +299,21 @@ def _compute_lambdas(
     gf_b_raw = max(0.3, team_b.get("GF_AVG", mu))
     ga_b_raw = max(0.3, team_b.get("GA_AVG", mu))
 
-    # Regress toward the WC mean so extreme qualifier records (e.g. GA=0.32 for Ecuador)
-    # don't dominate — at the WC every team faces quality opposition.
-    # SOS-adjusted regression: teams that played weak opponents get MORE regression.
-    # SOS_RATIO = avg_opponent_ELO / ~1749. A team with SOS=0.94 played opponents
-    # ~6% below WC average, so inflate their regression rate accordingly.
+    # Regress toward the WC mean so extreme qualifier records don't dominate.
+    # r = weight on team's own stats (1-r pulls toward WC mean).
+    # Bidirectional SOS adjustment:
+    #   Weak schedule (SOS < 1): subtract penalty → more regression, less trust in inflated stats
+    #     e.g. South Africa (SOS=0.80): r = max(0.45, 0.80 − 0.60) = 0.45 → 55% pulled to mean
+    #   Strong schedule (SOS > 1): add bonus → less regression, stats from quality games trusted more
+    #     e.g. Brazil (SOS=1.054): r = min(0.93, 0.80 + 0.11) = 0.91 → only 9% pulled to mean
     sos_a = team_a.get("SOS_RATIO", 1.0)
     sos_b = team_b.get("SOS_RATIO", 1.0)
-    sos_penalty_a = max(0.0, (1.0 - sos_a) * 3.0)   # e.g. SOS=0.94 → +0.18 extra regression
+    sos_penalty_a = max(0.0, (1.0 - sos_a) * 3.0)
     sos_penalty_b = max(0.0, (1.0 - sos_b) * 3.0)
-    r_a = min(0.93, WC_REGRESSION + sos_penalty_a)
-    r_b = min(0.93, WC_REGRESSION + sos_penalty_b)
+    sos_bonus_a   = max(0.0, (sos_a - 1.0) * 2.0)
+    sos_bonus_b   = max(0.0, (sos_b - 1.0) * 2.0)
+    r_a = max(0.45, min(0.93, WC_REGRESSION - sos_penalty_a + sos_bonus_a))
+    r_b = max(0.45, min(0.93, WC_REGRESSION - sos_penalty_b + sos_bonus_b))
 
     gf_a = r_a * gf_a_raw + (1 - r_a) * mu
     ga_a = r_a * ga_a_raw + (1 - r_a) * mu

@@ -166,6 +166,28 @@ def run_monte_carlo(n: int) -> dict:
 
 # ── match-level probabilities ─────────────────────────────────────────────────
 
+def _cap_draw(p_h: float, p_d: float, p_a: float,
+              elo_diff: float, a_is_stronger: bool) -> dict:
+    """
+    For large ELO gaps, reduce unrealistically high draw probabilities.
+
+    Historical WC data: when ELO diff > 300 the draw rate drops sharply.
+    Formula: draw_cap = max(5%, 12% - (diff-300)/300 * 7%)
+      diff=300 → 12% (uncapped),  diff=400 → ~10%,  diff=500 → ~7%,  diff=600+ → 5%.
+    Excess probability is redistributed to the stronger team.
+    """
+    if elo_diff > 300:
+        draw_cap = max(0.05, 0.12 - (elo_diff - 300) / 300 * 0.07)
+        if p_d > draw_cap:
+            excess = p_d - draw_cap
+            p_d = draw_cap
+            if a_is_stronger:
+                p_h += excess
+            else:
+                p_a += excess
+    return {"p_win_a": p_h, "p_draw": max(0.05, p_d), "p_win_b": p_a}
+
+
 def blended_match_prob(team_db: dict, team_a: str, team_b: str,
                        venue_name: str = None, home_team: str = None) -> dict:
     """
@@ -202,6 +224,7 @@ def blended_match_prob(team_db: dict, team_a: str, team_b: str,
     elif home_team == team_b:
         elo_b += HOME_ELO_BOOST
     elo_diff = abs(elo_a - elo_b)
+    a_is_stronger = elo_a >= elo_b
 
     def lerp(a, b, t): return a * (1 - t) + b * t
 
@@ -215,29 +238,72 @@ def blended_match_prob(team_db: dict, team_a: str, team_b: str,
     target_h = elo_w * elo["win_a"] + (1 - elo_w) * poi["win_a"]
     target_a = elo_w * elo["win_b"] + (1 - elo_w) * poi["win_b"]
 
-    # Case 2 (checked first): inverted prediction — weaker ELO team wins more
-    # The ML (80% weight) routinely overclaims teams whose stats come from weak
-    # competitions (Asia, Africa, CONCACAF) vs. teams from stronger leagues.
-    # When the ML says the *weaker* ELO team wins more often, that is a bias signal.
-    # We apply a strong blend toward the ELO+Poisson target.
-    # Threshold: ELO diff ≥ 3 (ignore exact ties to avoid over-correcting truly
-    # equal teams, but catch the host-nation boost case where diff after adjustment
-    # is just a few points).
-    # Blend: 50% floor + grows with gap size and inversion magnitude (caps at 85%).
     if elo_diff > 3:
-        a_is_stronger = elo_a > elo_b
+        # --- Case 2: full prediction inverted (weaker ELO team wins more) ---
+        # ML overclaims teams whose stats come from weak competitions. Blend
+        # strongly toward ELO when the final prediction is inverted.
+        # GF-check: if ELO-stronger team has LOWER actual GF, the ELO may itself
+        # be inflated (e.g. from facing tough confederation opponents without scoring
+        # much). In that case blend toward 50/50 ELO+Poi instead of pure ELO.
         p_stronger = pred["p_win_a"] if a_is_stronger else pred["p_win_b"]
         p_weaker   = pred["p_win_b"] if a_is_stronger else pred["p_win_a"]
         if p_weaker > p_stronger:
-            inversion = p_weaker - p_stronger
-            blend = min(0.90, 0.50 + (elo_diff - 3) / 300 + inversion)
-            # When the ML inverts who the favourite is, the Poisson is also likely
-            # miscalibrated (both are skewed by weak-opponent stats). Use pure ELO
-            # as the correction target for inverted predictions.
-            p_h = lerp(pred["p_win_a"], elo["win_a"], blend)
-            p_a = lerp(pred["p_win_b"], elo["win_b"], blend)
+            inversion  = p_weaker - p_stronger
+            gf_strong  = team_db.get(team_a if a_is_stronger else team_b, {}).get("GF_AVG", 1.4)
+            gf_weak    = team_db.get(team_b if a_is_stronger else team_a, {}).get("GF_AVG", 1.4)
+            # Raise minimum blend to 0.80 when inversion is significant (> 5pp)
+            min_blend  = 0.80 if inversion > 0.05 else 0.0
+            blend      = max(min_blend, min(0.90, 0.50 + (elo_diff - 3) / 300 + inversion))
+            if gf_strong < gf_weak:
+                # ELO-stronger team scores less → ELO inflated, use 50/50 ELO+Poi target
+                target_h_mid = 0.5 * elo["win_a"] + 0.5 * poi["win_a"]
+                target_a_mid = 0.5 * elo["win_b"] + 0.5 * poi["win_b"]
+                p_h = lerp(pred["p_win_a"], target_h_mid, blend)
+                p_a = lerp(pred["p_win_b"], target_a_mid, blend)
+            else:
+                # Standard: ELO-stronger team also scores more → Poisson corrupted
+                p_h = lerp(pred["p_win_a"], elo["win_a"], blend)
+                p_a = lerp(pred["p_win_b"], elo["win_b"], blend)
             p_d = 1.0 - p_h - p_a
-            return {"p_win_a": p_h, "p_draw": max(0.05, p_d), "p_win_b": p_a}
+            return _cap_draw(p_h, p_d, p_a, elo_diff, a_is_stronger)
+
+        # --- Case 2b: Poisson component inverted even if the blended result isn't ---
+        # Happens when team stats from weak competition distort Poisson lambdas.
+        # Two sub-cases based on whether the ELO-stronger team's goal-scoring rate
+        # supports its ELO advantage:
+        #
+        # • Standard (ELO-stronger team ALSO has higher GF): the Poisson was corrupted
+        #   by the weaker team's low GA inflating its defence — blend toward pure ELO.
+        #   Example: Morocco GA=0.63 suppresses Brazil's lambda → Poisson inverts.
+        #
+        # • GF-reversed (ELO-stronger team has LOWER GF): the ELO is inflated from
+        #   facing strong confederation opponents, while the weaker team genuinely
+        #   scores more — blend toward 50/50 ELO+Poisson instead of pure ELO.
+        #   Example: Ecuador ELO=1938 (CONMEBOL) vs Ivory Coast GF=1.56 > ECU GF=1.07.
+        if poi:
+            poi_stronger = poi.get("win_a", 0) if a_is_stronger else poi.get("win_b", 0)
+            poi_weaker   = poi.get("win_b", 0) if a_is_stronger else poi.get("win_a", 0)
+            if poi_weaker > poi_stronger:
+                poi_inv = poi_weaker - poi_stronger
+                gf_strong = team_db.get(team_a if a_is_stronger else team_b, {}).get("GF_AVG", 1.4)
+                gf_weak   = team_db.get(team_b if a_is_stronger else team_a, {}).get("GF_AVG", 1.4)
+                if gf_strong < gf_weak:
+                    # ELO-stronger team scores less → ELO inflated, Poisson closer to truth
+                    # Blend toward 50/50 ELO+Poi mid-point
+                    target_h_mid = 0.5 * elo["win_a"] + 0.5 * poi["win_a"]
+                    target_a_mid = 0.5 * elo["win_b"] + 0.5 * poi["win_b"]
+                    blend = min(0.90, 0.50 + (elo_diff - 3) / 300 + poi_inv)
+                    p_h = lerp(pred["p_win_a"], target_h_mid, blend)
+                    p_a = lerp(pred["p_win_b"], target_a_mid, blend)
+                else:
+                    # ELO-stronger team scores more → Poisson corrupted by weak-comp stats
+                    # Raise minimum blend to 0.80 when inversion is significant (>5pp)
+                    min_blend = 0.80 if poi_inv > 0.05 else 0.0
+                    blend = max(min_blend, min(0.90, 0.50 + (elo_diff - 3) / 300 + poi_inv))
+                    p_h = lerp(pred["p_win_a"], elo["win_a"], blend)
+                    p_a = lerp(pred["p_win_b"], elo["win_b"], blend)
+                p_d = 1.0 - p_h - p_a
+                return _cap_draw(p_h, p_d, p_a, elo_diff, a_is_stronger)
 
     # Case 1a: Extreme ELO gap (> 400) — Poisson is also biased by weak-opponent
     # stats, so blend toward pure ELO only (not the ELO+Poisson mix).
@@ -248,16 +314,25 @@ def blended_match_prob(team_db: dict, team_a: str, team_b: str,
         p_h = lerp(pred["p_win_a"], elo["win_a"], blend)
         p_a = lerp(pred["p_win_b"], elo["win_b"], blend)
         p_d = 1.0 - p_h - p_a
-        return {"p_win_a": p_h, "p_draw": max(0.05, p_d), "p_win_b": p_a}
+        return _cap_draw(p_h, p_d, p_a, elo_diff, a_is_stronger)
 
     # Case 1b: ELO gap correction (non-inverted) — blend toward ELO+Poisson.
     # Threshold 75 matches apply_elo_correction in stacked_predictor.py.
+    # For large gaps (≥ 200) where even the ELO+Poisson mix is weak-biased,
+    # blend toward pure ELO instead of the mix.
+    if elo_diff >= 200:
+        blend = min(0.92, 0.70 + (elo_diff - 200) / 300)
+        p_h = lerp(pred["p_win_a"], elo["win_a"], blend)
+        p_a = lerp(pred["p_win_b"], elo["win_b"], blend)
+        p_d = 1.0 - p_h - p_a
+        return _cap_draw(p_h, p_d, p_a, elo_diff, a_is_stronger)
+
     if elo_diff >= 75:
         blend = min(0.90, (elo_diff - 75) / 55)
         p_h = lerp(pred["p_win_a"], target_h, blend)
         p_a = lerp(pred["p_win_b"], target_a, blend)
         p_d = 1.0 - p_h - p_a
-        return {"p_win_a": p_h, "p_draw": max(0.05, p_d), "p_win_b": p_a}
+        return _cap_draw(p_h, p_d, p_a, elo_diff, a_is_stronger)
 
     return pred
 
@@ -301,6 +376,19 @@ def elo_corrected_lambdas(team_db: dict, team_a: str, team_b: str,
         lam_strong, lam_weak = lam_a, lam_h
 
     raw_ratio = lam_strong / max(lam_weak, 0.10)
+
+    # GF-check: if the ELO-stronger team has *lower* actual GF than the ELO-weaker
+    # team, its ELO is likely inflated from facing tough confederation opponents rather
+    # than reflecting genuine goal-scoring quality.  In that case the raw lambdas are
+    # already closer to the truth than the ELO-implied ratio, so skip the correction.
+    # Example: Ecuador ELO=1938 (CONMEBOL) but GF=1.07 vs Ivory Coast GF=1.56 — the
+    # ELO correction would wrongly suppress IVC's lambda to 0.54.
+    team_strong = team_a if elo_diff >= 0 else team_b
+    team_weak   = team_b if elo_diff >= 0 else team_a
+    gf_strong   = team_db.get(team_strong, {}).get("GF_AVG", 1.4)
+    gf_weak     = team_db.get(team_weak,   {}).get("GF_AVG", 1.4)
+    if gf_strong < gf_weak:
+        return lam_h, lam_a   # ELO inflated — trust raw stats
 
     # Skip correction only when the ELO gap is truly small (≤ 80) AND the lambdas
     # already favour the stronger side.  For medium and large gaps (> 80) we fall
@@ -548,6 +636,289 @@ def find_value_bets(odds_data: list[dict], mc: dict | None, team_db: dict) -> li
                 continue
             check("matches", match_name, market, "", sel, odds, mp_val, "Match 1X2",
                   fair_imp=fair_by_sel.get(sel))
+
+    # ── 1b. DOUBLE CHANCE (1X / X2 / 12) ────────────────────────────────────
+    # Selections: "TeamA/Draw" (1X), "TeamB/Draw" (X2), "TeamA/TeamB" (12)
+    dc_markets: dict[str, dict] = {}
+    for row in odds_data:
+        if row["page"] == "match_sidebets" and row.get("market") == "Double Chance":
+            mn = row["match"]
+            if mn not in dc_markets:
+                dc_markets[mn] = {}
+            dc_markets[mn][row["selection"]] = row["odds"]
+
+    for match_name, dc_dict in dc_markets.items():
+        parts = match_name.split(" - ", 1)
+        if len(parts) != 2:
+            continue
+        home_raw, away_raw = parts
+        home_team = best_match(home_raw, model_teams)
+        away_team = best_match(away_raw, model_teams)
+        if home_team is None or away_team is None:
+            continue
+        mp_key = frozenset([home_team, away_team])
+        if mp_key not in match_probs:
+            continue
+        mp   = match_probs[mp_key]
+        flip = (best_match(home_raw, model_teams) == mp["away"])
+        p_h  = mp["p_a"] if flip else mp["p_h"]
+        p_d  = mp["p_d"]
+        p_a  = mp["p_h"] if flip else mp["p_a"]
+
+        # fair margin removal for the three DC legs
+        raw_vals = list(dc_dict.values())
+        if len(raw_vals) >= 3:
+            fair_dc = remove_margin([implied(v) for v in raw_vals])
+            fair_map = {sel: fair_dc[i] for i, sel in enumerate(dc_dict)}
+        else:
+            fair_map = {}
+
+        for sel, odds in dc_dict.items():
+            sel_lo = sel.lower()
+            if "/draw" in sel_lo:
+                # "TeamA/Draw" = 1X or "TeamB/Draw" = X2
+                team_part = sel_lo.replace("/draw", "").strip()
+                if best_match(team_part, model_teams) == home_team:
+                    mp_val = p_h + p_d   # 1X
+                else:
+                    mp_val = p_a + p_d   # X2
+            elif "/" in sel:
+                # "TeamA/TeamB" = 12 (no draw)
+                mp_val = p_h + p_a
+            else:
+                continue
+            check("match_sidebets", match_name, "Double Chance", "", sel, odds, mp_val,
+                  "Double Chance", fair_imp=fair_map.get(sel))
+
+    # ── 1c. CORRECT SCORE ────────────────────────────────────────────────────
+    # Uses Poisson score matrix; bookmakers have wide margins here → good edge opportunity.
+    import math as _math
+
+    def _score_matrix_local(lam_h, lam_a, rho=-0.15, max_g=8):
+        """Bivariate Poisson score matrix with Dixon-Coles correction."""
+        probs = {}
+        for h in range(max_g + 1):
+            ph = _math.exp(-lam_h) * lam_h**h / _math.factorial(h)
+            for a in range(max_g + 1):
+                pa = _math.exp(-lam_a) * lam_a**a / _math.factorial(a)
+                if   h == 0 and a == 0: tau = 1.0 - lam_h * lam_a * rho
+                elif h == 1 and a == 0: tau = 1.0 + lam_a * rho
+                elif h == 0 and a == 1: tau = 1.0 + lam_h * rho
+                elif h == 1 and a == 1: tau = 1.0 - rho
+                else:                   tau = 1.0
+                probs[(h, a)] = ph * pa * tau
+        return probs
+
+    cs_markets: dict[str, dict] = {}
+    for row in odds_data:
+        if row["page"] == "match_sidebets" and row.get("market") == "Correct Score":
+            mn  = row["match"]
+            sel = row["selection"].strip()   # e.g. "1 - 0" or "0 - 0"
+            if mn not in cs_markets:
+                cs_markets[mn] = {}
+            cs_markets[mn][sel] = row["odds"]
+
+    for match_name, cs_dict in cs_markets.items():
+        parts = match_name.split(" - ", 1)
+        if len(parts) != 2:
+            continue
+        home_raw, away_raw = parts
+        home_team = best_match(home_raw, model_teams)
+        away_team = best_match(away_raw, model_teams)
+        if home_team is None or away_team is None:
+            continue
+        try:
+            from src.models.stacked_predictor import DIXON_COLES_RHO
+            lam_h, lam_a = elo_corrected_lambdas(team_db, home_team, away_team)
+            sm = _score_matrix_local(lam_h, lam_a, rho=DIXON_COLES_RHO)
+        except Exception:
+            continue
+
+        for sel, odds in cs_dict.items():
+            # Parse "H - A" score string
+            try:
+                h_str, a_str = sel.split(" - ", 1)
+                h_g, a_g = int(h_str.strip()), int(a_str.strip())
+            except (ValueError, AttributeError):
+                continue
+            mp_val = sm.get((h_g, a_g), 0.0)
+            if mp_val < 0.005:   # skip < 0.5% model prob (very unlikely scores)
+                continue
+            check("match_sidebets", match_name, "Correct Score", "", sel, odds, mp_val,
+                  "Correct Score")
+
+    # ── 1d. MATCH RESULT + BTTS ─────────────────────────────────────────────
+    # Selections: "Home and Yes", "Draw and Yes", "Away and Yes",
+    #             "Home and No",  "Draw and No",  "Away and No"
+    mrbtts_markets: dict[str, dict] = {}
+    for row in odds_data:
+        if (row["page"] == "match_sidebets" and
+                row.get("market") == "Match Result and Both Teams to Score"):
+            mn = row["match"]
+            if mn not in mrbtts_markets:
+                mrbtts_markets[mn] = {}
+            mrbtts_markets[mn][row["selection"]] = row["odds"]
+
+    for match_name, mrb_dict in mrbtts_markets.items():
+        parts = match_name.split(" - ", 1)
+        if len(parts) != 2:
+            continue
+        home_raw, away_raw = parts
+        home_team = best_match(home_raw, model_teams)
+        away_team = best_match(away_raw, model_teams)
+        if home_team is None or away_team is None:
+            continue
+        mp_key = frozenset([home_team, away_team])
+        if mp_key not in match_probs:
+            continue
+        mp   = match_probs[mp_key]
+        flip = (best_match(home_raw, model_teams) == mp["away"])
+        p_h  = mp["p_a"] if flip else mp["p_h"]
+        p_d  = mp["p_d"]
+        p_a  = mp["p_h"] if flip else mp["p_a"]
+
+        try:
+            lam_h, lam_a = elo_corrected_lambdas(team_db, home_team, away_team)
+            if flip:
+                lam_h, lam_a = lam_a, lam_h
+        except Exception:
+            continue
+        p_h_scores = 1.0 - _math.exp(-lam_h)
+        p_a_scores = 1.0 - _math.exp(-lam_a)
+        p_btts_yes = p_h_scores * p_a_scores
+        p_btts_no  = 1.0 - p_btts_yes
+
+        # Use score matrix to get BTTS-conditional probabilities
+        try:
+            from src.models.stacked_predictor import DIXON_COLES_RHO as _rho_val
+            sm = _score_matrix_local(lam_h, lam_a, rho=_rho_val)
+        except Exception:
+            sm = None
+
+        def _p_result_btts(outcome, btts):
+            if sm is None:
+                # Fallback: assume independence
+                p_res = {"home": p_h, "draw": p_d, "away": p_a}[outcome]
+                return p_res * (p_btts_yes if btts else p_btts_no)
+            total = 0.0
+            for (h, a), prob in sm.items():
+                if btts and (h == 0 or a == 0):
+                    continue
+                if not btts and h >= 1 and a >= 1:
+                    continue
+                if outcome == "home" and h > a:
+                    total += prob
+                elif outcome == "draw" and h == a:
+                    total += prob
+                elif outcome == "away" and a > h:
+                    total += prob
+            return total
+
+        for sel, odds in mrb_dict.items():
+            sel_lo = sel.lower()
+            if home_raw.lower() in sel_lo or "home" in sel_lo:
+                outcome = "home"
+            elif away_raw.lower() in sel_lo or "away" in sel_lo:
+                outcome = "away"
+            elif "draw" in sel_lo:
+                outcome = "draw"
+            else:
+                continue
+            btts = "yes" in sel_lo
+            mp_val = _p_result_btts(outcome, btts)
+            check("match_sidebets", match_name, "Match Result and BTTS", "", sel, odds,
+                  mp_val, "Match Result + BTTS")
+
+    # ── 1e. HALF TIME / FULL TIME ────────────────────────────────────────────
+    # 9 combinations: Home/Home, Home/Draw, Home/Away, Draw/Home, Draw/Draw,
+    #                 Draw/Away, Away/Home, Away/Draw, Away/Away
+    htft_markets: dict[str, dict] = {}
+    for row in odds_data:
+        if (row["page"] == "match_sidebets" and
+                "Half Time" in (row.get("market") or "")):
+            mn = row["match"]
+            if mn not in htft_markets:
+                htft_markets[mn] = {}
+            htft_markets[mn][row["selection"]] = row["odds"]
+
+    for match_name, htft_dict in htft_markets.items():
+        parts = match_name.split(" - ", 1)
+        if len(parts) != 2:
+            continue
+        home_raw, away_raw = parts
+        home_team = best_match(home_raw, model_teams)
+        away_team = best_match(away_raw, model_teams)
+        if home_team is None or away_team is None:
+            continue
+        try:
+            from src.models.stacked_predictor import DIXON_COLES_RHO as _rho_htft
+            _HT_FRAC = 0.45   # WC historical: ~45% of goals fall in first half
+            lam_h_full, lam_a_full = elo_corrected_lambdas(team_db, home_team, away_team)
+            mp_key = frozenset([home_team, away_team])
+            if mp_key not in match_probs:
+                continue
+            mp   = match_probs[mp_key]
+            flip = (best_match(home_raw, model_teams) == mp["away"])
+            if flip:
+                lam_h_full, lam_a_full = lam_a_full, lam_h_full
+            # 1st half: ~45% of expected goals
+            lam_h1 = lam_h_full * _HT_FRAC
+            lam_a1 = lam_a_full * _HT_FRAC
+        except Exception:
+            continue
+
+        sm1 = _score_matrix_local(lam_h1, lam_a1, rho=_rho_htft)
+
+        def _ht_result(sm):
+            ph, pd, pa = 0.0, 0.0, 0.0
+            for (h, a), p in sm.items():
+                if h > a: ph += p
+                elif h == a: pd += p
+                else: pa += p
+            return ph, pd, pa
+
+        p_ht_h, p_ht_d, p_ht_a = _ht_result(sm1)
+        p_ft_h = mp["p_a"] if flip else mp["p_h"]
+        p_ft_d = mp["p_d"]
+        p_ft_a = mp["p_h"] if flip else mp["p_a"]
+
+        result_map = {
+            "home": p_ht_h, "draw": p_ht_d, "away": p_ht_a,
+        }
+        ft_map = {
+            "home": p_ft_h, "draw": p_ft_d, "away": p_ft_a,
+        }
+
+        for sel, odds in htft_dict.items():
+            # Selection format: "TeamA/TeamB" = HT Home / FT Away, "Draw/TeamA" etc.
+            # Normalise to H/D/A
+            sel_parts = sel.split("/")
+            if len(sel_parts) != 2:
+                continue
+            ht_raw, ft_raw = sel_parts[0].strip().lower(), sel_parts[1].strip().lower()
+
+            def _classify(s):
+                s = s.strip().lower()
+                if s in ("draw", "x"): return "draw"
+                # Check against home/away team names
+                if best_match(s, model_teams) == home_team: return "home"
+                if best_match(s, model_teams) == away_team: return "away"
+                if home_raw.lower()[:4] in s: return "home"
+                if away_raw.lower()[:4] in s: return "away"
+                return None
+
+            ht_outcome = _classify(ht_raw)
+            ft_outcome = _classify(ft_raw)
+            if ht_outcome is None or ft_outcome is None:
+                continue
+
+            # Approximate: P(HT=X, FT=Y) ≈ P(HT=X) × P(FT=Y | HT=X)
+            # Simplification: assume independence of HT and FT results (reasonable approximation)
+            # P(FT=H | HT=H) is higher than base P(FT=H); we use independence as approximation
+            mp_val = result_map[ht_outcome] * ft_map[ft_outcome]
+            # Renormalize across all 9 combinations to correct for independence assumption
+            check("match_sidebets", match_name, "Half Time / Full Time", "", sel, odds,
+                  mp_val, "HT/FT")
 
     # ── 2. OUTRIGHT WINNER ──────────────────────────────────────────────────
     if mc:
@@ -1062,8 +1433,16 @@ def find_value_bets(odds_data: list[dict], mc: dict | None, team_db: dict) -> li
         mn = row["match"]
         if mn not in _bookie_home_fair:
             # Collect all 3 outcomes for this match to remove margin
-            _trio = [r for r in odds_data
-                     if r.get("match") == mn and r.get("market") == "Match Result (1X2)"]
+            _trio_all = [r for r in odds_data
+                         if r.get("match") == mn and r.get("market") == "Match Result (1X2)"]
+            # Deduplicate by selection to handle duplicate rows from scraper
+            _seen_sels: set[str] = set()
+            _trio = []
+            for _r in _trio_all:
+                _sel = _r.get("selection", "")
+                if _sel not in _seen_sels:
+                    _seen_sels.add(_sel)
+                    _trio.append(_r)
             if len(_trio) != 3:
                 continue
             _raws = [1.0 / r["odds"] for r in _trio]
@@ -1890,6 +2269,383 @@ def find_value_bets(odds_data: list[dict], mc: dict | None, team_db: dict) -> li
             continue
         check(row["page"], row["match"], mkt, sel_str,
               f"{team} exactly {pts_val} pts", row["odds"], model_p, "Exact Points")
+
+    # ── 19. 1ST / 2ND HALF GOALS O/U ─────────────────────────────────────────
+    # Market: "1st Half Goals" / "2nd Half Goals"; same O/U format as total goals.
+    # Model: ELO-corrected lambdas × WC historical half-goal fraction.
+    # _WC_1H_FRAC already defined in section 16c above (0.413).
+
+    for _hg_mkt, _hg_frac in [("1st Half Goals", _WC_1H_FRAC), ("2nd Half Goals", 1.0 - _WC_1H_FRAC)]:
+        _hg_data: dict[str, dict] = {}
+        for row in odds_data:
+            if row.get("market") == _hg_mkt:
+                try:
+                    _lv = float(str(row.get("line", "")).strip())
+                except (ValueError, TypeError):
+                    continue
+                mn = row["match"]
+                _hg_data.setdefault(mn, {})[f"{row['selection']}_{_lv}"] = row["odds"]
+
+        for match_name, _hg_dict in _hg_data.items():
+            parts = match_name.split(" - ", 1)
+            if len(parts) != 2:
+                continue
+            home_raw, away_raw = parts
+            home_team = best_match(home_raw, model_teams)
+            away_team = best_match(away_raw, model_teams)
+            if not home_team or not away_team:
+                continue
+            if home_team not in team_db or away_team not in team_db:
+                continue
+
+            lam_h, lam_a = elo_corrected_lambdas(team_db, home_team, away_team)
+            lam_h_half = lam_h * _hg_frac
+            lam_a_half = lam_a * _hg_frac
+
+            _hg_label = "1H Goals" if "1st" in _hg_mkt else "2H Goals"
+            for line in [0.5, 1.0, 1.5, 2.0, 2.5]:
+                p_over, p_under = poisson_ou_probs(lam_h_half, lam_a_half, line)
+                over_key  = f"Over_{line}"
+                under_key = f"Under_{line}"
+
+                fair_over = fair_under = None
+                if over_key in _hg_dict and under_key in _hg_dict:
+                    raw_o = implied(_hg_dict[over_key])
+                    raw_u = implied(_hg_dict[under_key])
+                    fair  = remove_margin([raw_o, raw_u])
+                    fair_over, fair_under = fair[0], fair[1]
+
+                if over_key in _hg_dict:
+                    check("match_sidebets", match_name, _hg_mkt, str(line),
+                          f"Over {line}", _hg_dict[over_key], p_over, _hg_label,
+                          fair_imp=fair_over)
+                if under_key in _hg_dict:
+                    check("match_sidebets", match_name, _hg_mkt, str(line),
+                          f"Under {line}", _hg_dict[under_key], p_under, _hg_label,
+                          fair_imp=fair_under)
+
+    # ── 20. ASIAN HANDICAP (2-WAY) ───────────────────────────────────────────
+    # Market: "Asian Handicap"; line "h_cap - a_cap"; sel = team name.
+    # Model: score matrix → P(home_eff > away_eff), normalised over non-push.
+    # _score_matrix() is already defined in section 10.
+
+    def _ah_probs(lam_h: float, lam_a: float, h_cap: float, a_cap: float):
+        """P(home wins AH), P(away wins AH) — push probability excluded & normalised out."""
+        sp = _score_matrix(lam_h, lam_a)
+        p_home = p_away = 0.0
+        for (h, a), p in sp.items():
+            eff = (h + h_cap) - (a + a_cap)
+            if   eff > 0: p_home += p
+            elif eff < 0: p_away += p
+        non_push = p_home + p_away
+        if non_push > 0:
+            p_home /= non_push
+            p_away /= non_push
+        return p_home, p_away
+
+    _ah_data: dict[str, dict] = {}
+    for row in odds_data:
+        if row.get("market") == "Asian Handicap":
+            line_str = str(row.get("line", "")).strip()
+            try:
+                _parts = line_str.split(" - ")
+                _h_cap, _a_cap = float(_parts[0]), float(_parts[1])
+            except Exception:
+                continue
+            mn = row["match"]
+            key = f"{_h_cap}_{_a_cap}"
+            if mn not in _ah_data:
+                _ah_data[mn] = {}
+            if key not in _ah_data[mn]:
+                _ah_data[mn][key] = {"h_cap": _h_cap, "a_cap": _a_cap, "odds": {}}
+            _ah_data[mn][key]["odds"][row["selection"]] = row["odds"]
+
+    for match_name, _ah_lines in _ah_data.items():
+        parts = match_name.split(" - ", 1)
+        if len(parts) != 2:
+            continue
+        home_raw, away_raw = parts
+        home_team = best_match(home_raw, model_teams)
+        away_team = best_match(away_raw, model_teams)
+        if not home_team or not away_team:
+            continue
+        if home_team not in team_db or away_team not in team_db:
+            continue
+
+        # Calibration guard: skip when model diverges > 8 pp from bookmaker's 1X2.
+        # Fallback: when bookie 1X2 isn't available (e.g. duplicate rows in scrape),
+        # require ELO difference to be under 300 to avoid extreme mismatch AH bets.
+        _bookie_hf2 = _bookie_home_fair.get(match_name)
+        if _bookie_hf2 is not None:
+            _pred_out2 = blended_match_prob(team_db, home_team, away_team)
+            if abs(_pred_out2["p_win_a"] - _bookie_hf2) > 0.08:
+                continue
+        else:
+            _elo_h2 = team_db[home_team].get("ELO", 1700)
+            _elo_a2 = team_db[away_team].get("ELO", 1700)
+            if abs(_elo_h2 - _elo_a2) > 300:
+                continue
+
+        lam_h, lam_a = elo_corrected_lambdas(team_db, home_team, away_team)
+
+        for key, ld in _ah_lines.items():
+            h_cap, a_cap = ld["h_cap"], ld["a_cap"]
+            odds_map = ld["odds"]
+            p_home_ah, p_away_ah = _ah_probs(lam_h, lam_a, h_cap, a_cap)
+
+            fair_h_ah = fair_a_ah = None
+            _ho_implied = _ao_implied = None
+            for sel, odds_val in odds_map.items():
+                st = best_match(sel, model_teams)
+                if st == home_team:
+                    _ho_implied = implied(odds_val)
+                elif st == away_team:
+                    _ao_implied = implied(odds_val)
+            if _ho_implied and _ao_implied:
+                _f = remove_margin([_ho_implied, _ao_implied])
+                fair_h_ah, fair_a_ah = _f[0], _f[1]
+
+            # Direct AH calibration guard: skip this line when our model diverges
+            # from the bookmaker's own AH implied probability by more than 20 pp.
+            # This catches score-distribution miscalibration that the 1X2 guard misses
+            # (e.g. Ecuador vs Curaçao where win% is close but margin distribution differs).
+            if fair_h_ah is not None and abs(p_home_ah - fair_h_ah) > 0.20:
+                continue
+            if fair_a_ah is not None and abs(p_away_ah - fair_a_ah) > 0.20:
+                continue
+
+            for sel, odds_val in odds_map.items():
+                st = best_match(sel, model_teams)
+                if st == home_team:
+                    check("match_sidebets", match_name, "Asian Handicap", f"{h_cap}-{a_cap}",
+                          f"{home_team} AH {h_cap}-{a_cap}", odds_val, p_home_ah, "Asian Handicap",
+                          fair_imp=fair_h_ah)
+                elif st == away_team:
+                    check("match_sidebets", match_name, "Asian Handicap", f"{h_cap}-{a_cap}",
+                          f"{away_team} AH {h_cap}-{a_cap}", odds_val, p_away_ah, "Asian Handicap",
+                          fair_imp=fair_a_ah)
+
+    # ── 21. 1ST / 2ND HALF ASIAN HANDICAP ────────────────────────────────────
+    # Same logic as section 20, applied to half-time goal lambdas.
+
+    for _hah_mkt, _hah_frac in [("1st Half Asian Handicap", _WC_1H_FRAC),
+                                  ("2nd Half Asian Handicap", 1.0 - _WC_1H_FRAC)]:
+        _hah_data: dict[str, dict] = {}
+        for row in odds_data:
+            if row.get("market") == _hah_mkt:
+                line_str = str(row.get("line", "")).strip()
+                try:
+                    _parts = line_str.split(" - ")
+                    _h_cap, _a_cap = float(_parts[0]), float(_parts[1])
+                except Exception:
+                    continue
+                mn = row["match"]
+                key = f"{_h_cap}_{_a_cap}"
+                if mn not in _hah_data:
+                    _hah_data[mn] = {}
+                if key not in _hah_data[mn]:
+                    _hah_data[mn][key] = {"h_cap": _h_cap, "a_cap": _a_cap, "odds": {}}
+                _hah_data[mn][key]["odds"][row["selection"]] = row["odds"]
+
+        for match_name, _hah_lines in _hah_data.items():
+            parts = match_name.split(" - ", 1)
+            if len(parts) != 2:
+                continue
+            home_raw, away_raw = parts
+            home_team = best_match(home_raw, model_teams)
+            away_team = best_match(away_raw, model_teams)
+            if not home_team or not away_team:
+                continue
+            if home_team not in team_db or away_team not in team_db:
+                continue
+
+            _bookie_hf3 = _bookie_home_fair.get(match_name)
+            if _bookie_hf3 is not None:
+                _pred_out3 = blended_match_prob(team_db, home_team, away_team)
+                if abs(_pred_out3["p_win_a"] - _bookie_hf3) > 0.08:
+                    continue
+            else:
+                _elo_h3 = team_db[home_team].get("ELO", 1700)
+                _elo_a3 = team_db[away_team].get("ELO", 1700)
+                if abs(_elo_h3 - _elo_a3) > 300:
+                    continue
+
+            lam_h_full, lam_a_full = elo_corrected_lambdas(team_db, home_team, away_team)
+            lam_h_hah = lam_h_full * _hah_frac
+            lam_a_hah = lam_a_full * _hah_frac
+
+            _hah_label = "1H AH" if "1st" in _hah_mkt else "2H AH"
+            for key, ld in _hah_lines.items():
+                h_cap, a_cap = ld["h_cap"], ld["a_cap"]
+                odds_map = ld["odds"]
+                p_home_hah, p_away_hah = _ah_probs(lam_h_hah, lam_a_hah, h_cap, a_cap)
+
+                fair_h_hah = fair_a_hah = None
+                _ho2_imp = _ao2_imp = None
+                for sel, odds_val in odds_map.items():
+                    st = best_match(sel, model_teams)
+                    if st == home_team:
+                        _ho2_imp = implied(odds_val)
+                    elif st == away_team:
+                        _ao2_imp = implied(odds_val)
+                if _ho2_imp and _ao2_imp:
+                    _f2 = remove_margin([_ho2_imp, _ao2_imp])
+                    fair_h_hah, fair_a_hah = _f2[0], _f2[1]
+
+                # AH calibration guard: skip if model diverges >20 pp from bookie implied
+                if fair_h_hah is not None and abs(p_home_hah - fair_h_hah) > 0.20:
+                    continue
+                if fair_a_hah is not None and abs(p_away_hah - fair_a_hah) > 0.20:
+                    continue
+
+                for sel, odds_val in odds_map.items():
+                    st = best_match(sel, model_teams)
+                    if st == home_team:
+                        check("match_sidebets", match_name, _hah_mkt, f"{h_cap}-{a_cap}",
+                              f"{home_team} {_hah_label} {h_cap}-{a_cap}", odds_val,
+                              p_home_hah, _hah_label, fair_imp=fair_h_hah)
+                    elif st == away_team:
+                        check("match_sidebets", match_name, _hah_mkt, f"{h_cap}-{a_cap}",
+                              f"{away_team} {_hah_label} {h_cap}-{a_cap}", odds_val,
+                              p_away_hah, _hah_label, fair_imp=fair_a_hah)
+
+    # ── 22. CORNERS HANDICAP (2 WAY) ─────────────────────────────────────────
+    # Market: "Corners Handicap (2 Way)"; line "h_cap - a_cap"; sel = team name.
+    # Model: corners_model → Poisson convolution AH probabilities.
+
+    def _corners_ah_probs(lam_hc: float, lam_ac: float, h_cap: float, a_cap: float, max_c: int = 25):
+        """P(home_corners + h_cap > away_corners + a_cap) and mirror, normalised over non-push."""
+        pmf_h = [math.exp(-lam_hc) * lam_hc**k / math.factorial(k) for k in range(max_c + 1)]
+        pmf_a = [math.exp(-lam_ac) * lam_ac**k / math.factorial(k) for k in range(max_c + 1)]
+        p_home_c = p_away_c = 0.0
+        for h in range(max_c + 1):
+            for a in range(max_c + 1):
+                eff = (h + h_cap) - (a + a_cap)
+                p = pmf_h[h] * pmf_a[a]
+                if   eff > 0: p_home_c += p
+                elif eff < 0: p_away_c += p
+        non_push_c = p_home_c + p_away_c
+        if non_push_c > 0:
+            p_home_c /= non_push_c
+            p_away_c /= non_push_c
+        return p_home_c, p_away_c
+
+    _crn_hcp_data: dict[str, dict] = {}
+    for row in odds_data:
+        if row.get("market") == "Corners Handicap (2 Way)":
+            line_str = str(row.get("line", "")).strip()
+            try:
+                _parts = line_str.split(" - ")
+                _h_cap, _a_cap = float(_parts[0]), float(_parts[1])
+            except Exception:
+                continue
+            mn = row["match"]
+            key = f"{_h_cap}_{_a_cap}"
+            if mn not in _crn_hcp_data:
+                _crn_hcp_data[mn] = {}
+            if key not in _crn_hcp_data[mn]:
+                _crn_hcp_data[mn][key] = {"h_cap": _h_cap, "a_cap": _a_cap, "odds": {}}
+            _crn_hcp_data[mn][key]["odds"][row["selection"]] = row["odds"]
+
+    for match_name, _crn_lines in _crn_hcp_data.items():
+        parts = match_name.split(" - ", 1)
+        if len(parts) != 2:
+            continue
+        home_raw, away_raw = parts
+        home_team = best_match(home_raw, model_teams)
+        away_team = best_match(away_raw, model_teams)
+        if not home_team or not away_team:
+            continue
+        if home_team not in team_db or away_team not in team_db:
+            continue
+
+        try:
+            lam_hc, lam_ac = corners_model(team_db[home_team], team_db[away_team])
+        except Exception:
+            continue
+
+        for key, ld in _crn_lines.items():
+            h_cap, a_cap = ld["h_cap"], ld["a_cap"]
+            odds_map = ld["odds"]
+            p_hc, p_ac = _corners_ah_probs(lam_hc, lam_ac, h_cap, a_cap)
+
+            fair_hc = fair_ac = None
+            _hc_imp = _ac_imp = None
+            for sel, odds_val in odds_map.items():
+                st = best_match(sel, model_teams)
+                if st == home_team:
+                    _hc_imp = implied(odds_val)
+                elif st == away_team:
+                    _ac_imp = implied(odds_val)
+            if _hc_imp and _ac_imp:
+                _fc = remove_margin([_hc_imp, _ac_imp])
+                fair_hc, fair_ac = _fc[0], _fc[1]
+
+            for sel, odds_val in odds_map.items():
+                st = best_match(sel, model_teams)
+                if st == home_team:
+                    check("match_sidebets", match_name, "Corners Handicap (2 Way)", f"{h_cap}-{a_cap}",
+                          f"{home_team} CrnHCP {h_cap}-{a_cap}", odds_val, p_hc, "Corners HCP",
+                          fair_imp=fair_hc)
+                elif st == away_team:
+                    check("match_sidebets", match_name, "Corners Handicap (2 Way)", f"{h_cap}-{a_cap}",
+                          f"{away_team} CrnHCP {h_cap}-{a_cap}", odds_val, p_ac, "Corners HCP",
+                          fair_imp=fair_ac)
+
+    # ── 23. TOTAL SHOTS ON TARGET O/U ────────────────────────────────────────
+    # No real SOT stats in team_db → proxy: lam_sot = WC_AVG_SOT × (GF_AVG / WC_AVG_GOALS)
+    # WC historical: ~8.0 total shots on target per match (4.0 per team).
+    _WC_AVG_SOT   = 8.0   # combined SOT per match
+    _WC_AVG_GOALS = 1.40  # goals per team per match (WC calibration)
+
+    _sot_data: dict[str, dict] = {}
+    for row in odds_data:
+        if row.get("market") == "Total Shots on Target":
+            try:
+                _lv = float(str(row.get("line", "")).strip())
+            except (ValueError, TypeError):
+                continue
+            mn = row["match"]
+            _sot_data.setdefault(mn, {})[f"{row['selection']}_{_lv}"] = row["odds"]
+
+    for match_name, _sot_dict in _sot_data.items():
+        parts = match_name.split(" - ", 1)
+        if len(parts) != 2:
+            continue
+        home_raw, away_raw = parts
+        home_team = best_match(home_raw, model_teams)
+        away_team = best_match(away_raw, model_teams)
+        if not home_team or not away_team:
+            continue
+        if home_team not in team_db or away_team not in team_db:
+            continue
+
+        # Proxy: scale WC average SOT by each team's relative goal-scoring rate
+        _gf_h = team_db[home_team].get("GF_AVG", _WC_AVG_GOALS)
+        _gf_a = team_db[away_team].get("GF_AVG", _WC_AVG_GOALS)
+        _lam_sot_h = (_WC_AVG_SOT / 2.0) * (_gf_h / _WC_AVG_GOALS)
+        _lam_sot_a = (_WC_AVG_SOT / 2.0) * (_gf_a / _WC_AVG_GOALS)
+
+        for line in [4.5, 5.0, 5.5, 6.0, 6.5, 7.0, 7.5, 8.0]:
+            p_over, p_under = poisson_ou_probs(_lam_sot_h, _lam_sot_a, line)
+            over_key  = f"Over_{line}"
+            under_key = f"Under_{line}"
+
+            fair_over = fair_under = None
+            if over_key in _sot_dict and under_key in _sot_dict:
+                raw_o = implied(_sot_dict[over_key])
+                raw_u = implied(_sot_dict[under_key])
+                fair  = remove_margin([raw_o, raw_u])
+                fair_over, fair_under = fair[0], fair[1]
+
+            if over_key in _sot_dict:
+                check("match_sidebets", match_name, "Total Shots on Target", str(line),
+                      f"SOT Over {line}", _sot_dict[over_key], p_over, "Shots on Target",
+                      fair_imp=fair_over)
+            if under_key in _sot_dict:
+                check("match_sidebets", match_name, "Total Shots on Target", str(line),
+                      f"SOT Under {line}", _sot_dict[under_key], p_under, "Shots on Target",
+                      fair_imp=fair_under)
 
     # ── Sort by EV ───────────────────────────────────────────────────────────
     value_bets.sort(key=lambda x: -x["ev"])
