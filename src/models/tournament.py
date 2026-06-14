@@ -148,7 +148,7 @@ BASE_TEAM_DB = {
     "Egypt":        {"ELO": 1694, "FORMA": 1.3, "GF_AVG": 1.1, "GA_AVG": 1.1},
     "South Africa": {"ELO": 1610, "FORMA": 1.3, "GF_AVG": 1.0, "GA_AVG": 1.2},
     "Czech Republic": {"ELO": 1750, "FORMA": 1.5, "GF_AVG": 1.3, "GA_AVG": 1.0},
-    "Bosnia & Herzegovina": {"ELO": 1690, "FORMA": 1.4, "GF_AVG": 1.2, "GA_AVG": 1.1},
+    "Bosnia & Herzegovina": {"ELO": 1694, "FORMA": 1.4, "GF_AVG": 1.2, "GA_AVG": 1.1},
     "Qatar":        {"ELO": 1550, "FORMA": 1.1, "GF_AVG": 0.9, "GA_AVG": 1.3},
     "Scotland":     {"ELO": 1760, "FORMA": 1.5, "GF_AVG": 1.3, "GA_AVG": 1.0},
     "Haiti":        {"ELO": 1490, "FORMA": 1.0, "GF_AVG": 0.8, "GA_AVG": 1.4},
