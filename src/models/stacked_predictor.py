@@ -323,6 +323,20 @@ def _compute_lambdas(
     lam_a = (gf_a / mu) * (ga_b / mu) * mu
     lam_b = (gf_b / mu) * (ga_a / mu) * mu
 
+    # ELO-anchored lambda blend — prevents outlier friendly results (e.g. a 5-1
+    # blowout) from severely distorting goal expectations against high-ELO opponents.
+    # The ELO prior uses the same WC anchor (mu) and the ELO differential to set
+    # an expected goal rate independent of recent stats.  30% weight is conservative
+    # enough to preserve stat signals while correcting obvious calibration drifts.
+    _elo_a = team_a.get("ELO", 1750)
+    _elo_b = team_b.get("ELO", 1750)
+    _elo_diff = _elo_a - _elo_b
+    _ELO_PRIOR_W = 0.30
+    lam_elo_a = mu * pow(10,  _elo_diff / 1600)
+    lam_elo_b = mu * pow(10, -_elo_diff / 1600)
+    lam_a = (1 - _ELO_PRIOR_W) * lam_a + _ELO_PRIOR_W * lam_elo_a
+    lam_b = (1 - _ELO_PRIOR_W) * lam_b + _ELO_PRIOR_W * lam_elo_b
+
     # FORMA adjustment: scale goal output by form relative to baseline (1.5)
     # A team with FORMA 2.5 (exceptional) gets ~7% boost; FORMA 1.0 (poor) gets ~3% cut
     forma_baseline = 1.5
@@ -348,15 +362,15 @@ def _compute_lambdas(
 
     # Shots on target ratio — teams that convert more shots are more clinical
     # Uses 15% weight to avoid double-counting with GF_AVG (correlated signals)
-    sot_a = team_a.get("SOT_FOR", WC_AVG_SOT)
-    sot_b = team_b.get("SOT_FOR", WC_AVG_SOT)
+    sot_a = team_a.get("SOT_FOR") or WC_AVG_SOT
+    sot_b = team_b.get("SOT_FOR") or WC_AVG_SOT
     lam_a *= 1.0 + (sot_a / WC_AVG_SOT - 1.0) * 0.15
     lam_b *= 1.0 + (sot_b / WC_AVG_SOT - 1.0) * 0.15
 
     # Possession — high-possession teams generate more chances AND suppress opponent output
     # Modifier is kept small (xG/GF already capture most of this signal)
-    poss_a = team_a.get("POSSESSION", 50.0) / 100.0
-    poss_b = team_b.get("POSSESSION", 50.0) / 100.0
+    poss_a = (team_a.get("POSSESSION") or 50.0) / 100.0
+    poss_b = (team_b.get("POSSESSION") or 50.0) / 100.0
     lam_a *= 1.0 + (poss_a - 0.5) * 0.10
     lam_b *= 1.0 + (poss_b - 0.5) * 0.10
 
