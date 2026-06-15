@@ -434,10 +434,34 @@ def corners_model(
     name_a = team_a.get("name", "")
     name_b = team_b.get("name", "")
 
-    cf_a = max(1.0, team_a.get("CORNERS_FOR",     mu))
-    ca_a = max(1.0, team_a.get("CORNERS_AGAINST", mu))
-    cf_b = max(1.0, team_b.get("CORNERS_FOR",     mu))
-    ca_b = max(1.0, team_b.get("CORNERS_AGAINST", mu))
+    _CORNERS_DEFAULT = 5.0   # sentinel set in load_team_db when no real data
+
+    def _corners_stat(team: dict, stat: str) -> tuple[float, bool]:
+        """Return (value, is_default) for a corners stat."""
+        val = team.get(stat)
+        if val is None or val == _CORNERS_DEFAULT:
+            return None, True
+        return max(1.0, float(val)), False
+
+    def _cf_proxy(team: dict) -> float:
+        """Proxy corners-for from GF_AVG when real data is absent."""
+        gf = max(0.3, team.get("GF_AVG", WC_AVG_GOALS))
+        return mu * (gf / WC_AVG_GOALS) ** 0.7
+
+    def _ca_proxy(team: dict) -> float:
+        """Proxy corners-against from GA_AVG when real data is absent."""
+        ga = max(0.3, team.get("GA_AVG", WC_AVG_GOALS))
+        return mu * (ga / WC_AVG_GOALS) ** 0.7
+
+    cf_a_raw, cf_a_default = _corners_stat(team_a, "CORNERS_FOR")
+    ca_a_raw, ca_a_default = _corners_stat(team_a, "CORNERS_AGAINST")
+    cf_b_raw, cf_b_default = _corners_stat(team_b, "CORNERS_FOR")
+    ca_b_raw, ca_b_default = _corners_stat(team_b, "CORNERS_AGAINST")
+
+    cf_a = cf_a_raw if not cf_a_default else _cf_proxy(team_a)
+    ca_a = ca_a_raw if not ca_a_default else _ca_proxy(team_a)
+    cf_b = cf_b_raw if not cf_b_default else _cf_proxy(team_b)
+    ca_b = ca_b_raw if not ca_b_default else _ca_proxy(team_b)
 
     lam_c_a = (cf_a / mu) * (ca_b / mu) * mu
     lam_c_b = (cf_b / mu) * (ca_a / mu) * mu
