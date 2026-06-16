@@ -39,6 +39,42 @@ WC_AVG_YELLOWS = 1.8    # Yellow cards per team per WC match
 DIXON_COLES_RHO = -0.15 # Dixon-Coles correlation parameter for low-score outcomes
 H2H_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "data", "h2h_data.json")
 
+# ── Draw probability calibration ──────────────────────────────────────────────
+# Empirical boost derived from WC 2026 observed draw rate vs model expectation.
+# Set to 1.0 to disable. Run scripts/calibrate_draw_rate.py after each matchday.
+# Calibrated 2026-06-16: 8 draws in 16 matches (50%) vs model mean 29.8%
+# → boost = 1.68. Use 1.50 to be slightly conservative (50% may regress).
+DRAW_BOOST: float = 1.50
+
+
+def apply_draw_boost(
+    p_win_a: float,
+    p_draw: float,
+    p_win_b: float,
+    boost: float = None,
+) -> tuple:
+    """
+    Scale p_draw by the boost factor, then renormalize so probabilities sum to 1.
+    Win probabilities are scaled proportionally to absorb the transferred mass.
+
+    Args:
+        boost: defaults to module-level DRAW_BOOST; pass explicitly to override.
+    """
+    if boost is None:
+        boost = DRAW_BOOST
+    if boost == 1.0:
+        return p_win_a, p_draw, p_win_b
+    p_draw_new = min(p_draw * boost, 0.85)   # hard ceiling — prevents degenerate outputs
+    win_total = p_win_a + p_win_b
+    if win_total > 0:
+        scale = (1.0 - p_draw_new) / win_total
+        p_win_a = p_win_a * scale
+        p_win_b = p_win_b * scale
+    total = p_win_a + p_draw_new + p_win_b
+    if total <= 0:
+        total = 1.0
+    return p_win_a / total, p_draw_new / total, p_win_b / total
+
 from src.models.predictor import VENUES, HIGH_ALTITUDE_TEAMS
 
 # Typical summer competitive temperature (°C) each squad is acclimatised to.
@@ -691,6 +727,9 @@ def stack_predict(
     else:
         pa, pd, pb = 0.333, 0.334, 0.333
 
+    # Apply draw probability calibration (empirical WC 2026 correction)
+    pa, pd, pb = apply_draw_boost(pa, pd, pb)
+
     breakdown = {}
     labels = {"elo": "ELO", "poisson": "Poisson", "ml": "ML", "h2h": "H2H"}
     for k, probs in models.items():
@@ -780,7 +819,8 @@ def apply_elo_correction(
             p_h = lerp(pred["p_win_a"], elo["win_a"], blend)
             p_a = lerp(pred["p_win_b"], elo["win_b"], blend)
             p_d = 1.0 - p_h - p_a
-            return {"p_win_a": p_h, "p_draw": max(0.05, p_d), "p_win_b": p_a}
+            p_h, p_d, p_a = apply_draw_boost(p_h, max(0.05, p_d), p_a)
+            return {"p_win_a": p_h, "p_draw": p_d, "p_win_b": p_a}
 
     # Case 1: ELO gap correction (non-inverted) — blend toward ELO+Poisson.
     # Threshold 75: catches cases like Algeria vs Jordan (Δ≈80) and similar.
@@ -789,8 +829,10 @@ def apply_elo_correction(
         p_h = lerp(pred["p_win_a"], target_h, blend)
         p_a = lerp(pred["p_win_b"], target_a, blend)
         p_d = 1.0 - p_h - p_a
-        return {"p_win_a": p_h, "p_draw": max(0.05, p_d), "p_win_b": p_a}
+        p_h, p_d, p_a = apply_draw_boost(p_h, max(0.05, p_d), p_a)
+        return {"p_win_a": p_h, "p_draw": p_d, "p_win_b": p_a}
 
+    # No correction needed — pred already has draw boost from stack_predict()
     return pred
 
 

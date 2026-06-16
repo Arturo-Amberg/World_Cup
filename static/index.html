@@ -1361,6 +1361,229 @@ button.hdr-pill-btn:focus-visible { box-shadow: 0 0 0 2px var(--accent); outline
 }
 .add-to-parlay-btn:hover { background: var(--accent); color: #fff; border-color: var(--accent); }
 .add-to-parlay-btn.added { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+/* ══ Points Optimizer styles ══ */
+.opt-scoring-legend {
+ display: flex; flex-wrap: wrap; gap: 10px;
+ background: var(--bg-raised); border: 1px solid var(--border);
+ border-radius: var(--r-lg); padding: 14px 20px;
+ margin-top: 20px;
+}
+.opt-legend-item {
+ display: flex; align-items: center; gap: 8px;
+ font-size: 13px; color: var(--txt-2);
+}
+.opt-pts {
+ display: inline-flex; align-items: center; justify-content: center;
+ width: 26px; height: 26px; border-radius: 6px;
+ font-size: 12px; font-weight: 800; font-family: var(--font-mono);
+ flex-shrink: 0;
+}
+.opt-pts-5 { background: #1a7f37; color: #fff; }
+.opt-pts-3 { background: var(--accent); color: #fff; }
+.opt-pts-2 { background: #8250df; color: #fff; }
+.opt-pts-0 { background: var(--bg-raised); color: var(--txt-3); border: 1px solid var(--border); }
+
+.opt-pick-display {
+ display: flex; flex-direction: column; align-items: center;
+ padding: 24px 0 16px;
+}
+.opt-score-wrap {
+ display: flex; align-items: center; gap: 10px;
+ margin-bottom: 12px;
+}
+.opt-score-num {
+ font-size: 64px; font-weight: 800; letter-spacing: -0.04em;
+ color: var(--txt); line-height: 1;
+}
+.opt-score-sep {
+ font-size: 40px; font-weight: 300; color: var(--txt-3); margin-top: -4px;
+}
+.opt-ev-main {
+ font-size: 15px; font-weight: 700; color: var(--accent);
+ font-family: var(--font-mono); margin-bottom: 4px;
+}
+.opt-prob-line {
+ font-size: 12px; color: var(--txt-3);
+ font-family: var(--font-mono);
+}
+.opt-vs-row {
+ display: flex; align-items: center; justify-content: center;
+ gap: 10px; margin-top: 12px; padding-top: 14px;
+ border-top: 1px solid var(--border);
+ font-size: 12px; color: var(--txt-3);
+}
+.opt-vs-score {
+ font-family: var(--font-mono); font-weight: 700;
+ font-size: 18px; color: var(--txt-2);
+}
+.opt-delta-badge {
+ margin-top: 10px; text-align: center;
+ font-size: 12px; font-weight: 600;
+ padding: 6px 14px; border-radius: 999px;
+ display: inline-block; width: fit-content; margin-left: auto; margin-right: auto;
+}
+.opt-delta-badge.positive {
+ background: rgba(26,127,55,0.12); color: #1a7f37;
+}
+.opt-delta-badge.neutral {
+ background: var(--bg-raised); color: var(--txt-3);
+}
+
+/* Draw probability bar */
+.opt-draw-label {
+ display: flex; justify-content: space-between;
+ font-size: 12px; color: var(--txt-3); margin-bottom: 6px;
+}
+.opt-draw-bar-track {
+ height: 8px; border-radius: 4px;
+ background: var(--bg-raised); overflow: hidden;
+}
+.opt-draw-bar-fill {
+ height: 100%; border-radius: 4px;
+ background: linear-gradient(90deg, var(--accent), #5ac8fa);
+ transition: width 0.4s var(--ease-out-quart);
+}
+
+/* Candidates table */
+.opt-table-wrap { overflow-x: auto; }
+.opt-table {
+ width: 100%; border-collapse: collapse;
+ font-size: 13px;
+}
+.opt-table th {
+ padding: 8px 12px; text-align: left;
+ font-size: 11px; font-weight: 700; letter-spacing: 0.04em;
+ text-transform: uppercase; color: var(--txt-3);
+ border-bottom: 1px solid var(--border);
+}
+.opt-table td {
+ padding: 10px 12px; border-bottom: 1px solid var(--border);
+ vertical-align: middle;
+}
+.opt-table tr:last-child td { border-bottom: none; }
+.opt-table tr.opt-row-best td { background: rgba(10,132,255,0.04); }
+.opt-table tr.opt-row-best td:first-child {
+ border-left: 3px solid var(--accent);
+ padding-left: 9px;
+}
+.opt-score-badge {
+ font-family: var(--font-mono); font-weight: 700; font-size: 15px;
+}
+.opt-ev-bar {
+ display: flex; align-items: center; gap: 8px;
+}
+.opt-ev-track {
+ flex: 1; height: 6px; border-radius: 3px;
+ background: var(--bg-raised); overflow: hidden;
+ min-width: 60px;
+}
+.opt-ev-fill {
+ height: 100%; border-radius: 3px;
+ background: linear-gradient(90deg, var(--accent), #30d158);
+}
+.opt-ev-val {
+ font-family: var(--font-mono); font-size: 12px;
+ font-weight: 700; color: var(--txt-2); white-space: nowrap;
+}
+.opt-outcome-pill {
+ display: inline-block; padding: 2px 8px;
+ border-radius: 999px; font-size: 11px; font-weight: 600;
+ white-space: nowrap;
+}
+.opt-outcome-a { background: rgba(10,132,255,0.12); color: var(--accent); }
+.opt-outcome-draw { background: rgba(130,80,223,0.12); color: #8250df; }
+.opt-outcome-b { background: rgba(255,59,48,0.12); color: var(--red); }
+.opt-rank { font-family: var(--font-mono); color: var(--txt-3); font-size: 12px; }
+
+/* ── Porra full schedule ── */
+.porra-summary-grid {
+ display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px;
+}
+.porra-stat-card {
+ background: var(--bg-card); border: 1px solid var(--border);
+ border-radius: var(--r-lg); padding: 16px 12px; text-align: center;
+ box-shadow: var(--shadow-xs);
+}
+.porra-stat-val {
+ font-size: 28px; font-weight: 800; letter-spacing: -0.03em;
+ color: var(--txt); font-family: var(--font-mono);
+}
+.porra-stat-label {
+ font-size: 11px; color: var(--txt-3); margin-top: 4px; font-weight: 600;
+ text-transform: uppercase; letter-spacing: 0.03em;
+}
+
+.porra-date-group { margin-bottom: 32px; }
+.porra-date-header {
+ font-size: 11px; font-weight: 700; letter-spacing: 0.06em;
+ text-transform: uppercase; color: var(--txt-3);
+ padding: 0 0 10px 0; border-bottom: 1px solid var(--border);
+ margin-bottom: 10px;
+}
+
+.porra-match-row {
+ display: grid;
+ grid-template-columns: 1fr 90px 1fr 80px 80px 72px;
+ align-items: center; gap: 12px;
+ padding: 12px 16px;
+ background: var(--bg-card); border: 1px solid var(--border);
+ border-radius: var(--r-md); margin-bottom: 6px;
+ transition: box-shadow 0.15s;
+}
+.porra-match-row:hover { box-shadow: var(--shadow-sm); }
+.porra-match-row.played { border-left: 3px solid var(--border-hi); }
+.porra-match-row.played-5 { border-left: 3px solid #1a7f37; background: rgba(26,127,55,0.03); }
+.porra-match-row.played-3 { border-left: 3px solid var(--accent); background: var(--accent-dim); }
+.porra-match-row.played-2 { border-left: 3px solid #8250df; background: rgba(130,80,223,0.04); }
+.porra-match-row.played-0 { border-left: 3px solid var(--red); background: rgba(255,59,48,0.03); }
+
+.porra-team { font-size: 13px; font-weight: 600; color: var(--txt); }
+.porra-team.away { text-align: right; }
+.porra-team.dim { color: var(--txt-2); font-weight: 500; }
+
+.porra-pick-cell {
+ text-align: center;
+}
+.porra-pick-score {
+ font-family: var(--font-mono); font-size: 18px; font-weight: 800;
+ color: var(--txt); letter-spacing: -0.02em;
+}
+.porra-pick-ev {
+ font-size: 10px; color: var(--txt-3); font-family: var(--font-mono);
+ margin-top: 2px;
+}
+
+.porra-actual-cell { text-align: center; }
+.porra-actual-score {
+ font-family: var(--font-mono); font-size: 15px; font-weight: 700; color: var(--txt-2);
+}
+.porra-actual-none {
+ font-size: 11px; color: var(--txt-3); letter-spacing: 0.02em;
+}
+
+.porra-pts-cell { text-align: center; }
+.porra-pts-badge {
+ display: inline-flex; align-items: center; justify-content: center;
+ width: 36px; height: 36px; border-radius: 8px;
+ font-size: 16px; font-weight: 800; font-family: var(--font-mono);
+}
+.porra-pts-5 { background: #1a7f37; color: #fff; }
+.porra-pts-3 { background: var(--accent); color: #fff; }
+.porra-pts-2 { background: #8250df; color: #fff; }
+.porra-pts-0 { background: rgba(255,59,48,0.12); color: var(--red); }
+.porra-pts-upcoming { background: var(--bg-raised); color: var(--txt-3); font-size: 11px; font-weight: 600; width: auto; padding: 0 8px; border-radius: 999px; height: 26px; }
+
+.porra-prob-mini {
+ font-size: 10px; color: var(--txt-3); font-family: var(--font-mono);
+ display: flex; flex-direction: column; gap: 2px; align-items: flex-end;
+}
+
+@media (max-width: 700px) {
+ .porra-summary-grid { grid-template-columns: repeat(3,1fr); }
+ .porra-match-row { grid-template-columns: 1fr 70px 1fr 60px 60px; }
+ .porra-prob-mini { display: none; }
+}
 </style>
 </head>
 <body>
@@ -1401,6 +1624,7 @@ button.hdr-pill-btn:focus-visible { box-shadow: 0 0 0 2px var(--accent); outline
  <button class="page-tab"        type="button" role="tab" aria-selected="false" aria-controls="page-valuebets"  onclick="showPage('valuebets')">Apuestas</button>
  <button class="page-tab"        type="button" role="tab" aria-selected="false" aria-controls="page-scores"     onclick="showPage('scores')">Marcadores</button>
  <button class="page-tab"        type="button" role="tab" aria-selected="false" aria-controls="page-bracket"    onclick="showPage('bracket')">Cuadro</button>
+ <button class="page-tab"        type="button" role="tab" aria-selected="false" aria-controls="page-optimizer" onclick="showPage('optimizer')">🎯 Porra</button>
 </nav>
 
 <!-- ══ OVERVIEW ══ -->
@@ -1713,6 +1937,57 @@ button.hdr-pill-btn:focus-visible { box-shadow: 0 0 0 2px var(--accent); outline
  </div>
 </div>
 
+<!-- ══ POINTS OPTIMIZER ══ -->
+<div class="page-section" id="page-optimizer">
+ <div class="section">
+
+  <!-- Header + scoring legend -->
+  <div class="page-heading">
+   <h1>Porra Mundial 2026</h1>
+   <p>Pick óptimo para cada partido — el marcador que maximiza los <strong>puntos esperados</strong>, no solo el más probable.</p>
+  </div>
+
+  <div class="opt-scoring-legend">
+   <div class="opt-legend-item"><span class="opt-pts opt-pts-5">5</span> Marcador exacto</div>
+   <div class="opt-legend-item"><span class="opt-pts opt-pts-3">3</span> Ganador correcto + diferencia de goles</div>
+   <div class="opt-legend-item"><span class="opt-pts opt-pts-2">2</span> Ganador correcto</div>
+   <div class="opt-legend-item"><span class="opt-pts opt-pts-0">0</span> Incorrecto</div>
+  </div>
+
+  <!-- Summary bar (shown once data loads) -->
+  <div id="porra-summary" style="display:none;margin-top:20px">
+   <div class="porra-summary-grid">
+    <div class="porra-stat-card">
+     <div class="porra-stat-val" id="ps-played">–</div>
+     <div class="porra-stat-label">Jugados</div>
+    </div>
+    <div class="porra-stat-card">
+     <div class="porra-stat-val" id="ps-pts">–</div>
+     <div class="porra-stat-label">Puntos</div>
+    </div>
+    <div class="porra-stat-card">
+     <div class="porra-stat-val" id="ps-avg">–</div>
+     <div class="porra-stat-label">Pts / partido</div>
+    </div>
+    <div class="porra-stat-card">
+     <div class="porra-stat-val" id="ps-exact">–</div>
+     <div class="porra-stat-label">Exactos (5 pts)</div>
+    </div>
+    <div class="porra-stat-card">
+     <div class="porra-stat-val" id="ps-remaining">–</div>
+     <div class="porra-stat-label">Por jugar</div>
+    </div>
+   </div>
+  </div>
+
+  <div id="porra-loading" class="loading" style="margin-top:28px"><div class="spinner"></div> Calculando picks para 72 partidos…</div>
+
+  <!-- Fixture list -->
+  <div id="porra-list" style="display:none;margin-top:24px"></div>
+
+ </div>
+</div>
+
 </main>
 
 <script>
@@ -1745,7 +2020,7 @@ let groupsData = null, allBetsData = [], edgesData = null;
 let betsLoaded = false, edgesLoaded = false, validationLoaded = false, valueBetsLoaded = false, bracketLoaded = false;
 
 function showPage(n) {
- const pages = ['overview','predictor','valuebets','scores','bracket'];
+ const pages = ['overview','predictor','valuebets','scores','bracket','optimizer'];
  document.querySelectorAll('.page-tab').forEach((t,i) => {
    const active = pages[i] === n;
    t.classList.toggle('active', active);
@@ -1757,13 +2032,14 @@ function showPage(n) {
  }
  if (n === 'bracket' && !bracketLoaded) loadBracket();
  if (n === 'scores' && groupsData) renderScores(groupsData);
+ if (n === 'optimizer') initOptimizerTeams();
 }
 
 window.addEventListener('keydown', e => {
  if (['INPUT','SELECT','TEXTAREA'].includes(e.target.tagName)) return;
  if (e.key === 'Escape') { document.getElementById('shortcuts-overlay').classList.remove('show'); return; }
  if (e.key === '?') { document.getElementById('shortcuts-overlay').classList.toggle('show'); return; }
- const map = {'1':'overview','2':'predictor','3':'valuebets','4':'scores','5':'bracket'};
+ const map = {'1':'overview','2':'predictor','3':'valuebets','4':'scores','5':'bracket','6':'optimizer'};
  if (map[e.key]) showPage(map[e.key]);
  if (e.key === 'Enter' && document.getElementById('page-predictor').classList.contains('active')) runPredict();
 });
@@ -2896,6 +3172,124 @@ function renderParlayBuilder() {
 		</div>`;
 	}).join('');
 	total.textContent = t.toFixed(2) + 'x';
+}
+</script>
+
+<script>
+/* ══ Porra — Full schedule optimizer ══════════════════════════════════════ */
+
+let _porraLoaded = false;
+
+function initOptimizerTeams() {  // called by showPage('optimizer')
+  if (_porraLoaded) return;
+  _porraLoaded = true;
+  loadPorra();
+}
+
+async function loadPorra() {
+  try {
+    const res = await fetch('/api/porra');
+    const d   = await res.json();
+    document.getElementById('porra-loading').style.display = 'none';
+    renderPorra(d.fixtures);
+  } catch(e) {
+    document.getElementById('porra-loading').textContent = 'Error cargando los partidos.';
+  }
+}
+
+function ptsBadge(pts, played) {
+  if (!played) return `<span class="porra-pts-badge porra-pts-upcoming">por jugar</span>`;
+  const cls = `porra-pts-${pts}`;
+  return `<span class="porra-pts-badge ${cls}">${pts}</span>`;
+}
+
+function renderPorra(fixtures) {
+  // Summary stats
+  const played    = fixtures.filter(f => f.played);
+  const totalPts  = played.reduce((s, f) => s + f.pts_earned, 0);
+  const exact5    = played.filter(f => f.pts_earned === 5).length;
+  const remaining = fixtures.filter(f => !f.played).length;
+
+  document.getElementById('ps-played').textContent   = played.length;
+  document.getElementById('ps-pts').textContent      = totalPts;
+  document.getElementById('ps-avg').textContent      = played.length ? (totalPts / played.length).toFixed(2) : '—';
+  document.getElementById('ps-exact').textContent    = exact5;
+  document.getElementById('ps-remaining').textContent = remaining;
+  document.getElementById('porra-summary').style.display = 'block';
+
+  // Group by date
+  const byDate = {};
+  for (const f of fixtures) {
+    if (!byDate[f.date]) byDate[f.date] = [];
+    byDate[f.date].push(f);
+  }
+
+  const list = document.getElementById('porra-list');
+  list.style.display = 'block';
+
+  const fmtDate = d => {
+    const [y,m,day] = d.split('-');
+    const names = ['','Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+    const days  = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
+    const dt    = new Date(`${d}T12:00:00`);
+    return `${days[dt.getDay()]} ${parseInt(day)} ${names[parseInt(m)]}`;
+  };
+
+  let html = '';
+  for (const [date, matches] of Object.entries(byDate).sort()) {
+    html += `<div class="porra-date-group">
+      <div class="porra-date-header">${fmtDate(date)} · ${matches.length} partido${matches.length>1?'s':''}</div>`;
+
+    for (const f of matches) {
+      const pick   = f.optimal_pick;
+      const pr     = f.probs;
+      const rowCls = f.played
+        ? `played played-${f.pts_earned}`
+        : '';
+
+      // Actual score column
+      let actualCell = '';
+      if (f.played && f.actual) {
+        actualCell = `<span class="porra-actual-score">${f.actual.home}–${f.actual.away}</span>`;
+      } else {
+        actualCell = `<span class="porra-actual-none">—</span>`;
+      }
+
+      // Outcome of pick vs actual (text hint)
+      let pickNote = '';
+      if (f.played && f.pts_earned !== null) {
+        const p = f.pts_earned;
+        if (p === 5) pickNote = '<span style="font-size:10px;color:#1a7f37;font-weight:700">exacto</span>';
+        else if (p === 3) pickNote = '<span style="font-size:10px;color:var(--accent);font-weight:700">±diff</span>';
+        else if (p === 2) pickNote = '<span style="font-size:10px;color:#8250df;font-weight:700">ganador</span>';
+        else pickNote = '<span style="font-size:10px;color:var(--red);font-weight:700">fallo</span>';
+      }
+
+      // Home team dim if clearly weaker
+      const homeDim = pr.win_a < 0.28 ? ' dim' : '';
+      const awayDim = pr.win_b < 0.28 ? ' dim' : '';
+
+      html += `<div class="porra-match-row ${rowCls}">
+        <div class="porra-team${homeDim}">${f.home}</div>
+        <div class="porra-pick-cell">
+          <div class="porra-pick-score">${pick.score}</div>
+          <div class="porra-pick-ev">${pick.expected_pts.toFixed(2)} pts esp.</div>
+          ${pickNote ? `<div style="margin-top:2px">${pickNote}</div>` : ''}
+        </div>
+        <div class="porra-team away${awayDim}">${f.away}</div>
+        <div class="porra-actual-cell">${actualCell}</div>
+        <div class="porra-pts-cell">${ptsBadge(f.pts_earned, f.played)}</div>
+        <div class="porra-prob-mini">
+          <span>${(pr.win_a*100).toFixed(0)}% / ${(pr.draw*100).toFixed(0)}% / ${(pr.win_b*100).toFixed(0)}%</span>
+          <span>xG ${f.xg.a}–${f.xg.b}</span>
+        </div>
+      </div>`;
+    }
+
+    html += `</div>`;
+  }
+
+  list.innerHTML = html;
 }
 </script>
 </body>

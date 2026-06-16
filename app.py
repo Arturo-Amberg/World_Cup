@@ -8,8 +8,9 @@ import os
 import random
 from flask import Flask, jsonify, request, send_from_directory
 from src.models.stacked_predictor import (
-    stack_predict, expected_goals, _poisson_pmf, penalty_win_prob
+    stack_predict, expected_goals, _poisson_pmf, penalty_win_prob, DRAW_BOOST
 )
+from src.models.points_optimizer import find_optimal_pick
 from src.models.predictor import VENUES
 from src.models.tournament import load_team_db, match_probs as _match_probs
 from src.utils.injuries_client import get_injury_detail
@@ -149,6 +150,11 @@ def index():
 @app.route("/scores")
 def scores():
     return send_from_directory("static", "scores.html")
+
+
+@app.route("/optimizer")
+def optimizer():
+    return send_from_directory("static", "index.html")
 
 
 @app.route("/api/teams")
@@ -558,6 +564,9 @@ def api_predict():
     # Scoreline matrix
     matrix = scoreline_matrix(lam_a, lam_b)
 
+    # Points optimizer
+    opt = find_optimal_pick(lam_a, lam_b)
+
     # Odds
     bookie = manual_odds
     if not bookie:
@@ -601,6 +610,10 @@ def api_predict():
         "ev":            ev,
         "scoreline_matrix": matrix,
         "top_scorelines":   matrix[:12],
+        "optimal_pick":     opt["max_ev_pick"],
+        "top_candidates":   opt["top_candidates"],
+        "pick_delta_ev":    opt["pick_delta_ev"],
+        "draw_probability": opt["draw_probability"],
         "model_breakdown":  pred["model_breakdown"],
         "penalty_prob_a":   round(penalty_win_prob(team_a_name, team_b_name), 3),
         "injuries_a":    get_injury_detail(team_a_name),
@@ -610,6 +623,163 @@ def api_predict():
         "elo_a":         ta.get("ELO", 0),
         "elo_b":         tb.get("ELO", 0),
     })
+
+
+@app.route("/api/optimal_pick", methods=["POST"])
+def api_optimal_pick():
+    """
+    Returns the scoreline prediction that maximises expected points in the
+    guessing game (5 pts exact / 3 pts correct outcome + GD / 2 pts correct outcome).
+
+    Request body: {"team_a": "Spain", "team_b": "Morocco", "venue": "optional"}
+    """
+    body        = request.get_json(force=True)
+    team_a_name = body.get("team_a", "")
+    team_b_name = body.get("team_b", "")
+    venue_name  = body.get("venue") or None
+
+    if not team_a_name or not team_b_name:
+        return jsonify({"error": "team_a and team_b required"}), 400
+
+    team_db = load_team_db()
+    ta = _team_or_default(team_db, team_a_name)
+    tb = _team_or_default(team_db, team_b_name)
+
+    home_team = None
+    if team_a_name in {"USA", "Mexico", "Canada"}:
+        home_team = team_a_name
+    elif team_b_name in {"USA", "Mexico", "Canada"}:
+        home_team = team_b_name
+
+    pred          = stack_predict(ta, tb, home_team=home_team, venue_name=venue_name)
+    lam_a, lam_b  = expected_goals(ta, tb, home_team=home_team, venue_name=venue_name)
+    opt           = find_optimal_pick(lam_a, lam_b)
+
+    return jsonify({
+        "team_a":           team_a_name,
+        "team_b":           team_b_name,
+        "probs":            {"win_a": round(pred["p_win_a"], 4),
+                             "draw":  round(pred["p_draw"],  4),
+                             "win_b": round(pred["p_win_b"], 4)},
+        "xg":               {"a": round(lam_a, 2), "b": round(lam_b, 2)},
+        "optimal_pick":     opt["max_ev_pick"],
+        "max_prob_pick":    opt["max_prob_pick"],
+        "top_candidates":   opt["top_candidates"],
+        "pick_delta_ev":    opt["pick_delta_ev"],
+        "draw_probability": opt["draw_probability"],
+        "draw_boost_applied": DRAW_BOOST,
+        "elo_a":            ta.get("ELO", 0),
+        "elo_b":            tb.get("ELO", 0),
+    })
+
+
+@app.route("/api/porra")
+def api_porra():
+    """
+    Returns optimal picks for all WC 2026 group-stage fixtures, in date order.
+    For completed matches also returns actual result and points scored.
+    """
+    import csv as _csv
+    from src.models.points_optimizer import find_optimal_pick
+
+    # Team name normalisation: CSV names → team_db names
+    NAME_MAP = {
+        "United States":          "USA",
+        "Bosnia and Herzegovina": "Bosnia & Herzegovina",
+    }
+
+    # Host nations for home advantage
+    HOST_NATIONS = {"USA", "Mexico", "Canada"}
+
+    team_db  = load_team_db()
+
+    def _team(name):
+        t = dict(team_db.get(name, {
+            "ELO": 1650, "FORMA": 1.2, "GF_AVG": 1.0, "GA_AVG": 1.2, "INJURIES": 0
+        }))
+        t["name"] = name
+        return t
+
+    def _score_pick(pick_a, pick_b, actual_a, actual_b):
+        """Points earned for a pick given the actual result (exclusive tiers)."""
+        def outcome(x, y): return 1 if x > y else (0 if x == y else -1)
+        if pick_a == actual_a and pick_b == actual_b:
+            return 5
+        if outcome(pick_a, pick_b) == outcome(actual_a, actual_b):
+            if (pick_a - pick_b) == (actual_a - actual_b):
+                return 3
+            return 2
+        return 0
+
+    rows = []
+    with open("data/intl_results.csv", newline="", encoding="utf-8") as f:
+        for row in _csv.DictReader(f):
+            if row.get("tournament") != "FIFA World Cup":
+                continue
+            if row.get("date", "") < "2026-06-01":
+                continue
+
+            date      = row["date"]
+            home_csv  = row["home_team"]
+            away_csv  = row["away_team"]
+            home_name = NAME_MAP.get(home_csv, home_csv)
+            away_name = NAME_MAP.get(away_csv, away_csv)
+
+            # Determine home advantage
+            home_team = None
+            if home_name in HOST_NATIONS:
+                home_team = home_name
+            elif away_name in HOST_NATIONS:
+                home_team = away_name
+
+            ta = _team(home_name)
+            tb = _team(away_name)
+
+            try:
+                lam_a, lam_b = expected_goals(ta, tb, home_team=home_team)
+                pred = stack_predict(ta, tb, home_team=home_team)
+                opt  = find_optimal_pick(lam_a, lam_b)
+            except Exception:
+                lam_a = lam_b = 1.25
+                pred = {"p_win_a": 0.333, "p_draw": 0.334, "p_win_b": 0.333}
+                opt  = {"max_ev_pick": {"score": "1-0", "gf_a": 1, "gf_b": 0,
+                                        "expected_pts": 0, "prob": 0},
+                        "draw_probability": 0.33}
+
+            pick = opt["max_ev_pick"]
+
+            # Actual result if available
+            hs = row.get("home_score", "NA")
+            as_ = row.get("away_score", "NA")
+            played   = hs not in ("NA", "")
+            actual   = None
+            pts_earned = None
+            if played:
+                actual = {"home": int(hs), "away": int(as_)}
+                pts_earned = _score_pick(
+                    pick["gf_a"], pick["gf_b"],
+                    actual["home"], actual["away"]
+                )
+
+            rows.append({
+                "date":        date,
+                "home":        home_name,
+                "away":        away_name,
+                "city":        row.get("city", ""),
+                "probs":       {
+                    "win_a": round(pred["p_win_a"], 3),
+                    "draw":  round(pred["p_draw"],  3),
+                    "win_b": round(pred["p_win_b"], 3),
+                },
+                "xg":          {"a": round(lam_a, 2), "b": round(lam_b, 2)},
+                "optimal_pick": pick,
+                "draw_probability": opt["draw_probability"],
+                "played":      played,
+                "actual":      actual,
+                "pts_earned":  pts_earned,
+            })
+
+    return jsonify({"fixtures": rows, "total": len(rows)})
 
 
 @app.route("/api/bets")
