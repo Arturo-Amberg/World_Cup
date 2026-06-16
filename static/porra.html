@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Porra Óptima — Mundial 2026</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #f5f5f7;
+  --bg-surface: #ffffff;
+  --bg-card: #ffffff;
+  --bg-raised: #f0f0f5;
+  --border: #e5e5ea;
+  --border-hi: #d1d1d6;
+  --txt: #1d1d1f;
+  --txt-2: #48484a;
+  --txt-3: #737373;
+  --accent: #0a84ff;
+  --accent-dim: rgba(10,132,255,0.10);
+  --accent-mid: rgba(10,132,255,0.18);
+  --red: #ff3b30;
+  --red-dim: rgba(255,59,48,0.10);
+  --green: #1a7f37;
+  --green-dim: rgba(26,127,55,0.10);
+  --purple: #8250df;
+  --purple-dim: rgba(130,80,223,0.10);
+  --r-sm: 3px; --r-md: 8px; --r-lg: 12px; --r-xl: 16px; --r-2xl: 20px;
+  --font-ui: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  --shadow-xs: 0 1px 3px rgba(0,0,0,0.05);
+  --shadow-sm: 0 2px 8px rgba(0,0,0,0.06);
+  --shadow-md: 0 4px 20px rgba(0,0,0,0.07);
+}
+
+*,*::before,*::after { margin:0; padding:0; box-sizing:border-box; }
+html { scroll-behavior:smooth; }
+body {
+  background: var(--bg);
+  color: var(--txt);
+  font-family: var(--font-ui);
+  line-height: 1.5;
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+  font-size: 15px;
+}
+
+/* ── Header ── */
+header {
+  height:64px; padding:0 40px;
+  display:flex; align-items:center; justify-content:space-between;
+  background: rgba(255,255,255,0.82);
+  backdrop-filter: saturate(180%) blur(20px);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+  border-bottom: 1px solid var(--border);
+  position:sticky; top:0; z-index:100;
+}
+.logo { font-size:22px; font-weight:800; letter-spacing:-0.03em; color:var(--txt); text-decoration:none; }
+.logo em { color:var(--accent); font-style:normal; }
+.logo-sub { color:var(--txt-3); font-size:12px; font-weight:500; margin-left:10px; }
+.hdr-right { display:flex; gap:8px; align-items:center; }
+.back-link {
+  font-size:13px; font-weight:600; color:var(--accent);
+  text-decoration:none; padding:6px 14px;
+  border-radius:var(--r-md); border:1px solid var(--accent-dim);
+  background:var(--accent-dim); transition:background 0.15s;
+}
+.back-link:hover { background:var(--accent-mid); }
+
+/* ── Hero ── */
+.hero { padding:40px 40px 24px; max-width:1200px; margin:0 auto; width:100%; }
+.hero h1 { font-size:32px; font-weight:800; letter-spacing:-0.03em; margin-bottom:8px; }
+.hero h1 span { color:var(--accent); }
+.hero p { font-size:15px; color:var(--txt-3); max-width:580px; line-height:1.6; }
+
+/* ── Scoring legend ── */
+.legend {
+  display:flex; flex-wrap:wrap; gap:10px;
+  padding:14px 20px; margin:0 40px 24px;
+  max-width:calc(1200px - 80px);
+  background: var(--bg-surface); border:1px solid var(--border);
+  border-radius: var(--r-lg);
+}
+.legend-item { display:flex; align-items:center; gap:8px; font-size:13px; color:var(--txt-2); }
+.pts-badge {
+  display:inline-flex; align-items:center; justify-content:center;
+  width:26px; height:26px; border-radius:6px;
+  font-size:12px; font-weight:800; font-family:var(--font-mono); flex-shrink:0;
+}
+.pts-5 { background:var(--green); color:#fff; }
+.pts-3 { background:var(--accent); color:#fff; }
+.pts-2 { background:var(--purple); color:#fff; }
+.pts-0 { background:var(--bg-raised); color:var(--txt-3); border:1px solid var(--border); }
+
+/* ── Summary cards ── */
+.summary {
+  display:grid; grid-template-columns:repeat(5,1fr); gap:12px;
+  padding:0 40px 28px; max-width:1200px; margin:0 auto; width:100%;
+}
+.stat-card {
+  background:var(--bg-card); border:1px solid var(--border);
+  border-radius:var(--r-lg); padding:16px 12px; text-align:center;
+  box-shadow:var(--shadow-xs);
+}
+.stat-val { font-size:28px; font-weight:800; letter-spacing:-0.03em; font-family:var(--font-mono); }
+.stat-label { font-size:11px; color:var(--txt-3); margin-top:4px; font-weight:600; text-transform:uppercase; letter-spacing:0.03em; }
+
+/* ── Content area ── */
+.content { padding:0 40px 60px; max-width:1200px; margin:0 auto; width:100%; }
+
+/* ── Date group ── */
+.date-group { margin-bottom:32px; }
+.date-header {
+  font-size:11px; font-weight:700; letter-spacing:0.06em; text-transform:uppercase;
+  color:var(--txt-3); padding-bottom:10px; border-bottom:1px solid var(--border); margin-bottom:8px;
+}
+
+/* ── Match row ── */
+.match-row {
+  display:grid;
+  grid-template-columns: 1fr 100px 1fr 90px 64px 68px;
+  align-items:center; gap:12px;
+  padding:12px 16px;
+  background:var(--bg-card); border:1px solid var(--border);
+  border-radius:var(--r-md); margin-bottom:6px;
+  transition:box-shadow 0.15s;
+}
+.match-row:hover { box-shadow:var(--shadow-sm); }
+.match-row.p5 { border-left:3px solid var(--green);  background:rgba(26,127,55,0.03); }
+.match-row.p3 { border-left:3px solid var(--accent); background:var(--accent-dim); }
+.match-row.p2 { border-left:3px solid var(--purple); background:var(--purple-dim); }
+.match-row.p0 { border-left:3px solid #ddd; }
+.match-row.upcoming { border-left:3px solid transparent; }
+
+.team-name { font-size:13px; font-weight:600; color:var(--txt); }
+.team-name.away { text-align:right; }
+.team-name.dim { color:var(--txt-3); font-weight:500; }
+
+/* pick cell */
+.pick-cell { text-align:center; }
+.pick-score {
+  font-family:var(--font-mono); font-size:20px; font-weight:800;
+  color:var(--txt); letter-spacing:-0.02em;
+}
+.pick-ev { font-size:10px; color:var(--txt-3); font-family:var(--font-mono); margin-top:2px; }
+.pick-note { font-size:10px; font-weight:700; margin-top:2px; }
+.note-5 { color:var(--green); }
+.note-3 { color:var(--accent); }
+.note-2 { color:var(--purple); }
+.note-0 { color:var(--red); }
+
+/* actual cell */
+.actual-cell { text-align:center; }
+.actual-score { font-family:var(--font-mono); font-size:15px; font-weight:700; color:var(--txt-2); }
+.actual-none { font-size:11px; color:var(--txt-3); letter-spacing:0.02em; }
+
+/* pts badge */
+.pts-cell { text-align:center; }
+.pts-result {
+  display:inline-flex; align-items:center; justify-content:center;
+  width:36px; height:36px; border-radius:8px;
+  font-size:16px; font-weight:800; font-family:var(--font-mono);
+}
+.pr5 { background:var(--green); color:#fff; }
+.pr3 { background:var(--accent); color:#fff; }
+.pr2 { background:var(--purple); color:#fff; }
+.pr0 { background:rgba(255,59,48,0.10); color:var(--red); }
+.pr-up {
+  background:var(--bg-raised); color:var(--txt-3);
+  font-size:10px; font-weight:600; width:auto; padding:0 8px;
+  border-radius:999px; height:26px; white-space:nowrap;
+}
+
+/* probs mini */
+.prob-mini { font-size:10px; color:var(--txt-3); font-family:var(--font-mono); text-align:right; line-height:1.6; }
+
+/* ── Loading ── */
+.loading {
+  display:flex; align-items:center; justify-content:center; gap:12px;
+  padding:60px 0; color:var(--txt-3); font-size:14px;
+}
+.spinner {
+  width:20px; height:20px; border-radius:50%;
+  border:2px solid var(--border); border-top-color:var(--accent);
+  animation: spin 0.7s linear infinite;
+}
+@keyframes spin { to { transform:rotate(360deg); } }
+
+/* ── Responsive ── */
+@media (max-width:700px) {
+  header { padding:0 20px; }
+  .hero, .content { padding-left:20px; padding-right:20px; }
+  .legend { margin-left:20px; margin-right:20px; }
+  .summary { grid-template-columns:repeat(3,1fr); padding-left:20px; padding-right:20px; }
+  .match-row { grid-template-columns: 1fr 80px 1fr 60px 50px; }
+  .prob-mini { display:none; }
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div style="display:flex;align-items:center">
+    <a class="logo" href="/">WC<em>26</em></a>
+    <span class="logo-sub">Porra óptima</span>
+  </div>
+  <div class="hdr-right">
+    <a class="back-link" href="/">← Volver</a>
+  </div>
+</header>
+
+<div class="hero">
+  <h1>Porra <span>Mundial 2026</span></h1>
+  <p>Pick óptimo para cada partido — el marcador que maximiza los puntos esperados, no solo el más probable. Actualizado tras cada jornada.</p>
+</div>
+
+<div class="legend">
+  <div class="legend-item"><span class="pts-badge pts-5">5</span> Marcador exacto</div>
+  <div class="legend-item"><span class="pts-badge pts-3">3</span> Ganador correcto + diferencia de goles</div>
+  <div class="legend-item"><span class="pts-badge pts-2">2</span> Ganador correcto</div>
+  <div class="legend-item"><span class="pts-badge pts-0">0</span> Incorrecto</div>
+</div>
+
+<div class="summary" id="summary" style="display:none">
+  <div class="stat-card">
+    <div class="stat-val" id="s-played">–</div>
+    <div class="stat-label">Jugados</div>
+  </div>
+  <div class="stat-card" style="border-color:rgba(10,132,255,0.25)">
+    <div class="stat-val" id="s-pts" style="color:var(--accent)">–</div>
+    <div class="stat-label">Puntos</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-val" id="s-avg">–</div>
+    <div class="stat-label">Pts / partido</div>
+  </div>
+  <div class="stat-card" style="border-color:rgba(26,127,55,0.25)">
+    <div class="stat-val" id="s-exact" style="color:var(--green)">–</div>
+    <div class="stat-label">Exactos (5 pts)</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-val" id="s-remaining">–</div>
+    <div class="stat-label">Por jugar</div>
+  </div>
+</div>
+
+<div class="content">
+  <div class="loading" id="loading"><div class="spinner"></div> Calculando picks para todos los partidos…</div>
+  <div id="schedule"></div>
+</div>
+
+<script>
+const DAY_NAMES = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
+const MONTH_NAMES = ['','Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+
+function fmtDate(d) {
+  const [y,m,day] = d.split('-');
+  const dt = new Date(`${d}T12:00:00`);
+  return `${DAY_NAMES[dt.getDay()]} ${parseInt(day)} ${MONTH_NAMES[parseInt(m)]}`;
+}
+
+function ptsBadge(pts, played) {
+  if (!played) return `<span class="pts-result pr-up">por jugar</span>`;
+  return `<span class="pts-result pr${pts}">${pts}</span>`;
+}
+
+function pickNote(pts, played) {
+  if (!played) return '';
+  const map = {5:['note-5','exacto'], 3:['note-3','±diff'], 2:['note-2','ganador'], 0:['note-0','fallo']};
+  const [cls, label] = map[pts];
+  return `<div class="pick-note ${cls}">${label}</div>`;
+}
+
+function rowClass(pts, played) {
+  if (!played) return 'upcoming';
+  return `p${pts}`;
+}
+
+async function load() {
+  try {
+    const res = await fetch('/api/porra');
+    const d = await res.json();
+    document.getElementById('loading').style.display = 'none';
+    render(d.fixtures);
+  } catch(e) {
+    document.getElementById('loading').innerHTML = `<span style="color:var(--red)">Error cargando los partidos.</span>`;
+  }
+}
+
+function render(fixtures) {
+  // Summary
+  const played = fixtures.filter(f => f.played);
+  const total  = played.reduce((s,f) => s + f.pts_earned, 0);
+  const exact  = played.filter(f => f.pts_earned === 5).length;
+  document.getElementById('s-played').textContent    = played.length;
+  document.getElementById('s-pts').textContent       = total;
+  document.getElementById('s-avg').textContent       = played.length ? (total/played.length).toFixed(2) : '–';
+  document.getElementById('s-exact').textContent     = exact;
+  document.getElementById('s-remaining').textContent = fixtures.filter(f => !f.played).length;
+  document.getElementById('summary').style.display   = 'grid';
+
+  // Group by date
+  const byDate = {};
+  for (const f of fixtures) {
+    if (!byDate[f.date]) byDate[f.date] = [];
+    byDate[f.date].push(f);
+  }
+
+  let html = '';
+  for (const [date, matches] of Object.entries(byDate).sort()) {
+    const playedToday = matches.filter(m => m.played).length;
+    const label = playedToday === matches.length ? 'Jugado'
+      : playedToday > 0 ? `${playedToday}/${matches.length} jugados`
+      : 'Próximos';
+    html += `<div class="date-group">
+      <div class="date-header">${fmtDate(date)} · ${matches.length} partido${matches.length>1?'s':''} <span style="font-weight:400;margin-left:8px">${label}</span></div>`;
+
+    for (const f of matches) {
+      const pick = f.optimal_pick;
+      const pr   = f.probs;
+      const homeWeak = pr.win_a < 0.28;
+      const awayWeak = pr.win_b < 0.28;
+
+      let actualCell = f.played && f.actual
+        ? `<span class="actual-score">${f.actual.home}–${f.actual.away}</span>`
+        : `<span class="actual-none">—</span>`;
+
+      html += `<div class="match-row ${rowClass(f.pts_earned, f.played)}">
+        <div class="team-name${homeWeak?' dim':''}">${f.home}</div>
+        <div class="pick-cell">
+          <div class="pick-score">${pick.score.replace('-','–')}</div>
+          <div class="pick-ev">${pick.expected_pts.toFixed(2)} pts esp.</div>
+          ${pickNote(f.pts_earned, f.played)}
+        </div>
+        <div class="team-name away${awayWeak?' dim':''}">${f.away}</div>
+        <div class="actual-cell">${actualCell}</div>
+        <div class="pts-cell">${ptsBadge(f.pts_earned, f.played)}</div>
+        <div class="prob-mini">
+          <div>${(pr.win_a*100).toFixed(0)}% / ${(pr.draw*100).toFixed(0)}% / ${(pr.win_b*100).toFixed(0)}%</div>
+          <div>xG ${f.xg.a}–${f.xg.b}</div>
+        </div>
+      </div>`;
+    }
+    html += `</div>`;
+  }
+  document.getElementById('schedule').innerHTML = html;
+}
+
+load();
+</script>
+</body>
+</html>
