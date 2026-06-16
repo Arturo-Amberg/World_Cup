@@ -33,6 +33,7 @@ ENDPOINTS = [
     "/api/validate",
     "/api/valuebets",
     "/api/team_stats",
+    "/api/porra",
 ]
 
 
