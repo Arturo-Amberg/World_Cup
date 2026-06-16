@@ -94,14 +94,14 @@ def precompute_ensemble_matchups(team_names: list) -> None:
 #  Datos base de equipos (ELO, forma, stats)
 # ─────────────────────────────────────────────
 BASE_TEAM_DB = {
-    "Argentina":    {"ELO": 2095, "FORMA": 2.2, "GF_AVG": 1.9, "GA_AVG": 0.7},
-    "France":       {"ELO": 2095, "FORMA": 2.3, "GF_AVG": 2.1, "GA_AVG": 0.7},
-    "Brazil":       {"ELO": 2067, "FORMA": 2.0, "GF_AVG": 1.8, "GA_AVG": 0.7},
-    "England":      {"ELO": 2021, "FORMA": 1.9, "GF_AVG": 1.7, "GA_AVG": 0.9},
-    "Spain":        {"ELO": 2165, "FORMA": 2.5, "GF_AVG": 2.2, "GA_AVG": 0.5},
+    "Argentina":    {"ELO": 2095, "FORMA": 2.2, "GF_AVG": 1.9, "GA_AVG": 0.7, "EXTRA": 1.07},
+    "France":       {"ELO": 2095, "FORMA": 2.3, "GF_AVG": 2.1, "GA_AVG": 0.7, "EXTRA": 1.07},
+    "Brazil":       {"ELO": 2067, "FORMA": 2.0, "GF_AVG": 1.8, "GA_AVG": 0.7, "EXTRA": 1.07},
+    "England":      {"ELO": 2021, "FORMA": 1.9, "GF_AVG": 1.7, "GA_AVG": 0.9, "EXTRA": 1.07},
+    "Spain":        {"ELO": 2165, "FORMA": 2.5, "GF_AVG": 2.2, "GA_AVG": 0.5, "EXTRA": 1.07},
     "Germany":      {"ELO": 1923, "FORMA": 1.8, "GF_AVG": 1.9, "GA_AVG": 1.1},
-    "Portugal":     {"ELO": 1993, "FORMA": 1.9, "GF_AVG": 2.0, "GA_AVG": 1.0},
-    "Netherlands":  {"ELO": 1976, "FORMA": 1.8, "GF_AVG": 1.7, "GA_AVG": 1.0},
+    "Portugal":     {"ELO": 1993, "FORMA": 1.9, "GF_AVG": 2.0, "GA_AVG": 1.0, "EXTRA": 1.07},
+    "Netherlands":  {"ELO": 1976, "FORMA": 1.8, "GF_AVG": 1.7, "GA_AVG": 1.0, "EXTRA": 1.07},
     "Belgium":      {"ELO": 1934, "FORMA": 1.7, "GF_AVG": 1.6, "GA_AVG": 0.9},
     "Croatia":      {"ELO": 1901, "FORMA": 1.7, "GF_AVG": 1.4, "GA_AVG": 0.9},
     "Italy":        {"ELO": 1910, "FORMA": 1.7, "GF_AVG": 1.4, "GA_AVG": 0.8},
