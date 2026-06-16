@@ -22,18 +22,17 @@ from src.models.stacked_predictor import DIXON_COLES_RHO, _poisson_pmf
 
 # ── Calibration constants ─────────────────────────────────────────────────────
 # Calibrated 2026-06-16: 8 draws / 16 games (50% observed vs 29.8% model mean).
-# Lambda scaling alone can't reach 50% (binary search hits lower bound at 0.5,
-# achieves only 44.7%). Using 0.82 gives ~36% draw rate in the scoreline matrix
-# — a meaningful boost toward reality without making 0-0 dominate every pick.
+# scale=0.93 gently raises draw probability in the scoreline matrix (~+3-4 pp).
+# rho=-0.37 keeps 1-1 as the preferred draw pick over 0-0 (1-1 is by far the
+# most common draw in WC 2026: 5/8 draws). Together these flip moderately
+# lopsided games (e.g. Belgium-Egypt 1.51-0.80) from 1-0 to 1-1 picks.
 # The DRAW_BOOST in stacked_predictor.py handles the 1X2 probability side.
-# Lambda scale: keep at 1.0. Reducing it shifts draw picks from 1-1 to 0-0,
-# which is wrong — 1-1 is by far the most common draw in WC 2026 (5/8 draws).
-# The DRAW_BOOST in stacked_predictor.py handles the 1X2 probability calibration.
-WC2026_LAMBDA_SCALE: float = 1.0
+WC2026_LAMBDA_SCALE: float = 0.93
 
-# rho=-0.30 lifts exact low-score draws (0-0, 1-1) relative to adjacent cells.
-# Stronger than the default -0.15, calibrated on WC 2026 where 1-1 dominates.
-WC2026_DC_RHO: float = -0.30
+# rho=-0.37: lifts exact low-score draws (0-0, 1-1) relative to adjacent cells.
+# Slightly stronger than -0.30 to compensate for the lambda compression effect
+# that would otherwise favour 0-0 over 1-1.
+WC2026_DC_RHO: float = -0.37
 
 
 # ── Core functions ────────────────────────────────────────────────────────────
