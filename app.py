@@ -157,6 +157,11 @@ def optimizer():
     return send_from_directory("static", "index.html")
 
 
+@app.route("/porra")
+def porra():
+    return send_from_directory("static", "porra.html")
+
+
 @app.route("/api/teams")
 def api_teams():
     from src.models.tournament import BASE_TEAM_DB
