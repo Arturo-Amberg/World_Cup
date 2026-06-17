@@ -21,17 +21,17 @@ import math
 from src.models.stacked_predictor import DIXON_COLES_RHO, _poisson_pmf
 
 # ── Calibration constants ─────────────────────────────────────────────────────
-# Calibrated 2026-06-16: 8 draws / 16 games (50% observed vs 29.8% model mean).
-# scale=0.93 gently raises draw probability in the scoreline matrix (~+3-4 pp).
-# rho=-0.37 keeps 1-1 as the preferred draw pick over 0-0 (1-1 is by far the
-# most common draw in WC 2026: 5/8 draws). Together these flip moderately
-# lopsided games (e.g. Belgium-Egypt 1.51-0.80) from 1-0 to 1-1 picks.
-# The DRAW_BOOST in stacked_predictor.py handles the 1X2 probability side.
-WC2026_LAMBDA_SCALE: float = 0.96
+# Optimized 2026-06-17 via scripts/optimize_porra.py on 20 completed WC 2026
+# group stage matches (8 draws = 40%). Grid search over (lambda_scale × rho)
+# maximizing total porra points. Best cluster: scale=1.025-1.035, rho=-0.41
+# to -0.43, all scoring 42 pts vs 26 pts with previous params (+16 pts / +0.80/game).
+# scale=1.03: slightly raises lambdas (more decisive scorelines in non-draw games).
+# rho=-0.42: stronger DC low-score correction, boosting 0-0 and 1-1 picks.
+WC2026_LAMBDA_SCALE: float = 1.03
 
-# rho=-0.33: lifts exact low-score draws (0-0, 1-1) relative to adjacent cells.
-# Dialled back from -0.37 to reduce over-aggressive draw picking.
-WC2026_DC_RHO: float = -0.33
+# rho=-0.42: stronger Dixon-Coles correction for the high-draw WC 2026 environment
+# (40% draws in first 20 games vs 21% in WC 2022).
+WC2026_DC_RHO: float = -0.42
 
 
 # ── Core functions ────────────────────────────────────────────────────────────
