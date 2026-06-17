@@ -27,12 +27,11 @@ from src.models.stacked_predictor import DIXON_COLES_RHO, _poisson_pmf
 # most common draw in WC 2026: 5/8 draws). Together these flip moderately
 # lopsided games (e.g. Belgium-Egypt 1.51-0.80) from 1-0 to 1-1 picks.
 # The DRAW_BOOST in stacked_predictor.py handles the 1X2 probability side.
-WC2026_LAMBDA_SCALE: float = 0.93
+WC2026_LAMBDA_SCALE: float = 0.96
 
-# rho=-0.37: lifts exact low-score draws (0-0, 1-1) relative to adjacent cells.
-# Slightly stronger than -0.30 to compensate for the lambda compression effect
-# that would otherwise favour 0-0 over 1-1.
-WC2026_DC_RHO: float = -0.37
+# rho=-0.33: lifts exact low-score draws (0-0, 1-1) relative to adjacent cells.
+# Dialled back from -0.37 to reduce over-aggressive draw picking.
+WC2026_DC_RHO: float = -0.33
 
 
 # ── Core functions ────────────────────────────────────────────────────────────
