@@ -38,6 +38,19 @@ HOST_NATIONS = {
     2026: {"USA", "Mexico", "Canada"},
 }
 
+# Top-tier competitive tournaments to include in the "pro" training set
+COMPETITIVE_TOURNAMENTS = {
+    "FIFA World Cup",
+    "FIFA World Cup qualification",
+    "African Cup of Nations",
+    "Gold Cup",
+    "CONCACAF Series",
+    "FIFA Series",
+    "AFC Asian Cup qualification",
+    "UEFA Nations League",
+    "Copa America",
+}
+
 # Dataset name → internal name (mirrors github_stats_client)
 NAME_MAP = {
     "United States":          "USA",
@@ -49,29 +62,45 @@ NAME_MAP = {
     "Cape Verde":             "Cape Verde",
 }
 
-CURRENT = {"lambda_scale": 0.96, "rho": -0.33}
+CURRENT = {"lambda_scale": 1.03, "rho": -0.42}
 
 
-def load_matches(year: int) -> list[dict]:
-    start, end = WC_RANGES[year]
+def load_matches(year: int | None = None, since: str | None = None) -> list[dict]:
+    """
+    Load completed match data.
+    - year: load a specific WC group stage (2022 or 2026)
+    - since: load all competitive matches from this date onwards (YYYY-MM-DD)
+    """
     matches = []
     with open(CSV_PATH, newline="", encoding="utf-8") as f:
         for row in csv.DictReader(f):
-            if row.get("tournament") != "FIFA World Cup":
-                continue
             d = row.get("date", "")
-            if not (start <= d <= end):
-                continue
             hs = row.get("home_score", "")
             as_ = row.get("away_score", "")
             if hs in ("", "NA") or as_ in ("", "NA"):
                 continue
+
+            if year is not None:
+                start, end = WC_RANGES[year]
+                if row.get("tournament") != "FIFA World Cup":
+                    continue
+                if not (start <= d <= end):
+                    continue
+            elif since is not None:
+                if d < since:
+                    continue
+                if row.get("tournament", "") not in COMPETITIVE_TOURNAMENTS:
+                    continue
+            else:
+                continue
+
             matches.append({
-                "date":  d,
-                "home":  NAME_MAP.get(row["home_team"], row["home_team"]),
-                "away":  NAME_MAP.get(row["away_team"], row["away_team"]),
+                "date":       d,
+                "home":       NAME_MAP.get(row["home_team"], row["home_team"]),
+                "away":       NAME_MAP.get(row["away_team"], row["away_team"]),
                 "home_score": int(float(hs)),
                 "away_score": int(float(as_)),
+                "tournament": row.get("tournament", ""),
             })
     return matches
 
@@ -87,9 +116,9 @@ def score_pick(pick_a: int, pick_b: int, actual_a: int, actual_b: int) -> int:
     return 0
 
 
-def compute_lambdas(matches: list[dict], year: int) -> list[tuple | None]:
+def compute_lambdas(matches: list[dict], year: int | None = None) -> list[tuple | None]:
     team_db = load_team_db()
-    hosts = HOST_NATIONS[year]
+    hosts = HOST_NATIONS.get(year, {"USA", "Mexico", "Canada"})
 
     def team_dict(name):
         t = dict(team_db.get(name, {
@@ -190,27 +219,35 @@ def print_match_breakdown(matches, lambdas, lambda_scale, rho, year):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--year", type=int, default=2022,
+    parser.add_argument("--year", type=int,
                         help="WC year to use as training data (2022 or 2026)")
+    parser.add_argument("--since", default="2025-06-01",
+                        help="Use all competitive matches since YYYY-MM-DD (default: 2025-06-01)")
     parser.add_argument("--show-current", action="store_true",
                         help="Show how current params score on this dataset")
     args = parser.parse_args()
 
     year = args.year
-    if year not in WC_RANGES:
-        print(f"Year {year} not supported. Choose from: {list(WC_RANGES.keys())}")
-        sys.exit(1)
+
+    if year is not None:
+        if year not in WC_RANGES:
+            print(f"Year {year} not supported. Choose from: {list(WC_RANGES.keys())}")
+            sys.exit(1)
+        label = f"WC {year} group stage"
+        matches = load_matches(year=year)
+    else:
+        label = f"competitive matches since {args.since}"
+        matches = load_matches(since=args.since)
 
     print(f"\n{'═'*60}")
-    print(f"  Porra Optimizer — WC {year} group stage as training data")
+    print(f"  Porra Optimizer — {label}")
     print(f"{'═'*60}\n")
 
-    matches = load_matches(year)
     if not matches:
-        print(f"No completed WC {year} group stage matches found in intl_results.csv.")
+        print(f"No matches found.")
         sys.exit(1)
 
-    valid = [m for m in matches if m["home_score"] != -1]
+    valid = matches
     n_draws = sum(1 for m in valid if m["home_score"] == m["away_score"])
     print(f"  Loaded {len(valid)} completed matches ({n_draws} draws = {n_draws/len(valid):.0%})")
 
@@ -258,8 +295,9 @@ def main():
         print(f"\n  Current params breakdown:")
         print_match_breakdown(valid, lambdas, CURRENT["lambda_scale"], CURRENT["rho"], year)
 
-    print(f"\n  Best params breakdown:")
-    print_match_breakdown(valid, lambdas, best2["lambda_scale"], best2["rho"], year)
+    if len(valid) <= 50:
+        print(f"\n  Best params breakdown:")
+        print_match_breakdown(valid, lambdas, best2["lambda_scale"], best2["rho"], year)
 
     print(f"\n{'─'*60}")
     print(f"  Recommended constants for src/models/points_optimizer.py:")
