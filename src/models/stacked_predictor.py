@@ -418,6 +418,27 @@ def _compute_lambdas(
     lam_a = lam_a * (avail_a / avail_b)
     lam_b = lam_b * (avail_b / avail_a)
 
+    # Tactical matchup adjustment — underdog bus-parking effect.
+    # When there is a large ELO gap the weaker team sets up defensively:
+    #   • their own xG drops (they barely attack)
+    #   • the stronger team's xG also drops slightly (they face a packed defense)
+    # This captures real-world patterns: Portugal vs DR Congo, Germany vs Curaçao,
+    # England vs Ghana, etc. — favorites rarely blow out well-organised minnows.
+    # Gap thresholds: >150 ELO → mild, >300 → moderate, >450 → maximum.
+    _elo_a_raw = team_a.get("ELO", 1750)
+    _elo_b_raw = team_b.get("ELO", 1750)
+    _elo_gap = abs(_elo_a_raw - _elo_b_raw)
+    if _elo_gap > 150:
+        _gap_frac = min(1.0, (_elo_gap - 150) / 300)  # 0 at 150 ELO diff, 1.0 at 450+
+        _underdog_cut  = 0.14 * _gap_frac   # underdog: up to -14% own output (they don't attack)
+        _favorite_cut  = 0.08 * _gap_frac   # favorite: up to -8% output (facing a bus)
+        if _elo_a_raw > _elo_b_raw:         # A is the favorite
+            lam_a *= (1.0 - _favorite_cut)
+            lam_b *= (1.0 - _underdog_cut)
+        else:                               # B is the favorite
+            lam_b *= (1.0 - _favorite_cut)
+            lam_a *= (1.0 - _underdog_cut)
+
     lam_a *= WC_GOAL_SCALE
     lam_b *= WC_GOAL_SCALE
     lam_a = max(0.15, min(5.0, lam_a))

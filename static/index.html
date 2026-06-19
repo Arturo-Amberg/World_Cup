@@ -51,6 +51,15 @@
     lamA *= 1+(((TEAM_POSS[ta]||50)/100)-0.5)*0.10;
     lamB *= 1+(((TEAM_POSS[tb]||50)/100)-0.5)*0.10;
     if (homeTeam && HOST_NATIONS.has(homeTeam)) { if(ta===homeTeam) lamA*=1.08; else if(tb===homeTeam) lamB*=1.08; }
+    // Tactical bus-parking: underdog sets up defensively when ELO gap > 150
+    const eloA = TEAM_ELO[ta]||1700, eloB = TEAM_ELO[tb]||1700;
+    const eloGap = Math.abs(eloA - eloB);
+    if (eloGap > 150) {
+      const gapFrac = Math.min(1.0, (eloGap - 150) / 300);
+      const underdogCut = 0.14 * gapFrac, favoriteCut = 0.08 * gapFrac;
+      if (eloA > eloB) { lamA *= (1 - favoriteCut); lamB *= (1 - underdogCut); }
+      else              { lamB *= (1 - favoriteCut); lamA *= (1 - underdogCut); }
+    }
     return [Math.max(0.15,Math.min(5,lamA)), Math.max(0.15,Math.min(5,lamB))];
   }
   function poissonPredict(lamA, lamB) {
