@@ -94,43 +94,56 @@ def precompute_ensemble_matchups(team_names: list) -> None:
 #  Datos base de equipos (ELO, forma, stats)
 # ─────────────────────────────────────────────
 BASE_TEAM_DB = {
-    # Updated 2026-06-19 post-WC matchdays 1–2 (Jun 11–18)
-    # ELO, FORMA, GF/GA updated based on WC results + analyst calibration
-    "Argentina":    {"ELO": 2125, "FORMA": 2.2, "GF_AVG": 1.9, "GA_AVG": 0.6, "EXTRA": 1.14},
-    "France":       {"ELO": 2077, "FORMA": 2.3, "GF_AVG": 2.0, "GA_AVG": 0.7, "EXTRA": 1.14},
-    "Brazil":       {"ELO": 1958, "FORMA": 1.8, "GF_AVG": 1.5, "GA_AVG": 0.9},
-    "England":      {"ELO": 2050, "FORMA": 2.2, "GF_AVG": 2.0, "GA_AVG": 0.8, "EXTRA": 1.08},
-    "Spain":        {"ELO": 2120, "FORMA": 2.0, "GF_AVG": 1.8, "GA_AVG": 0.5, "EXTRA": 1.10},
-    "Germany":      {"ELO": 1935, "FORMA": 2.0, "GF_AVG": 2.1, "GA_AVG": 1.0, "EXTRA": 1.14},
-    "Portugal":     {"ELO": 1962, "FORMA": 1.7, "GF_AVG": 1.7, "GA_AVG": 1.1, "EXTRA": 1.05},
-    "Netherlands":  {"ELO": 1942, "FORMA": 1.7, "GF_AVG": 1.6, "GA_AVG": 1.0, "EXTRA": 1.05},
-    "Belgium":      {"ELO": 1876, "FORMA": 1.5, "GF_AVG": 1.5, "GA_AVG": 1.0},
-    "Croatia":      {"ELO": 1888, "FORMA": 1.5, "GF_AVG": 1.3, "GA_AVG": 1.2},
+    # Updated 2026-06-20 — ELO + EXTRA tournament feeling applied per WC matchdays 1–2
+    # EXTRA > 1.0 = hot/confident; EXTRA < 1.0 = cold/misfiring
+    # Affects both win probability (via ELO equivalent) and expected goals (direct ×)
+
+    # ── ELITE TIER ────────────────────────────────────────────────────────────
+    "Argentina":    {"ELO": 2125, "FORMA": 2.2, "GF_AVG": 1.9, "GA_AVG": 0.6, "EXTRA": 1.14},   # dominant 3-0 Algeria, Messi influential
+    "France":       {"ELO": 2077, "FORMA": 2.3, "GF_AVG": 2.0, "GA_AVG": 0.7, "EXTRA": 1.14},   # clinical 3-1 Senegal, Mbappé clicking
+    "England":      {"ELO": 2050, "FORMA": 2.2, "GF_AVG": 2.0, "GA_AVG": 0.8, "EXTRA": 1.10},   # 4-2 Croatia, Kane brace, looking excellent
+    "Spain":        {"ELO": 2120, "FORMA": 2.0, "GF_AVG": 1.8, "GA_AVG": 0.5, "EXTRA": 1.02},   # 0-0 Cape Verde — couldn't score vs minnow, attacking concerns
+    "Germany":      {"ELO": 1935, "FORMA": 2.0, "GF_AVG": 2.1, "GA_AVG": 1.0, "EXTRA": 1.14},   # 7-1 Curaçao, dominant (weak opponent caveat)
+    "Portugal":     {"ELO": 1962, "FORMA": 1.7, "GF_AVG": 1.7, "GA_AVG": 1.1, "EXTRA": 0.95},   # 🔴 1-1 DR Congo — alarming, Ronaldo ineffective, defence shaky
+    "Colombia":     {"ELO": 1993, "FORMA": 1.9, "GF_AVG": 1.8, "GA_AVG": 0.9, "EXTRA": 1.08},   # clinical 3-1 Uzbekistan
+
+    # ── TIER 2 / STRONG ───────────────────────────────────────────────────────
+    "Brazil":       {"ELO": 1958, "FORMA": 1.8, "GF_AVG": 1.5, "GA_AVG": 0.9, "EXTRA": 0.97},   # 1-1 Morocco — Vinicius quiet, not clicking
+    "Netherlands":  {"ELO": 1942, "FORMA": 1.7, "GF_AVG": 1.6, "GA_AVG": 1.0, "EXTRA": 0.97},   # 2-2 Japan — struggled to close out
+    "Belgium":      {"ELO": 1876, "FORMA": 1.5, "GF_AVG": 1.5, "GA_AVG": 1.0, "EXTRA": 0.94},   # 🔴 1-1 Egypt — blunt attack, no creativity
+    "Croatia":      {"ELO": 1888, "FORMA": 1.5, "GF_AVG": 1.3, "GA_AVG": 1.2, "EXTRA": 0.93},   # 🔴 2-4 England — conceded 4, squad aging badly
     "Italy":        {"ELO": 1869, "FORMA": 1.7, "GF_AVG": 1.4, "GA_AVG": 0.8},
-    "Morocco":      {"ELO": 1860, "FORMA": 1.9, "GF_AVG": 1.3, "GA_AVG": 0.6},
-    "Japan":        {"ELO": 1912, "FORMA": 1.9, "GF_AVG": 1.7, "GA_AVG": 0.9, "EXTRA": 1.08},
-    "USA":          {"ELO": 1823, "FORMA": 1.8, "GF_AVG": 1.7, "GA_AVG": 1.1},
-    "Mexico":       {"ELO": 1924, "FORMA": 2.0, "GF_AVG": 1.6, "GA_AVG": 0.6},
-    "Canada":       {"ELO": 1765, "FORMA": 1.8, "GF_AVG": 1.8, "GA_AVG": 0.7},
-    "Colombia":     {"ELO": 1993, "FORMA": 1.9, "GF_AVG": 1.8, "GA_AVG": 0.9, "EXTRA": 1.08},
-    "Uruguay":      {"ELO": 1868, "FORMA": 1.4, "GF_AVG": 1.2, "GA_AVG": 1.0},
-    "Ecuador":      {"ELO": 1888, "FORMA": 1.5, "GF_AVG": 1.1, "GA_AVG": 0.9},
-    "South Korea":  {"ELO": 1815, "FORMA": 1.7, "GF_AVG": 1.4, "GA_AVG": 1.0},
+    "Morocco":      {"ELO": 1860, "FORMA": 1.9, "GF_AVG": 1.3, "GA_AVG": 0.6, "EXTRA": 1.06},   # 🟢 great defensive block vs Brazil, dangerous counter
+    "Japan":        {"ELO": 1912, "FORMA": 1.9, "GF_AVG": 1.7, "GA_AVG": 0.9, "EXTRA": 1.08},   # 2-2 Netherlands, quality and energy
+
+    # ── TIER 3 / MID ──────────────────────────────────────────────────────────
+    "USA":          {"ELO": 1823, "FORMA": 1.8, "GF_AVG": 1.7, "GA_AVG": 1.1, "EXTRA": 1.05},   # 4-1 Paraguay, electric home crowd
+    "Mexico":       {"ELO": 1924, "FORMA": 2.0, "GF_AVG": 1.6, "GA_AVG": 0.6, "EXTRA": 1.08},   # 🟢 2 clean sheets as hosts, crowd factor massive
+    "Canada":       {"ELO": 1765, "FORMA": 1.8, "GF_AVG": 1.8, "GA_AVG": 0.7, "EXTRA": 1.08},   # 🟢 6-0 Qatar, David hat-trick — tournament's hottest team
+    "Uruguay":      {"ELO": 1868, "FORMA": 1.4, "GF_AVG": 1.2, "GA_AVG": 1.0, "EXTRA": 0.94},   # 🔴 1-1 Saudi Arabia — toothless, Darwin Núñez invisible
+    "Ecuador":      {"ELO": 1888, "FORMA": 1.5, "GF_AVG": 1.1, "GA_AVG": 0.9, "EXTRA": 0.94},   # 🔴 0-1 Ivory Coast — shocked, confidence shattered
+    "South Korea":  {"ELO": 1815, "FORMA": 1.7, "GF_AVG": 1.4, "GA_AVG": 1.0},                  # mixed (W + L)
     "Senegal":      {"ELO": 1845, "FORMA": 1.8, "GF_AVG": 1.4, "GA_AVG": 0.9},
-    "Switzerland":  {"ELO": 1840, "FORMA": 1.8, "GF_AVG": 1.7, "GA_AVG": 0.8},
+    "Switzerland":  {"ELO": 1840, "FORMA": 1.8, "GF_AVG": 1.7, "GA_AVG": 0.8, "EXTRA": 1.04},   # 4-1 Bosnia, disciplined and dangerous
     "Poland":       {"ELO": 1710, "FORMA": 1.4, "GF_AVG": 1.3, "GA_AVG": 1.1},
     "Serbia":       {"ELO": 1734, "FORMA": 1.5, "GF_AVG": 1.4, "GA_AVG": 1.1},
-    "Australia":    {"ELO": 1855, "FORMA": 2.0, "GF_AVG": 1.5, "GA_AVG": 0.7},
+    "Australia":    {"ELO": 1855, "FORMA": 2.0, "GF_AVG": 1.5, "GA_AVG": 0.7, "EXTRA": 1.07},   # 🟢 stunned Turkey 2-0, pressing game clicking, high morale
     "Iran":         {"ELO": 1754, "FORMA": 1.5, "GF_AVG": 1.3, "GA_AVG": 1.0},
-    "Austria":      {"ELO": 1848, "FORMA": 1.9, "GF_AVG": 1.6, "GA_AVG": 0.9},
-    "Turkey":       {"ELO": 1833, "FORMA": 1.8, "GF_AVG": 1.6, "GA_AVG": 1.1},
+    "Austria":      {"ELO": 1848, "FORMA": 1.9, "GF_AVG": 1.6, "GA_AVG": 0.9, "EXTRA": 1.04},   # 3-1 Jordan, solid
+    "Turkey":       {"ELO": 1833, "FORMA": 1.8, "GF_AVG": 1.6, "GA_AVG": 1.1, "EXTRA": 0.94},   # 🔴 0-2 Australia — poor, didn't show up
+    "Norway":       {"ELO": 1923, "FORMA": 2.0, "GF_AVG": 2.0, "GA_AVG": 0.9, "EXTRA": 1.06},   # 🟢 clinical 4-1 Iraq, Haaland-led, looking sharp
+    "Sweden":       {"ELO": 1736, "FORMA": 1.8, "GF_AVG": 1.8, "GA_AVG": 0.9, "EXTRA": 1.05},   # 5-1 Tunisia, impressive scoring
+    "Scotland":     {"ELO": 1803, "FORMA": 1.8, "GF_AVG": 1.5, "GA_AVG": 0.9, "EXTRA": 1.05},   # 🟢 first WC win in 36 years — massive morale boost
+    "Ivory Coast":  {"ELO": 1745, "FORMA": 1.8, "GF_AVG": 1.5, "GA_AVG": 0.9, "EXTRA": 1.05},   # 🟢 shocked Ecuador, riding that energy
+    "Algeria":      {"ELO": 1762, "FORMA": 1.9, "GF_AVG": 1.5, "GA_AVG": 0.6},                  # 0-3 Argentina dampens the pre-WC momentum
+
+    # ── LOWER TIER ────────────────────────────────────────────────────────────
     "Nigeria":      {"ELO": 1767, "FORMA": 1.5, "GF_AVG": 1.4, "GA_AVG": 1.1},
     "Cameroon":     {"ELO": 1614, "FORMA": 1.4, "GF_AVG": 1.2, "GA_AVG": 1.2},
-    "Ghana":        {"ELO": 1560, "FORMA": 1.3, "GF_AVG": 1.0, "GA_AVG": 1.0},
+    "Ghana":        {"ELO": 1560, "FORMA": 1.3, "GF_AVG": 1.0, "GA_AVG": 1.0, "EXTRA": 1.04},   # 1-0 Panama — upset result, confidence up
     "Tunisia":      {"ELO": 1603, "FORMA": 1.0, "GF_AVG": 0.9, "GA_AVG": 1.4},
-    "Algeria":      {"ELO": 1762, "FORMA": 1.9, "GF_AVG": 1.5, "GA_AVG": 0.6},
-    "Ivory Coast":  {"ELO": 1745, "FORMA": 1.8, "GF_AVG": 1.5, "GA_AVG": 0.9},
-    "Saudi Arabia": {"ELO": 1600, "FORMA": 1.3, "GF_AVG": 0.9, "GA_AVG": 1.1},
+    "Saudi Arabia": {"ELO": 1600, "FORMA": 1.3, "GF_AVG": 0.9, "GA_AVG": 1.1, "EXTRA": 1.03},   # drew with Uruguay, overachieving
+    "Egypt":        {"ELO": 1712, "FORMA": 1.5, "GF_AVG": 1.1, "GA_AVG": 0.9, "EXTRA": 1.03},   # drew Belgium, good result for them
     "Iraq":         {"ELO": 1597, "FORMA": 1.2, "GF_AVG": 1.0, "GA_AVG": 1.3},
     "Indonesia":    {"ELO": 1372, "FORMA": 1.1, "GF_AVG": 0.9, "GA_AVG": 1.4},
     "Uzbekistan":   {"ELO": 1703, "FORMA": 1.3, "GF_AVG": 1.1, "GA_AVG": 1.1},
@@ -144,21 +157,17 @@ BASE_TEAM_DB = {
     "Costa Rica":   {"ELO": 1608, "FORMA": 1.2, "GF_AVG": 1.0, "GA_AVG": 1.2},
     "Bolivia":      {"ELO": 1621, "FORMA": 1.0, "GF_AVG": 0.8, "GA_AVG": 1.4},
     "Venezuela":    {"ELO": 1733, "FORMA": 1.1, "GF_AVG": 0.9, "GA_AVG": 1.3},
-    "New Zealand":  {"ELO": 1578, "FORMA": 1.2, "GF_AVG": 1.1, "GA_AVG": 1.2},
+    "New Zealand":  {"ELO": 1578, "FORMA": 1.2, "GF_AVG": 1.1, "GA_AVG": 1.2, "EXTRA": 1.03},   # drew Iran, decent result
     "El Salvador":  {"ELO": 1342, "FORMA": 0.9, "GF_AVG": 0.7, "GA_AVG": 1.5},
     "Guatemala":    {"ELO": 1504, "FORMA": 1.0, "GF_AVG": 0.8, "GA_AVG": 1.4},
-    "Egypt":        {"ELO": 1712, "FORMA": 1.5, "GF_AVG": 1.1, "GA_AVG": 0.9},
     "South Africa": {"ELO": 1507, "FORMA": 1.1, "GF_AVG": 0.8, "GA_AVG": 1.2},
     "Czech Republic": {"ELO": 1643, "FORMA": 1.3, "GF_AVG": 1.2, "GA_AVG": 1.1},
     "Bosnia & Herzegovina": {"ELO": 1625, "FORMA": 1.2, "GF_AVG": 1.1, "GA_AVG": 1.4},
     "Qatar":        {"ELO": 1468, "FORMA": 0.9, "GF_AVG": 0.8, "GA_AVG": 1.8},
-    "Scotland":     {"ELO": 1803, "FORMA": 1.8, "GF_AVG": 1.5, "GA_AVG": 0.9},
     "Haiti":        {"ELO": 1524, "FORMA": 1.1, "GF_AVG": 1.2, "GA_AVG": 1.4},
     "Curaçao":      {"ELO": 1430, "FORMA": 1.0, "GF_AVG": 1.0, "GA_AVG": 2.0},
-    "Sweden":       {"ELO": 1736, "FORMA": 1.8, "GF_AVG": 1.8, "GA_AVG": 0.9},
-    "Norway":       {"ELO": 1923, "FORMA": 2.0, "GF_AVG": 2.0, "GA_AVG": 0.9},
-    "Cape Verde":   {"ELO": 1612, "FORMA": 1.5, "GF_AVG": 1.1, "GA_AVG": 0.9},
-    "DR Congo":     {"ELO": 1675, "FORMA": 1.5, "GF_AVG": 1.0, "GA_AVG": 0.9},
+    "Cape Verde":   {"ELO": 1612, "FORMA": 1.5, "GF_AVG": 1.1, "GA_AVG": 0.9, "EXTRA": 1.05},   # 🟢 drew Spain — massive, riding confidence
+    "DR Congo":     {"ELO": 1675, "FORMA": 1.5, "GF_AVG": 1.0, "GA_AVG": 0.9, "EXTRA": 1.05},   # 🟢 drew Portugal — giant-killing energy
     "Jordan":       {"ELO": 1660, "FORMA": 1.1, "GF_AVG": 0.9, "GA_AVG": 1.3},
 }
 
