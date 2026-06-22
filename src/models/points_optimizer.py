@@ -21,18 +21,15 @@ import math
 from src.models.stacked_predictor import DIXON_COLES_RHO, _poisson_pmf
 
 # ── Calibration constants ─────────────────────────────────────────────────────
-# Optimized 2026-06-17 via scripts/optimize_porra.py on 625 competitive
-# professional matches (Jun 2025–Jun 2026): WC qualification, AFCON, Gold Cup,
-# CONCACAF Series, FIFA Series, AFC qualification. 21% draw rate — consistent
-# with WC 2022 baseline, not the small-sample 40% of first 20 WC 2026 games.
-# Top-5 grid-search cluster: scale=1.04–1.06, rho=+0.01–0.05, all 905 pts.
+# Optimized 2026-06-22 via scripts/optimize_porra.py on 40 WC 2026 group stage
+# matches (Jun 11–21): 84 pts / 2.10 per game.
+# Top-5 cluster: scale=1.045–1.06, rho=-0.37 to -0.38, all 84 pts.
 # scale=1.045: keeps goal expectations close to raw model output.
 WC2026_LAMBDA_SCALE: float = 1.045
 
-# rho=+0.03: slight positive DC correction — reduces over-representation of
-# exact 0-0/1-1 scorelines relative to pure Poisson (appropriate for the
-# ~21% professional-match draw rate; was over-negative from WC 2026 early data).
-WC2026_DC_RHO: float = 0.03
+# rho=-0.38: negative DC correction — WC 2026 group stage shows 32% draw rate
+# but scoreline variance is high; this reduces over-prediction of low-scoring draws.
+WC2026_DC_RHO: float = -0.38
 
 
 # ── Core functions ────────────────────────────────────────────────────────────

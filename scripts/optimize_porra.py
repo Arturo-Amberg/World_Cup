@@ -62,7 +62,7 @@ NAME_MAP = {
     "Cape Verde":             "Cape Verde",
 }
 
-CURRENT = {"lambda_scale": 1.03, "rho": -0.42}
+CURRENT = {"lambda_scale": 1.045, "rho": -0.38}
 
 
 def load_matches(year: int | None = None, since: str | None = None) -> list[dict]:
